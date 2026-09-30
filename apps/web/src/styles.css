@@ -1,0 +1,15 @@
+:root { font-family: Inter, system-ui, sans-serif; color: #153c3a; background: #f4f7f4; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { min-height: 100vh; max-width: 1200px; margin: auto; padding: 42px 6vw 28px; display: flex; flex-direction: column; }
+header { display: flex; align-items: center; gap: 14px; font-size: 12px; letter-spacing: .1em; }
+header strong { display: block; font-size: 19px; letter-spacing: .14em; margin-top: 3px; }
+.mark { display: grid; place-items: center; width: 48px; height: 48px; background: #0c5754; color: white; border-radius: 14px; font: 30px Georgia, serif; }
+section { flex: 1; padding: 100px 0; }
+.eyebrow { font-size: 11px; letter-spacing: .17em; font-weight: 700; color: #537b73; }
+h1 { font: clamp(38px, 6vw, 72px)/1.08 Georgia, serif; font-weight: 400; letter-spacing: -.04em; margin: 26px 0; }
+.intro { max-width: 460px; color: #61716e; line-height: 1.8; }
+.status { margin-top: 36px; display: inline-block; padding: 12px 18px; border: 1px solid #cbdcd4; border-radius: 24px; font-size: 13px; }
+.status span { color: #65827b; margin-right: 6px; }
+footer { border-top: 1px solid #d6e1db; padding-top: 22px; display: flex; justify-content: space-between; gap: 20px; color: #667a73; font-size: 12px; }
+@media (max-width: 520px) { section { padding: 72px 0; } footer { flex-direction: column; } }
