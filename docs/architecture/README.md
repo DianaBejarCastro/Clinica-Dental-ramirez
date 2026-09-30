@@ -1,5 +1,7 @@
 # Arquitectura v0.1.0
 
+> Documento histórico de infraestructura. La arquitectura de identidad actual está en [authentication.md](authentication.md).
+
 Monolito modular: una API ASP.NET Core y una base PostgreSQL, con frontend React separado.
 Esta fase crea las capas compartidas; los módulos de negocio se diseñarán posteriormente.
 

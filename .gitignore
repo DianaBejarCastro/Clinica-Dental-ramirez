@@ -13,3 +13,4 @@ Thumbs.db
 database/backups/*
 !database/backups/.gitkeep
 *.tsbuildinfo
+artifacts/

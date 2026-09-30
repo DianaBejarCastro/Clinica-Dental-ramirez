@@ -1,5 +1,7 @@
 # PostgreSQL
 
+> Las notas siguientes corresponden a la infraestructura v0.1.x. Para las siete tablas de identidad de v0.2.0 consultar [identity-schema.md](identity-schema.md).
+
 PostgreSQL 18, base clinica_ramirez, usuario clinica_user. Contraseña mediante entorno.
 El volumen postgres_data se monta en /var/lib/postgresql para la estructura de PostgreSQL 18.
 El puerto del host es configurable mediante POSTGRES_PORT; entre contenedores siempre es 5432.

@@ -1,40 +1,17 @@
-import { useEffect, useState } from 'react';
+import { AuthProvider, useAuth } from './modules/auth/AuthProvider';
+import { Protected, useRoute } from './router/Router';
+import AdminLayout from './layouts/AdminLayout';
+import UsersPage from './modules/admin/users/UsersPage';
+import RolesPage from './modules/admin/roles/RolesPage';
+import PermissionsPage from './modules/admin/permissions/PermissionsPage';
+import './admin.css';
 
-const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
+function Workspace() {
+  const path = useRoute(); const { session } = useAuth();
+  const pages = { '/users': <Protected permission="users.view"><UsersPage /></Protected>, '/roles': <Protected permission="roles.view"><RolesPage /></Protected>, '/permissions': <Protected permission="permissions.view"><PermissionsPage /></Protected> };
+  return <Protected><AdminLayout path={path}>{path in pages ? pages[path as keyof typeof pages] : path === '/' || path === '/login' ? <><p className="eyebrow">RESUMEN</p><h1>Hola, {session?.user.firstName}.</h1><p className="muted">Bienvenido a la administración de Clínica Dental RAMÍREZ.</p><section className="card"><h2>Tu espacio de trabajo</h2><p>Usa el menú para gestionar las cuentas y el acceso del equipo.</p><p><strong>Roles:</strong> {session?.user.roles.join(', ') || 'Sin roles asignados'}</p></section></> : <section className="card"><h1>Página no encontrada</h1><a href="#/">Volver al resumen</a></section>}</AdminLayout></Protected>;
+}
 
 export default function App() {
-  const [status, setStatus] = useState('Comprobando conexión…');
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 5000);
-    fetch(`${apiUrl}/health`, { signal: controller.signal })
-      .then(response => {
-        if (!response.ok) throw new Error('API no disponible');
-        setStatus('API: Healthy');
-      })
-      .catch(() => {
-        if (!cancelled) setStatus('API: sin conexión');
-      });
-    let cancelled = false;
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeout);
-      controller.abort();
-    };
-  }, []);
-
-  return (
-    <main>
-      <header><span className="mark" aria-hidden="true">R</span><span>CLÍNICA DENTAL <strong>RAMÍREZ</strong></span></header>
-      <section>
-        <p className="eyebrow">BASE DEL PROYECTO · V0.1.1</p>
-        <h1>Un nuevo comienzo<br />para nuestra clínica.</h1>
-        <p className="intro">El espacio digital de Clínica Dental RAMÍREZ está en preparación.</p>
-        <p>Frontend: disponible</p>
-        <div className="status" role="status"><span aria-hidden="true">●</span> {status}</div>
-      </section>
-      <footer>Clínica Dental RAMÍREZ <span>Infraestructura inicial</span></footer>
-    </main>
-  );
+  return <AuthProvider><Workspace /></AuthProvider>;
 }

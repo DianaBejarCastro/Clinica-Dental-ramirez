@@ -1,0 +1,51 @@
+import { readFileSync } from 'node:fs';
+import { randomBytes, randomUUID } from 'node:crypto';
+import assert from 'node:assert/strict';
+
+const env = Object.fromEntries(readFileSync(new URL('../.env', import.meta.url), 'utf8').split(/\r?\n/).filter(line => /^[A-Z_]+=/.test(line)).map(line => { const at = line.indexOf('='); return [line.slice(0, at), line.slice(at + 1)]; }));
+const base = `http://localhost:${env.API_PORT || 5000}`;
+let access = ''; let cookie = '';
+async function request(path, method = 'GET', body, status = 200, authenticated = true, useCookie = false) {
+  const response = await fetch(base + path, { method, headers: { 'Content-Type': 'application/json', 'X-Clinic-Request': '1', ...(authenticated && access ? { Authorization: `Bearer ${access}` } : {}), ...(useCookie && cookie ? { Cookie: cookie } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
+  assert.equal(response.status, status, `${method} ${path}: HTTP ${response.status}, esperado ${status}`);
+  const nextCookie = response.headers.get('set-cookie');
+  if (nextCookie) cookie = nextCookie.split(';')[0];
+  console.log(`PASS ${method} ${path} → ${status}`);
+  return status === 204 ? null : response.json().catch(() => null);
+}
+
+const login = await request('/api/auth/login', 'POST', { email: env.BOOTSTRAP_ADMIN_EMAIL, password: env.BOOTSTRAP_ADMIN_PASSWORD }, 200, false);
+access = login.accessToken;
+assert.equal(login.user.permissions.length, 56);
+await request('/api/auth/me');
+await request('/api/admin/users');
+const roles = await request('/api/admin/roles'); assert.equal(roles.length, 6);
+const permissions = await request('/api/admin/permissions'); assert.equal(permissions.length, 56);
+const password = randomBytes(32).toString('base64');
+const email = `verification-${randomUUID()}@example.com`;
+const user = await request('/api/admin/users', 'POST', { firstName: 'Verificación', lastName: 'v0.2.0', email, password, phone: null }, 201);
+assert.ok(!('passwordHash' in user));
+await request(`/api/admin/users/${user.id}`);
+await request('/api/admin/users', 'POST', { firstName: 'Duplicado', lastName: 'Prueba', email, password }, 409);
+await request(`/api/admin/users/${user.id}/roles`, 'PUT', { roleIds: [roles.find(r => r.code === 'SECRETARY').id] }, 204);
+await request(`/api/admin/users/${user.id}`, 'PUT', { firstName: 'Verificación actualizada', lastName: 'v0.2.0', email, phone: null });
+const adminAccess = access; const adminCookie = cookie;
+const ordinary = await request('/api/auth/login', 'POST', { email, password }, 200, false);
+access = ordinary.accessToken;
+await request('/api/admin/users', 'GET', undefined, 403);
+access = adminAccess; cookie = adminCookie;
+await request(`/api/admin/users/${user.id}/status`, 'PATCH', { isActive: false }, 204);
+await request('/api/auth/login', 'POST', { email, password }, 401, false);
+access = ordinary.accessToken;
+await request('/api/auth/me', 'GET', undefined, 401);
+access = adminAccess;
+await request('/api/admin/users?page=0', 'GET', undefined, 400);
+await request(`/api/admin/users/${randomUUID()}`, 'GET', undefined, 404);
+await request('/api/admin/users', 'GET', undefined, 401, false);
+const refreshed = await request('/api/auth/refresh', 'POST', undefined, 200, false, true);
+access = refreshed.accessToken;
+await request('/api/auth/me');
+await request('/api/auth/logout', 'POST', undefined, 204, false, true);
+await request('/api/auth/me', 'GET', undefined, 401);
+await request('/api/auth/refresh', 'POST', undefined, 401, false, true);
+console.log('E2E correcto: usuario sintético conservado e inactivo; no se imprimieron secretos ni tokens.');

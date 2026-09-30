@@ -1,161 +1,76 @@
-# Clínica Dental RAMÍREZ · v0.1.1
+﻿# Clínica Dental RAMÍREZ · v0.2.0
 
-Infraestructura inicial de un sistema web odontológico con monolito modular.
-Incluye React, API con Controllers, Swagger, CORS, EF Core y PostgreSQL.
-No incluye autenticación, módulos clínicos, tablas clínicas ni migraciones.
+Monolito modular ASP.NET Core 10 / EF Core 10 / PostgreSQL 18 con React, TypeScript y Vite separados. Esta fase incorpora identidad relacional, autenticación, roles, permisos y auditoría. No incluye módulos clínicos.
 
-## Requisitos y versiones
+## Requisitos
 
-- Node.js 24 y pnpm 11.9.0.
-- .NET SDK 10.0.400 (global.json permite únicamente parches de esa banda).
-- ASP.NET Core 10, Entity Framework Core 10 y proveedor Npgsql 10.
-- PostgreSQL 18.
-- Docker con motor Linux en ejecución y Docker Compose.
-- Git.
+Node 24, pnpm 11.9.0, .NET SDK 10.0.400 y Docker Desktop con motor Linux. No se cambiaron versiones principales. Dependencias frontend y API fijadas mediante archivos lock.
 
-Las imágenes son node:24-alpine, mcr.microsoft.com/dotnet/sdk:10.0,
-mcr.microsoft.com/dotnet/aspnet:10.0 y postgres:18. No se usa latest.
-Los tags fijan la línea de versión; sus parches pueden actualizarse.
-Las dependencias se fijan mediante archivos lock.
+## Configuración local
 
-## Estructura
+Si aún no existe `.env`, copiar `.env.example`. Configurar POSTGRES_PASSWORD, JWT_SECRET (al menos 48 caracteres aleatorios) y BOOTSTRAP_ADMIN_PASSWORD (12–128 caracteres). Nunca versionar ni imprimir estos valores. No sobrescribir un `.env` existente.
 
-```text
-apps/
-  web/           React + TypeScript + Vite
-  api/           ASP.NET Core, capas y AppDbContext
-database/
-  backups/       Copias locales ignoradas por Git
-  scripts/       Scripts de base de datos
-docs/
-  architecture/  Decisiones y responsabilidades
-  database/      Persistencia y cuidados del volumen
-infra/           Notas del entorno
-packages/        Futuros paquetes compartidos
-```
-
-## Desarrollo local (PowerShell)
-
-Desde la raíz:
+Configurar POSTGRES_PORT=5434 para este equipo: otro proyecto ocupa 5432. La API dentro de Docker siempre usa postgres:5432. JWT usa issuer clinica_ramirez, audience clinica_ramirez_web, access de 15 minutos y refresh de 7 días por defecto.
 
 ```powershell
-Copy-Item .env.example .env
-```
-
-Editar .env y reemplazar POSTGRES_PASSWORD por una contraseña local.
-En el entorno verificado, POSTGRES_PORT=5434 porque otro proyecto ocupa 5432.
-La plantilla mantiene 5432 como valor predeterminado; ajustar .env antes de levantar los servicios.
-JWT_SECRET está reservado: no se utiliza y no habilita autenticación.
-No guardar .env en Git.
-
-Levantar PostgreSQL:
-
-```powershell
-docker compose up -d postgres
-```
-
-Frontend, en otra terminal:
-
-```powershell
-cd apps/web
 pnpm install
-pnpm dev
-```
-
-También se admiten pnpm install, pnpm dev y pnpm build desde la raíz.
-VITE_API_URL permite cambiar la URL de la API (valor público, nunca un secreto).
-Por defecto es http://localhost:5000.
-
-API, desde la raíz en otra terminal:
-
-```powershell
-# Cargar las variables de la plantilla local sin ejecutarla como código.
-Get-Content .env | ForEach-Object {
-  if ($_ -match '^([A-Z_][A-Z0-9_]*)=(.*)$') {
-    [Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process')
-  }
-}
-# El hostname postgres solo se resuelve dentro de Docker.
-$env:POSTGRES_HOST = 'localhost'
-cd apps/api
 dotnet restore
-dotnet build --no-restore
-dotnet run --no-build
-```
-
-La API no lee .env automáticamente: Compose sí, y el comando anterior lo importa para dotnet.
-Como alternativa, configurar ConnectionStrings__DefaultConnection.
-La API rechaza una contraseña vacía o CHANGE_ME. No aplica migraciones al arrancar.
-Si se personalizan puertos en .env para ejecución local, ajustar también la URL de dotnet
-(--urls), el puerto de Vite (--port), VITE_API_URL y Cors__AllowedOrigins__0.
-No poner secretos en variables VITE_*.
-
-## Entorno completo en Docker
-
-Desde la raíz, después de preparar .env:
-
-```powershell
+dotnet tool restore
+dotnet build
+docker compose up -d postgres
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/initialize-identity.ps1
 docker compose config --quiet
-docker compose build
-docker compose up -d
-docker compose ps
-docker compose logs -f api
-docker compose down
+docker compose up -d --build
 ```
 
-Compose usa Development y Vite: es un entorno local, no una configuración de producción.
-Los puertos publicados se limitan a 127.0.0.1.
-La base usa un volumen persistente. No ejecutar down -v si se desea conservarlo.
-Los cambios de código requieren docker compose up -d --build.
+`initialize-identity.ps1` aplica explícitamente la migración y ejecuta seed contra localhost:5434. El seed crea seis roles y 56 permisos. Crea el administrador inicial únicamente si no hay usuarios, usando las variables BOOTSTRAP_ADMIN_EMAIL y BOOTSTRAP_ADMIN_PASSWORD. Se puede repetir sin duplicar datos. No se ejecutan migración ni seed al iniciar la API normalmente.
 
-Validar la plantilla sin crear .env:
+En este entorno el bootstrap local usa el email guardado en `.env`; la contraseña está exclusivamente allí. La aplicación no incluye recuperación ni cambio de contraseña en esta fase.
 
-```powershell
-docker compose --env-file .env.example config --quiet
-```
+## Direcciones
 
-Esto solo valida la configuración; CHANGE_ME no sirve para arrancar la API.
-
-## URLs y puertos
-
-| Servicio | Dirección |
+| Servicio | URL |
 | --- | --- |
-| Frontend | http://localhost:5173 |
-| API e información de versión | http://localhost:5000 |
-| Health del proceso | http://localhost:5000/health |
-| Conectividad PostgreSQL | http://localhost:5000/health/ready |
-| Swagger (Development) | http://localhost:5000/swagger |
-| OpenAPI (Development) | http://localhost:5000/swagger/v1/swagger.json |
-| PostgreSQL (entorno verificado) | localhost:5434 |
+| Aplicación y login | http://localhost:5173 |
+| API / versión | http://localhost:5000 |
+| Proceso | http://localhost:5000/health |
+| PostgreSQL accesible | http://localhost:5000/health/ready |
+| Swagger | http://localhost:5000/swagger |
+| PostgreSQL local | localhost:5434 |
 
-/health devuelve 200 cuando el proceso está disponible.
-/health/ready devuelve 200 con PostgreSQL accesible y 503 si falla la conexión.
-El indicador del frontend consulta /health, no certifica la conexión a la base.
+Compose usa imágenes clinica-ramirez-api:0.2.0 y clinica-ramirez-web:0.2.0. Publica solo en 127.0.0.1 y conserva el volumen postgres_data. Es desarrollo: Vite y Swagger habilitados, cookie sin Secure únicamente en Development. Producción requiere HTTPS y configuración revisada. No usar down -v para conservar datos.
 
-## Comprobaciones
+## Frontend
+
+Login, restauración de sesión, logout, rutas protegidas y menú según permisos. Access token en memoria; refresh en cookie HttpOnly. Rutas hash: `#/`, `#/users`, `#/roles`, `#/permissions`. Usuarios incluye paginación, creación, edición, estado y roles; Roles incluye creación, edición y permisos; Permisos es un catálogo de solo lectura agrupado por módulo.
+
+## Pruebas
 
 ```powershell
-pnpm --dir apps/web install
+dotnet restore
+dotnet build
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-backend.ps1
+pnpm install
 pnpm build
-dotnet restore apps/api/ClinicaRamirez.Api.csproj
-dotnet build apps/api/ClinicaRamirez.Api.csproj --no-restore
-docker compose --env-file .env.example config --quiet
-docker compose --env-file .env.example build
+pnpm test
+node scripts/verify-identity.mjs
+node scripts/verify-browser.mjs
+Get-Content database/scripts/verify-identity.sql | docker compose exec -T postgres psql -U clinica_user -d clinica_ramirez -X -v ON_ERROR_STOP=1
 ```
 
-## Colaboración y próximos pasos
+El script backend ejecuta `dotnet test` con conexión por entorno y crea una base PostgreSQL aislada identity_test_<uuid>. No borra bases; cada ejecución conserva datos sintéticos para inspección. El servidor de pruebas puede requerir ejecución fuera del sandbox Windows.
 
-Consultar AGENTS.md y docs/architecture/README.md.
-Trabajar desde develop, proponer cambios en ramas y revisarlos antes de integrar a main.
-La siguiente fase deberá acordar límites de módulos, esquema y auditoría antes de implementar negocio.
+`verify-identity.mjs` prueba la API Docker contra desarrollo, lee credenciales de `.env` sin imprimirlas y conserva un usuario sintético desactivado. Requiere migración, seed y contenedores activos. El logout invalida las sesiones del administrador usado para la verificación.
 
-## Verificación v0.1.1
+## Desarrollo fuera de Docker
 
-Docker, PostgreSQL 18 y la conexión real API ↔ PostgreSQL están verificados.
-Los tres servicios permanecen en ejecución; /health y /health/ready devuelven 200.
-Edge headless confirmó que React muestra Frontend: disponible y API: Healthy.
-Las imágenes locales están etiquetadas como clinica-ramirez-api:0.1.1 y clinica-ramirez-web:0.1.1.
-En Development, la cadena generada por la API desactiva GSS/Kerberos porque este entorno usa contraseña.
-Las versiones informativas de los manifiestos de aplicación permanecen en 0.1.0.
+Para frontend: `pnpm dev`. Para API: cargar `.env` como variables de proceso, establecer POSTGRES_HOST=localhost y POSTGRES_PORT=5434, y ejecutar `dotnet run --project apps/api`. La API no lee `.env` por sí misma. Mantener configuraciones CORS, puertos y VITE_API_URL coherentes. Nunca poner secretos en variables VITE_*.
 
-Ver [comandos, incidencias y evidencias](docs/verification-v0.1.1.md).
+## Documentación
+
+- [Verificación v0.2.0](docs/verification-v0.2.0.md)
+- [Autenticación, sesiones y permisos](docs/architecture/authentication.md)
+- [Modelo relacional, restricciones y migración](docs/database/identity-schema.md)
+- [Verificación histórica v0.1.1](docs/verification-v0.1.1.md)
+
+Trabajar en develop o ramas de trabajo. No modificar main directamente. Las verificaciones anteriores conservan su valor histórico y describen fases previas.

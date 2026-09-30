@@ -1,53 +1,123 @@
+using System.Security.Claims;
+using System.Text;
+using System.Threading.RateLimiting;
+using ClinicaRamirez.Api.Application.Identity;
+using ClinicaRamirez.Api.Domain.Identity;
 using ClinicaRamirez.Api.Infrastructure;
+using ClinicaRamirez.Api.Infrastructure.Identity;
+using ClinicaRamirez.Api.Middleware;
 using ClinicaRamirez.Api.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
-
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrWhiteSpace(connectionString))
 {
     var password = builder.Configuration["POSTGRES_PASSWORD"];
     if (string.IsNullOrWhiteSpace(password) || password == "CHANGE_ME")
-        throw new InvalidOperationException("Configure POSTGRES_PASSWORD o ConnectionStrings__DefaultConnection antes de iniciar la API.");
-
-    connectionString = new NpgsqlConnectionStringBuilder
-    {
+        throw new InvalidOperationException("Configure POSTGRES_PASSWORD o ConnectionStrings__DefaultConnection.");
+    connectionString = new NpgsqlConnectionStringBuilder {
         Host = builder.Configuration["POSTGRES_HOST"] ?? "localhost",
         Port = int.Parse(builder.Configuration["POSTGRES_PORT"] ?? "5432"),
         Database = builder.Configuration["POSTGRES_DB"] ?? "clinica_ramirez",
         Username = builder.Configuration["POSTGRES_USER"] ?? "clinica_user",
         Password = password,
-        // El entorno local usa contraseña y no dispone de Kerberos.
-        GssEncryptionMode = builder.Environment.IsDevelopment()
-            ? GssEncryptionMode.Disable
-            : GssEncryptionMode.Prefer
+        GssEncryptionMode = builder.Environment.IsDevelopment() ? GssEncryptionMode.Disable : GssEncryptionMode.Prefer
     }.ConnectionString;
 }
-
+var jwt = JwtSettings.Load(builder.Configuration);
+builder.Services.AddSingleton(jwt);
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<IdentitySupport>();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<AdminService>();
+builder.Services.AddScoped<IdentitySeed>();
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options => {
+    options.MapInboundClaims = false;
+    options.TokenValidationParameters = new TokenValidationParameters {
+        ValidateIssuer = true, ValidIssuer = jwt.Issuer, ValidateAudience = true, ValidAudience = jwt.Audience,
+        ValidateLifetime = true, ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Secret)),
+        ValidAlgorithms = [SecurityAlgorithms.HmacSha256], ClockSkew = TimeSpan.FromSeconds(10),
+        NameClaimType = "email", RoleClaimType = "roles"
+    };
+    options.Events = new JwtBearerEvents { OnTokenValidated = async context => {
+        var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+        if (!Guid.TryParse(context.Principal?.FindFirstValue("sub"), out var userId)
+            || !Guid.TryParse(context.Principal?.FindFirstValue("sid"), out var sessionId)
+            || !await db.RefreshTokens.AnyAsync(x => x.Id == sessionId && x.UserId == userId
+                && x.User.IsActive && x.RevokedAt == null && x.ExpiresAt > DateTime.UtcNow))
+            context.Fail("Sesión inválida.");
+    }};
+});
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options => {
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "Clínica Dental RAMÍREZ · Identidad", Version = "0.2.0" });
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme {
+        Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT",
+        Description = "Access token. Para POST /api/auth/* enviar X-Clinic-Request: 1; refresh usa cookie HttpOnly."
+    });
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement {
+        [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+    });
+});
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddProblemDetails();
-builder.Services.AddHealthChecks()
-    .AddCheck<DatabaseHealthCheck>("postgresql", tags: ["ready"]);
-var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-    ?? ["http://localhost:5173"];
+builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("postgresql", tags: ["ready"]);
+var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? ["http://localhost:5173"];
 builder.Services.AddCors(options => options.AddPolicy("Web",
-    policy => policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod()));
-
+    policy => policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
+builder.Services.AddRateLimiter(options => {
+    options.RejectionStatusCode = 429;
+    options.AddPolicy("login", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("LOGIN_RATE_LIMIT", 30),
+            Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+});
 var app = builder.Build();
 app.UseExceptionHandler();
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 app.UseCors("Web");
+app.Use(async (context, next) => {
+    if (context.Request.Path.StartsWithSegments("/api"))
+        context.Response.Headers.CacheControl = "no-store";
+    if (context.Request.Method == "POST" && context.Request.Path.StartsWithSegments("/api/auth"))
+    {
+        var origin = context.Request.Headers.Origin.ToString();
+        if (context.Request.Headers["X-Clinic-Request"] != "1" || (origin.Length > 0 && !origins.Contains(origin)))
+        {
+            context.Response.StatusCode = 403;
+            await context.Response.WriteAsJsonAsync(new { title = "Origen o cabecera de seguridad inválidos." });
+            return;
+        }
+    }
+    await next();
+});
+app.UseRateLimiter();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
+// Comando explícito; no se aplican migraciones ni seed al arrancar el servidor.
+if (args.Contains("--seed-identity"))
+{
+    using var scope = app.Services.CreateScope();
+    await scope.ServiceProvider.GetRequiredService<IdentitySeed>().Run();
+    return;
+}
 app.Run();
+public partial class Program { }
