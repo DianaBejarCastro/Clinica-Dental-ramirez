@@ -19,7 +19,11 @@ if (string.IsNullOrWhiteSpace(connectionString))
         Port = int.Parse(builder.Configuration["POSTGRES_PORT"] ?? "5432"),
         Database = builder.Configuration["POSTGRES_DB"] ?? "clinica_ramirez",
         Username = builder.Configuration["POSTGRES_USER"] ?? "clinica_user",
-        Password = password
+        Password = password,
+        // El entorno local usa contraseña y no dispone de Kerberos.
+        GssEncryptionMode = builder.Environment.IsDevelopment()
+            ? GssEncryptionMode.Disable
+            : GssEncryptionMode.Prefer
     }.ConnectionString;
 }
 

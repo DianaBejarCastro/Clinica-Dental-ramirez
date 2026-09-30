@@ -11,10 +11,10 @@ export default function App() {
     fetch(`${apiUrl}/health`, { signal: controller.signal })
       .then(response => {
         if (!response.ok) throw new Error('API no disponible');
-        setStatus('API disponible');
+        setStatus('API: Healthy');
       })
       .catch(() => {
-        if (!cancelled) setStatus('API sin conexión');
+        if (!cancelled) setStatus('API: sin conexión');
       });
     let cancelled = false;
     return () => {
@@ -28,9 +28,10 @@ export default function App() {
     <main>
       <header><span className="mark" aria-hidden="true">R</span><span>CLÍNICA DENTAL <strong>RAMÍREZ</strong></span></header>
       <section>
-        <p className="eyebrow">BASE DEL PROYECTO · V0.1.0</p>
+        <p className="eyebrow">BASE DEL PROYECTO · V0.1.1</p>
         <h1>Un nuevo comienzo<br />para nuestra clínica.</h1>
         <p className="intro">El espacio digital de Clínica Dental RAMÍREZ está en preparación.</p>
+        <p>Frontend: disponible</p>
         <div className="status" role="status"><span aria-hidden="true">●</span> {status}</div>
       </section>
       <footer>Clínica Dental RAMÍREZ <span>Infraestructura inicial</span></footer>

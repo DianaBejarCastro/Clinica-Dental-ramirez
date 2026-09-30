@@ -1,4 +1,4 @@
-# Clínica Dental RAMÍREZ · v0.1.0
+# Clínica Dental RAMÍREZ · v0.1.1
 
 Infraestructura inicial de un sistema web odontológico con monolito modular.
 Incluye React, API con Controllers, Swagger, CORS, EF Core y PostgreSQL.
@@ -43,6 +43,8 @@ Copy-Item .env.example .env
 ```
 
 Editar .env y reemplazar POSTGRES_PASSWORD por una contraseña local.
+En el entorno verificado, POSTGRES_PORT=5434 porque otro proyecto ocupa 5432.
+La plantilla mantiene 5432 como valor predeterminado; ajustar .env antes de levantar los servicios.
 JWT_SECRET está reservado: no se utiliza y no habilita autenticación.
 No guardar .env en Git.
 
@@ -124,7 +126,7 @@ Esto solo valida la configuración; CHANGE_ME no sirve para arrancar la API.
 | Conectividad PostgreSQL | http://localhost:5000/health/ready |
 | Swagger (Development) | http://localhost:5000/swagger |
 | OpenAPI (Development) | http://localhost:5000/swagger/v1/swagger.json |
-| PostgreSQL | localhost:5432 |
+| PostgreSQL (entorno verificado) | localhost:5434 |
 
 /health devuelve 200 cuando el proceso está disponible.
 /health/ready devuelve 200 con PostgreSQL accesible y 503 si falla la conexión.
@@ -146,3 +148,14 @@ docker compose --env-file .env.example build
 Consultar AGENTS.md y docs/architecture/README.md.
 Trabajar desde develop, proponer cambios en ramas y revisarlos antes de integrar a main.
 La siguiente fase deberá acordar límites de módulos, esquema y auditoría antes de implementar negocio.
+
+## Verificación v0.1.1
+
+Docker, PostgreSQL 18 y la conexión real API ↔ PostgreSQL están verificados.
+Los tres servicios permanecen en ejecución; /health y /health/ready devuelven 200.
+Edge headless confirmó que React muestra Frontend: disponible y API: Healthy.
+Las imágenes locales están etiquetadas como clinica-ramirez-api:0.1.1 y clinica-ramirez-web:0.1.1.
+En Development, la cadena generada por la API desactiva GSS/Kerberos porque este entorno usa contraseña.
+Las versiones informativas de los manifiestos de aplicación permanecen en 0.1.0.
+
+Ver [comandos, incidencias y evidencias](docs/verification-v0.1.1.md).
