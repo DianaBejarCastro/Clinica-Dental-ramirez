@@ -8,5 +8,5 @@ namespace ClinicaRamirez.Api.Controllers;
 public sealed class InfoController : ControllerBase
 {
     [HttpGet]
-    public ActionResult<ApiInfoResponse> Get() => new ApiInfoResponse("Clínica Dental RAMÍREZ", "0.2.0");
+    public ActionResult<ApiInfoResponse> Get() => new ApiInfoResponse("Clínica Dental RAMÍREZ", "0.3.0");
 }

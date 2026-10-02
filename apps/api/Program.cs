@@ -68,7 +68,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options => {
-    options.SwaggerDoc("v1", new OpenApiInfo { Title = "Clínica Dental RAMÍREZ · Identidad", Version = "0.2.0" });
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "Clínica Dental RAMÍREZ · Identidad", Version = "0.3.0" });
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme {
         Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT",
         Description = "Access token. Para POST /api/auth/* enviar X-Clinic-Request: 1; refresh usa cookie HttpOnly."

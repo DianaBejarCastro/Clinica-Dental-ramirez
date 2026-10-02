@@ -6,6 +6,8 @@ import { randomInt, randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
 
 const env = Object.fromEntries(readFileSync(new URL('../.env', import.meta.url), 'utf8').split(/\r?\n/).filter(line => /^[A-Z_]+=/.test(line)).map(line => { const at = line.indexOf('='); return [line.slice(0, at), line.slice(at + 1)]; }));
+const doctorId = JSON.parse(readFileSync(new URL('../artifacts/clinic-e2e.json', import.meta.url), 'utf8')).created.doctors[0];
+assert.ok(doctorId, 'Ejecute verify-clinic.mjs antes de verificar el navegador');
 const port = randomInt(20000, 30000);
 const profile = resolve('artifacts', `edge-smoke-${randomUUID()}`);
 mkdirSync(profile, { recursive: true });
@@ -36,13 +38,22 @@ try {
   const cookie = cookies.cookies.find(c => c.name === 'clinic_refresh');
   assert.ok(cookie?.httpOnly); assert.equal(cookie.sameSite, 'Strict');
   console.log('PASS navegador: login real, cookie HttpOnly/Strict y tokens fuera del storage');
-  for (const [route, text] of [['/clinic', 'Razón social'], ['/centers', 'Sucursales'], ['/doctors', 'Doctores'], ['/specialties', 'Odontología general'], ['/schedules', 'Lunes']]) {
+  for (const [route, text] of [['/clinic', 'Razón social'], ['/centers', 'Central prueba'], ['/doctors', 'Doctor de prueba'], ['/specialties', 'Odontología general']]) {
     await evaluate(`location.hash=${JSON.stringify(route)}`);
     await until(`document.body.innerText.includes(${JSON.stringify(text)})`, route);
     console.log(`PASS navegador: ${route}`);
   }
+  await evaluate('location.hash="/schedules"');
+  await until(`!!document.querySelector('select option[value="${doctorId}"]')`, 'selector de doctor');
+  assert.equal(await evaluate('!!document.querySelector(".week-grid")'), false);
+  await evaluate(`(() => { const select = document.querySelector('select'); select.value=${JSON.stringify(doctorId)}; select.dispatchEvent(new Event('change',{bubbles:true})); })()`);
+  await until('document.querySelectorAll(".week-day").length === 7 && document.querySelectorAll(".schedule-block").length === 2', 'semana del doctor con dos bloques');
+  assert.ok(await evaluate('document.body.innerText.includes("Descanso: 09:00–09:30")'));
+  console.log('PASS navegador: /schedules, selección de doctor, siete días y dos bloques por sucursal');
+  await evaluate(`location.hash=${JSON.stringify(`/schedules?doctor=${doctorId}`)}`);
+  await until('document.querySelectorAll(".schedule-block").length === 2', 'ruta del doctor');
   await command('Page.reload');
-  await until('!!document.querySelector("nav") && document.body.innerText.includes("Lunes")', 'restauración de sesión');
+  await until('!!document.querySelector("nav") && document.querySelectorAll(".schedule-block").length === 2', 'restauración de sesión y doctor');
   console.log('PASS navegador: sesión restaurada después de recargar');
   await evaluate('location.hash="/users"');
   await until('document.body.innerText.includes("usuarios · Página")', 'usuarios');
