@@ -17,7 +17,7 @@ services:
       start_period: 10s
 
   api:
-    image: clinica-ramirez-api:0.2.0
+    image: clinica-ramirez-api:0.3.0
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -44,7 +44,7 @@ services:
         condition: service_healthy
 
   web:
-    image: clinica-ramirez-web:0.2.0
+    image: clinica-ramirez-web:0.3.0
     build:
       context: .
       dockerfile: apps/web/Dockerfile

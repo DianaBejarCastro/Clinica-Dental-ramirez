@@ -61,6 +61,8 @@ public sealed class AdminService(AppDbContext db, IdentitySupport support, IPass
         var ids = roleIds.Distinct().ToArray();
         var roles = await db.Roles.Where(x => ids.Contains(x.Id) && x.IsActive).ToArrayAsync();
         if (roles.Length != ids.Length) throw new ApiException(400, "Roles inexistentes o inactivos.");
+        if (!roles.Any(x => x.Code == "DOCTOR") && await db.DoctorProfiles.AnyAsync(x => x.UserId == id))
+            throw new ApiException(409, "El usuario con perfil profesional debe conservar el rol DOCTOR.");
         if (!roles.Any(x => x.Code == "ADMINISTRATOR")) await support.PreserveAdministrator(id);
         db.UserRoles.RemoveRange(user.UserRoles.Where(x => !ids.Contains(x.RoleId)));
         foreach (var role in roles.Where(r => user.UserRoles.All(x => x.RoleId != r.Id)))
@@ -82,11 +84,16 @@ public sealed class AdminService(AppDbContext db, IdentitySupport support, IPass
     }
     public async Task<RoleResponse> UpdateRole(Guid id, RoleUpdateRequest request)
     {
+        await using var tx = await db.Database.BeginTransactionAsync();
+        await support.LockAdministration();
         var role = await RoleQuery.SingleOrDefaultAsync(x => x.Id == id) ?? throw new ApiException(404, "Rol inexistente.");
         if (role.Code == "ADMINISTRATOR" && !request.IsActive) throw new ApiException(409, "No se puede desactivar el rol administrador.");
+        if (role.Code == "DOCTOR" && !request.IsActive && await db.DoctorProfiles.AnyAsync())
+            throw new ApiException(409, "No se puede desactivar DOCTOR mientras existan perfiles profesionales.");
         role.Name = request.Name.Trim(); role.Description = request.Description?.Trim(); role.IsActive = request.IsActive;
         support.Audit("role_updated", "Role", id);
         await db.SaveChangesAsync();
+        await tx.CommitAsync();
         return IdentitySupport.RoleDto(role);
     }
     public async Task RolePermissions(Guid id, Guid[] permissionIds)

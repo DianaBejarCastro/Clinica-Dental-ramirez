@@ -39,6 +39,7 @@ public sealed class IdentityFixture : WebApplicationFactory<Program>, IAsyncLife
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await db.Database.MigrateAsync();
         await scope.ServiceProvider.GetRequiredService<IdentitySeed>().Run();
+        await scope.ServiceProvider.GetRequiredService<ClinicSeed>().Run();
     }
     Task IAsyncLifetime.DisposeAsync() => Task.CompletedTask; // Conservar la base aislada para inspección; nunca borrar desarrollo.
     public HttpClient Client() { var client = CreateClient(new() { HandleCookies = false }); client.DefaultRequestHeaders.Add("X-Clinic-Request", "1"); return client; }

@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
 using ClinicaRamirez.Api.Application.Identity;
+using ClinicaRamirez.Api.Application.ClinicAdministration;
 using ClinicaRamirez.Api.Domain.Identity;
 using ClinicaRamirez.Api.Infrastructure;
 using ClinicaRamirez.Api.Infrastructure.Identity;
@@ -41,6 +42,8 @@ builder.Services.AddScoped<IdentitySupport>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AdminService>();
 builder.Services.AddScoped<IdentitySeed>();
+builder.Services.AddScoped<ClinicAdministrationService>();
+builder.Services.AddScoped<ClinicSeed>();
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 builder.Services.AddAuthorization();
@@ -113,10 +116,11 @@ app.MapControllers();
 app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 // Comando explícito; no se aplican migraciones ni seed al arrancar el servidor.
-if (args.Contains("--seed-identity"))
+if (args.Contains("--seed-identity") || args.Contains("--seed-clinic"))
 {
     using var scope = app.Services.CreateScope();
-    await scope.ServiceProvider.GetRequiredService<IdentitySeed>().Run();
+    if (args.Contains("--seed-identity")) await scope.ServiceProvider.GetRequiredService<IdentitySeed>().Run();
+    if (args.Contains("--seed-clinic")) await scope.ServiceProvider.GetRequiredService<ClinicSeed>().Run();
     return;
 }
 app.Run();

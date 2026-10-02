@@ -1,4 +1,5 @@
 using ClinicaRamirez.Api.Domain.Identity;
+using ClinicaRamirez.Api.Domain.ClinicAdministration;
 using Microsoft.EntityFrameworkCore;
 
 namespace ClinicaRamirez.Api.Persistence;
@@ -12,9 +13,17 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<Clinic> Clinics => Set<Clinic>();
+    public DbSet<Center> Centers => Set<Center>();
+    public DbSet<DoctorProfile> DoctorProfiles => Set<DoctorProfile>();
+    public DbSet<Specialty> Specialties => Set<Specialty>();
+    public DbSet<DoctorSpecialty> DoctorSpecialties => Set<DoctorSpecialty>();
+    public DbSet<DoctorCenter> DoctorCenters => Set<DoctorCenter>();
+    public DbSet<DoctorSchedule> DoctorSchedules => Set<DoctorSchedule>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
+        b.ConfigureClinicAdministration();
         b.Entity<User>(e => {
             e.HasKey(x => x.Id);
             e.Property(x => x.FirstName).HasMaxLength(100).IsRequired();
@@ -91,6 +100,13 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     {
         foreach (var entry in ChangeTracker.Entries())
         {
+            if (entry.Entity is IAdministrativeRecord record)
+            {
+                if (entry.State == EntityState.Deleted)
+                    throw new InvalidOperationException("Utilice desactivación lógica.");
+                if (entry.State is EntityState.Added or EntityState.Modified)
+                    record.UpdatedAt = DateTime.UtcNow;
+            }
             if (entry.Entity is AuditLog && entry.State is EntityState.Modified or EntityState.Deleted)
                 throw new InvalidOperationException("La auditoría es inmutable.");
             if (entry.State == EntityState.Deleted && (entry.Entity is User || entry.Entity is Role))
