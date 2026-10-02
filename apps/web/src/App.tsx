@@ -10,12 +10,14 @@ import DoctorsPage from './modules/admin/doctors/DoctorsPage';
 import SpecialtiesPage from './modules/admin/specialties/SpecialtiesPage';
 import SchedulesPage from './modules/admin/schedules/SchedulesPage';
 import DashboardPage from './modules/admin/DashboardPage';
+import PatientsPage from './modules/admin/patients/PatientsPage';
 import './admin.css';
 import './clinic-admin.css';
 
 function Workspace() {
   const route = useRoute(); const [path, query = ''] = route.split('?');
   const pages = {
+    '/patients': <Protected permission="patients.view"><PatientsPage /></Protected>,
     '/users': <Protected permission="users.view"><UsersPage /></Protected>, '/roles': <Protected permission="roles.view"><RolesPage /></Protected>, '/permissions': <Protected permission="permissions.view"><PermissionsPage /></Protected>,
     '/clinic': <Protected permission="clinic.view"><ClinicPage /></Protected>, '/centers': <Protected permission="centers.view"><CentersPage /></Protected>, '/doctors': <Protected permission="doctors.view"><DoctorsPage /></Protected>,
     '/specialties': <Protected permission="specialties.view"><SpecialtiesPage /></Protected>, '/schedules': <Protected permission="schedules.view"><SchedulesPage key={query} initialDoctor={new URLSearchParams(query).get('doctor') ?? ''} /></Protected>,

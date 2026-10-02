@@ -1,4 +1,5 @@
 using ClinicaRamirez.Api.Domain.Identity;
+using ClinicaRamirez.Api.Domain.Patients;
 using ClinicaRamirez.Api.Domain.ClinicAdministration;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,6 +7,7 @@ namespace ClinicaRamirez.Api.Persistence;
 
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    public DbSet<PatientProfile> PatientProfiles => Set<PatientProfile>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
@@ -24,6 +26,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.ConfigureClinicAdministration();
+        b.ConfigurePatients();
         b.Entity<User>(e => {
             e.HasKey(x => x.Id);
             e.Property(x => x.FirstName).HasMaxLength(100).IsRequired();
@@ -98,6 +101,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
+        PreparePatients();
         foreach (var entry in ChangeTracker.Entries())
         {
             if (entry.Entity is IAdministrativeRecord record)
@@ -120,5 +124,25 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
                 role.UpdatedAt = DateTime.UtcNow;
         }
         return base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void PreparePatients()
+    {
+        foreach (var entry in ChangeTracker.Entries<PatientProfile>())
+        {
+            if (entry.State == EntityState.Deleted) throw new InvalidOperationException("Utilice desactivación lógica de pacientes.");
+            if (entry.State == EntityState.Added) entry.Entity.CreatedAt = DateTime.UtcNow;
+            if (entry.State is EntityState.Added or EntityState.Modified) entry.Entity.UpdatedAt = DateTime.UtcNow;
+        }
+    }
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        PreparePatients();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        PreparePatients();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 }

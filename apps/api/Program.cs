@@ -43,6 +43,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AdminService>();
 builder.Services.AddScoped<IdentitySeed>();
 builder.Services.AddScoped<ClinicAdministrationService>();
+builder.Services.AddScoped<ClinicaRamirez.Api.Application.Patients.PatientsService>();
 builder.Services.AddScoped<ClinicSeed>();
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();

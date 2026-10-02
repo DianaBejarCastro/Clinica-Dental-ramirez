@@ -681,6 +681,95 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                     b.ToTable("UserRoles");
                 });
 
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Patients.PatientProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateOnly?>("BirthDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("BloodType")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Ci")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<string>("EmergencyContactName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("EmergencyContactPhone")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Gender")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Ci")
+                        .IsUnique()
+                        .HasFilter("\"Ci\" IS NOT NULL");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("LastName");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasFilter("\"UserId\" IS NOT NULL");
+
+                    b.ToTable("PatientProfiles", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PatientProfiles_Ci", "\"Ci\" IS NULL OR (length(\"Ci\") > 0 AND \"Ci\" = upper(btrim(\"Ci\")))");
+
+                            t.HasCheckConstraint("CK_PatientProfiles_Names", "length(btrim(\"FirstName\")) > 0 AND length(btrim(\"LastName\")) > 0");
+                        });
+                });
+
             modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.Center", b =>
                 {
                     b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.Clinic", "Clinic")
@@ -831,6 +920,16 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Role");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Patients.PatientProfile", b =>
+                {
+                    b.HasOne("ClinicaRamirez.Api.Domain.Identity.User", "User")
+                        .WithOne()
+                        .HasForeignKey("ClinicaRamirez.Api.Domain.Patients.PatientProfile", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("User");
                 });
