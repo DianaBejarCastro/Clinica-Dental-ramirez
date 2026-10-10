@@ -1,0 +1,9 @@
+.patient-register .login-form { max-width: 650px; }
+.registration-fields { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.registration-fields label { min-width: 0; }
+.registration-fields .full-width { grid-column: 1 / -1; }
+.patient-portal { width: min(100% - 32px, 1050px); margin: 32px auto; }
+.patient-portal header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+.patient-portal dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.patient-portal dd { margin: 0 0 12px; overflow-wrap: anywhere; }
+@media (max-width: 600px) { .registration-fields, .patient-portal dl { grid-template-columns: 1fr; } }

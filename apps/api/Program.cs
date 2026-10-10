@@ -46,6 +46,8 @@ builder.Services.AddScoped<ClinicAdministrationService>();
 builder.Services.AddScoped<ClinicLogoService>();
 builder.Services.AddScoped<ClinicSocialNetworkService>();
 builder.Services.AddScoped<ClinicaRamirez.Api.Application.Patients.PatientsService>();
+builder.Services.AddScoped<ClinicaRamirez.Api.Application.Patients.PatientRegistrationService>();
+builder.Services.AddScoped<ClinicaRamirez.Api.Application.Patients.PatientPortalService>();
 builder.Services.AddScoped<ClinicaRamirez.Api.Application.Appointments.AppointmentsService>();
 builder.Services.AddScoped<ClinicSeed>();
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
@@ -88,6 +90,9 @@ var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string
 builder.Services.AddCors(options => options.AddPolicy("Web",
     policy => policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 builder.Services.AddRateLimiter(options => {
+    options.AddPolicy("patient-registration", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("REGISTRATION_RATE_LIMIT", 10), Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     options.RejectionStatusCode = 429;
     options.AddPolicy("login", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",

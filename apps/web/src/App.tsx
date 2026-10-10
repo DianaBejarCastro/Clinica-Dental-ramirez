@@ -1,4 +1,7 @@
-import { AuthProvider } from './modules/auth/AuthProvider';
+import { AuthProvider, useAuth } from './modules/auth/AuthProvider';
+import { useEffect } from 'react';
+import PatientRegisterPage from './modules/auth/PatientRegisterPage';
+import PatientDashboard from './modules/patient/PatientDashboard';
 import { Protected, useRoute } from './router/Router';
 import AdminLayout from './layouts/AdminLayout';
 import UsersPage from './modules/admin/users/UsersPage';
@@ -18,6 +21,9 @@ import './clinic-admin.css';
 
 function Workspace() {
   const route = useRoute(); const [path, query = ''] = route.split('?');
+  const { session, loading } = useAuth(); const isPatient = session?.user.roles.includes('PATIENT') ?? false;
+  useEffect(() => { if (!loading && isPatient && path !== '/patient' && path !== '/patient/appointments') window.location.hash = '/patient'; }, [isPatient, loading, path]);
+  if (!loading && isPatient) return <Protected><PatientDashboard appointments={path === '/patient/appointments'} /></Protected>;
   const pages = {
     '/appointments': <Protected permission="appointments.view"><AppointmentsPage /></Protected>,
     '/patients': <Protected permission="patients.view"><PatientsPage /></Protected>,
@@ -31,5 +37,6 @@ function Workspace() {
 export default function App() {
   const route = useRoute(); const [path, query = ''] = route.split('?');
   if (path === '/inicio') return <PublicHomePage section={new URLSearchParams(query).get('section')} />;
+  if (path === '/register') return <PatientRegisterPage />;
   return <AuthProvider><Workspace /></AuthProvider>;
 }
