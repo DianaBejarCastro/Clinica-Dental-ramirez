@@ -23,7 +23,7 @@ export function PageTitle({ title, description, children }: { title: string; des
   return <div className="title-row"><div><h1>{title}</h1><p className="muted">{description}</p></div>{children}</div>;
 }
 export function StateBadge({ active }: { active: boolean }) {
-  return <span className={`badge ${active ? '' : 'inactive'}`}>{active ? 'Activo' : 'Inactivo'}</span>;
+  return <span className={`badge ${active ? 'active' : 'inactive'}`}>{active ? 'Activo' : 'Inactivo'}</span>;
 }
 export interface FieldSpec { name: string; label: string; type?: string; required?: boolean; maxLength?: number; min?: number; max?: number; step?: string }
 export function Fields({ fields, value = {}, disabled = false }: { fields: FieldSpec[]; value?: object; disabled?: boolean }) {

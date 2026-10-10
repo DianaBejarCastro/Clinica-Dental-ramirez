@@ -12,7 +12,6 @@ public sealed class ClinicUpdateRequest
     [MaxLength(30)] public string? Phone { get; init; }
     [MaxLength(30)] public string? Whatsapp { get; init; }
     [MaxLength(254), EmailAddress] public string? Email { get; init; }
-    [MaxLength(2048), HttpUrl] public string? Website { get; init; }
     [MaxLength(50)] public string? TaxId { get; init; }
     public bool IsActive { get; init; } = true;
 }
@@ -82,7 +81,11 @@ public sealed class DoctorScheduleCreateRequest : DoctorScheduleUpdateRequest;
 public sealed record StatusRequest(bool IsActive);
 
 public sealed record ClinicResponse(Guid Id, string Name, string? LegalName, string? Description, string? LogoUrl,
-    string? Phone, string? Whatsapp, string? Email, string? Website, string? TaxId, bool IsActive, DateTime CreatedAt, DateTime UpdatedAt);
+    string? Phone, string? Whatsapp, string? Email, string? TaxId, bool IsActive, DateTime CreatedAt, DateTime UpdatedAt)
+{
+    public ClinicLogoResponse? Logo { get; init; }
+}
+public sealed record ClinicLogoResponse(string ContentType, string FileName, long Size, DateTime UpdatedAt);
 public sealed record CenterResponse(Guid Id, Guid ClinicId, string Name, string Code, string? Description, string Address,
     string? City, string? Department, string Country, string? Phone, string? Whatsapp, string? Email, string? GoogleMapsUrl,
     decimal? Latitude, decimal? Longitude, bool IsMain, bool IsActive, DateTime CreatedAt, DateTime UpdatedAt);

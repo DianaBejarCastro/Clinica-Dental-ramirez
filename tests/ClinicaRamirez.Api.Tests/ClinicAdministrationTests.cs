@@ -102,8 +102,11 @@ public sealed class ClinicAdministrationTests(IdentityFixture f) : IClassFixture
         using var client = await Admin();
         var original = await Json(await client.GetAsync("/api/admin/clinic"));
         var name = Unique("Clinica actualizada ");
-        var body = new { name, legalName = "Entidad sintetica", description = "Prueba", logoUrl = "https://example.com/logo.png", phone = "22123456", whatsapp = "72000000", email = "clinic@example.com", website = "https://example.com", taxId = "TEST-NIT", isActive = true };
+        var body = new { name, legalName = "Entidad sintetica", description = "Prueba", logoUrl = "https://example.com/logo.png", phone = "22123456", whatsapp = "72000000", email = "clinic@example.com", taxId = "TEST-NIT", isActive = true };
         var updated = await Json(await client.PutAsJsonAsync("/api/admin/clinic", body));
+        Assert.False(original.TryGetProperty("website", out _));
+        Assert.False(updated.TryGetProperty("website", out _));
+        Assert.False(updated.TryGetProperty("siteWeb", out _));
         Assert.Equal(Id(original), Id(updated));
         Assert.Equal(name, updated.GetProperty("name").GetString());
         Assert.Equal("TEST-NIT", (await Json(await client.GetAsync("/api/admin/clinic"))).GetProperty("taxId").GetString());

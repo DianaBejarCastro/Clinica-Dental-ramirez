@@ -1,5 +1,6 @@
+import type { ClinicLogoMetadata } from './clinic/logoResource';
 export interface Timestamped { id: string; isActive: boolean; createdAt: string; updatedAt: string | null }
-export interface Clinic extends Timestamped { name: string; legalName: string | null; description: string | null; logoUrl: string | null; phone: string | null; whatsapp: string | null; email: string | null; website: string | null; taxId: string | null }
+export interface Clinic extends Timestamped { logo?: ClinicLogoMetadata | null; name: string; legalName: string | null; description: string | null; logoUrl: string | null; phone: string | null; whatsapp: string | null; email: string | null; taxId: string | null }
 export interface Center extends Timestamped { clinicId: string; name: string; code: string; description: string | null; address: string; city: string | null; department: string | null; country: string; phone: string | null; whatsapp: string | null; email: string | null; googleMapsUrl: string | null; latitude: number | null; longitude: number | null; isMain: boolean }
 export interface Specialty extends Timestamped { code: string; name: string; description: string | null; doctorCount: number }
 export interface Assignment { id: string; code: string; name: string; isActive: boolean }

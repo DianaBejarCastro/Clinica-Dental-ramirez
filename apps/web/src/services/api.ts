@@ -4,6 +4,7 @@ export interface Role { id: string; code: string; name: string; description: str
 export interface Permission { id: string; code: string; name: string; module: string }
 export interface User { id: string; firstName: string; lastName: string; email: string; phone: string | null; isActive: boolean; roles: { id: string; name: string }[] }
 const base = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
+export const apiUrl = (path: string) => base + path;
 let session: Session | null = null;
 let refreshing: Promise<Session> | null = null;
 const listeners = new Set<() => void>();
@@ -13,9 +14,9 @@ export function setSession(value: Session | null) { session = value; listeners.f
 export class ApiError extends Error { constructor(public status: number, message: string) { super(message); } }
 async function send<T>(path: string, method = 'GET', data?: unknown): Promise<T> {
   const response = await fetch(base + path, { method, credentials: 'include', headers: {
-    'Content-Type': 'application/json', 'X-Clinic-Request': '1',
+    ...(data instanceof FormData ? {} : { 'Content-Type': 'application/json' }), 'X-Clinic-Request': '1',
     ...(session ? { Authorization: `Bearer ${session.accessToken}` } : {}),
-  }, body: data === undefined ? undefined : JSON.stringify(data) });
+  }, body: data instanceof FormData ? data : data === undefined ? undefined : JSON.stringify(data) });
   if (!response.ok) {
     const problem = await response.json().catch(() => ({}));
     throw new ApiError(response.status, problem.title ?? (response.status === 403 ? 'No tienes permiso para esta acción.' : 'No se pudo completar la solicitud.'));

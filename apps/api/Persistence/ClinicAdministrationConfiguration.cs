@@ -13,10 +13,12 @@ public static class ClinicAdministrationConfiguration
             e.Property(x => x.LegalName).HasMaxLength(250);
             e.Property(x => x.Description).HasMaxLength(2000);
             e.Property(x => x.LogoUrl).HasMaxLength(2048);
+            e.Property(x => x.LogoData).HasColumnType("bytea");
+            e.Property(x => x.LogoContentType).HasMaxLength(50);
+            e.Property(x => x.LogoFileName).HasMaxLength(255);
             e.Property(x => x.Phone).HasMaxLength(30);
             e.Property(x => x.Whatsapp).HasMaxLength(30);
             e.Property(x => x.Email).HasMaxLength(254);
-            e.Property(x => x.Website).HasMaxLength(2048);
             e.Property(x => x.TaxId).HasMaxLength(50);
             e.ToTable("Clinics", t => {
                 t.HasCheckConstraint("CK_Clinics_Singleton", "\"Id\" = '00000000-0000-0000-0000-000000000001'::uuid");

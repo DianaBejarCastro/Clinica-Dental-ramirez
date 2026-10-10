@@ -1,0 +1,78 @@
+.public-site { --public-accent: #087f83; --public-soft: #eaf6f6; color: var(--color-text); background: var(--color-surface); }
+.public-site * { box-sizing: border-box; }
+.public-container { width: min(1160px, calc(100% - 48px)); margin-inline: auto; }
+.public-site a { text-decoration: none; }
+.public-site a:focus-visible, .public-site button:focus-visible { outline: 3px solid var(--public-accent); outline-offset: 5px; }
+.public-header { border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
+.public-header-inner { min-height: 96px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.public-brand { display: flex; align-items: center; gap: 12px; color: var(--color-text); flex-shrink: 0; }
+.public-brand > span { font-size: 10px; letter-spacing: .12em; }
+.public-brand strong { display: block; font-size: 18px; letter-spacing: .08em; }
+.public-site .clinic-brand-logo img { max-width: 140px; max-height: 52px; width: auto; height: auto; object-fit: contain; background: transparent; border: 0; padding: 0; border-radius: 0; }
+.public-menu { display: flex; align-items: center; gap: 20px; }
+.public-menu a { font-size: 13px; font-weight: 600; color: var(--color-text); }
+.public-menu a:hover, .public-footer a:hover { color: var(--public-accent); }
+.public-menu .public-access { color: var(--color-muted); }
+.public-site .public-button { display: inline-flex; align-items: center; justify-content: center; gap: 12px; padding: 13px 20px; border-radius: var(--radius-sm); background: var(--color-primary); color: var(--color-surface); font-size: 14px; font-weight: 600; transition: background .2s; }
+.public-site .public-button:hover { background: var(--color-primary-hover); color: var(--color-surface); }
+.public-site .public-button-secondary { background: transparent; color: var(--color-primary); border: 1px solid var(--color-border); }
+.public-menu-toggle { display: none; }
+.public-hero { background: var(--color-bg); overflow: hidden; }
+.public-hero-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 64px; align-items: center; min-height: 580px; padding-block: 72px; }
+.public-eyebrow { color: var(--public-accent); font-size: 11px; font-weight: 700; letter-spacing: .15em; margin: 0 0 18px; }
+.public-site h1 { font-size: clamp(36px, 4.5vw, 60px); line-height: 1.12; letter-spacing: -.04em; margin: 0 0 24px; }
+.public-site h1 span { color: var(--color-primary); }
+.public-hero-copy > p:not(.public-eyebrow):not(.public-hero-note) { font-size: 17px; color: var(--color-muted); max-width: 490px; }
+.public-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+.public-hero-note { font-size: 12px; color: var(--color-muted); margin-top: 26px; }
+.public-hero-art { position: relative; min-height: 390px; display: grid; place-items: center; border-radius: 48% 48% 16% 16%; background: var(--public-soft); }
+.public-hero-art svg { position: relative; width: 190px; height: 230px; color: var(--color-surface); z-index: 1; }
+.public-orbit { position: absolute; width: 300px; height: 300px; border: 1px solid var(--public-accent); opacity: .2; border-radius: 50%; }
+.public-hero-art > p { position: absolute; bottom: 18px; right: 24px; color: var(--public-accent); font-size: 13px; }
+.public-section { padding-block: 76px; scroll-margin-top: 24px; }
+.public-site h2 { font-size: clamp(26px, 3vw, 36px); letter-spacing: -.025em; line-height: 1.2; margin: 0 0 20px; }
+.public-intro { max-width: 650px; color: var(--color-muted); margin-bottom: 32px; }
+.public-benefits, .public-services { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin-top: 32px; }
+.public-card { padding: 26px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+.public-card h3 { font-size: 16px; line-height: 1.5; margin: 16px 0 0; }
+.public-benefit-mark { display: block; width: 22px; height: 4px; background: var(--public-accent); }
+.public-service-number { color: var(--public-accent); font-size: 12px; font-weight: 600; }
+.public-tinted { background: var(--color-bg); }
+.public-team-empty { display: flex; align-items: center; gap: 24px; max-width: 700px; margin-top: 30px; }
+.public-team-empty > span { font-size: 38px; color: var(--public-accent); }
+.public-team-empty h3 { font-size: 18px; margin-bottom: 8px; }
+.public-team-empty p { color: var(--color-muted); }
+.public-cta { background: var(--color-sidebar); color: var(--color-surface); padding-block: 48px; }
+.public-cta > div { display: flex; align-items: center; justify-content: space-between; gap: 28px; }
+.public-cta .public-eyebrow { color: var(--color-sidebar-text); }
+.public-cta p { margin-bottom: 0; }
+.public-cta .public-button { flex-shrink: 0; }
+.public-contact-note { padding: 24px; border-left: 3px solid var(--public-accent); background: var(--public-soft); max-width: 720px; line-height: 1.7; }
+.public-contact-list { display: grid; gap: 12px; font-style: normal; overflow-wrap: anywhere; }
+.public-footer { background: var(--color-bg); border-top: 1px solid var(--color-border); padding-block: 40px; }
+.public-footer-inner { display: flex; justify-content: space-between; align-items: center; gap: 32px; }
+.public-footer p { font-size: 13px; color: var(--color-muted); }
+.public-footer nav { display: flex; flex-wrap: wrap; gap: 20px; }
+.public-footer a { font-size: 13px; color: var(--color-muted); }
+.public-skip { position: absolute; left: 12px; top: -100px; padding: 12px; background: var(--color-surface); z-index: 10; }
+.public-skip:focus { top: 12px; }
+.login-back { display: inline-block; margin-bottom: 24px; font-size: 14px; }
+@media (max-width: 1100px) { .public-header-inner { flex-wrap: wrap; padding-block: 20px; } .public-menu { flex-wrap: wrap; gap: 16px; } .public-benefits, .public-services { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 768px) {
+  .public-container { width: calc(100% - 36px); }
+  .public-header-inner { gap: 16px; min-height: 80px; }
+  .public-menu-toggle { display: inline-flex; align-items: center; padding: 10px; background: transparent; color: var(--color-primary); border: 1px solid var(--color-border); }
+  .public-menu { display: none; width: 100%; align-items: stretch; flex-direction: column; gap: 0; }
+  .public-menu.is-open { display: flex; }
+  .public-menu a { padding: 13px 8px; }
+  .public-menu .public-button { margin-top: 10px; }
+  .public-hero-grid { grid-template-columns: 1fr; gap: 32px; min-height: auto; padding-block: 48px; }
+  .public-hero-art { min-height: 300px; max-width: 460px; width: 100%; margin-inline: auto; }
+  .public-orbit { width: 250px; height: 250px; }
+  .public-hero-art svg { width: 140px; height: 180px; }
+  .public-section { padding-block: 48px; }
+  .public-cta > div, .public-footer-inner { align-items: flex-start; flex-direction: column; }
+  .public-card { padding: 20px; }
+}
+@media (max-width: 400px) { .public-benefits, .public-services { grid-template-columns: 1fr; } .public-site .clinic-brand-logo img { max-width: 110px; } .public-brand strong { font-size: 16px; } }
+@media (prefers-reduced-motion: reduce) { .public-site .public-button { transition: none; } }

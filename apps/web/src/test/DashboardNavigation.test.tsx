@@ -21,7 +21,7 @@ const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit
   if (path === '/api/admin/clinic' && init?.method === 'GET') return Response.json({
     id: 'clinic-1', name: 'Clínica Dental RAMÍREZ', isActive: true,
     legalName: null, description: null, logoUrl: null, phone: null, whatsapp: null,
-    email: null, website: null, taxId: null, createdAt: '2026-09-30T00:00:00Z', updatedAt: null,
+    email: null, taxId: null, createdAt: '2026-09-30T00:00:00Z', updatedAt: null,
   });
   throw new Error(`Solicitud inesperada: ${init?.method} ${path}`);
 });
@@ -92,10 +92,12 @@ it('retira contadores y vuelve a consultar al cambiar permisos de la sesión', a
 it('incluye las seis vistas v0.3.0 en la navegación autorizada', async () => {
   render(<App />);
   const nav = within(await screen.findByRole('navigation'));
+  await userEvent.click(nav.getByRole('button', { name: 'Clínica' }));
+  await userEvent.click(nav.getByRole('button', { name: 'Equipo médico' }));
   for (const [name, route] of [
-    ['Resumen', '/'], ['Clínica', '/clinic'], ['Sucursales', '/centers'],
+    ['Resumen', '/'], ['Datos de la clínica', '/clinic'], ['Sucursales', '/centers'],
     ['Doctores', '/doctors'], ['Especialidades', '/specialties'], ['Horarios', '/schedules'],
-  ]) expect(nav.getByRole('link', { name }).getAttribute('href')).toBe(`#${route}`);
+  ]) expect(nav.getByRole('link', { name, hidden: true }).getAttribute('href')).toBe(`#${route}`);
   expect(nav.getByRole('link', { name: 'Resumen' }).getAttribute('aria-current')).toBe('page');
 });
 
@@ -103,16 +105,17 @@ it('navega entre resumen y clínica marcando la ruta activa', async () => {
   render(<App />);
   const user = userEvent.setup();
   const nav = within(await screen.findByRole('navigation'));
-  await user.click(nav.getByRole('link', { name: 'Clínica' }));
+  await user.click(nav.getByRole('button', { name: 'Clínica' }));
+  await user.click(nav.getByRole('link', { name: 'Datos de la clínica' }));
   expect(await screen.findByDisplayValue('Clínica Dental RAMÍREZ')).toBeTruthy();
-  expect(nav.getByRole('link', { name: 'Clínica' }).getAttribute('aria-current')).toBe('page');
+  expect(nav.getByRole('link', { name: 'Datos de la clínica' }).getAttribute('aria-current')).toBe('page');
   await user.click(nav.getByRole('link', { name: 'Resumen' }));
   expect(await screen.findByRole('heading', { name: 'Hola, Ana.' })).toBeTruthy();
   expect(nav.getByRole('link', { name: 'Resumen' }).getAttribute('aria-current')).toBe('page');
 });
 
 it.each([
-  ['/clinic', 'Clínica'], ['/centers', 'Sucursales'], ['/doctors', 'Doctores'],
+  ['/clinic', 'Datos de la clínica'], ['/centers', 'Sucursales'], ['/doctors', 'Doctores'],
   ['/specialties', 'Especialidades'], ['/schedules', 'Horarios'],
 ])('restringe acceso directo a %s y oculta su navegación sin permiso', async (route, name) => {
   permissions = [];

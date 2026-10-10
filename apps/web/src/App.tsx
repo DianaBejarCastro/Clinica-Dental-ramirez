@@ -11,12 +11,15 @@ import SpecialtiesPage from './modules/admin/specialties/SpecialtiesPage';
 import SchedulesPage from './modules/admin/schedules/SchedulesPage';
 import DashboardPage from './modules/admin/DashboardPage';
 import PatientsPage from './modules/admin/patients/PatientsPage';
+import AppointmentsPage from './modules/admin/appointments/AppointmentsPage';
+import PublicHomePage from './modules/public/PublicHomePage';
 import './admin.css';
 import './clinic-admin.css';
 
 function Workspace() {
   const route = useRoute(); const [path, query = ''] = route.split('?');
   const pages = {
+    '/appointments': <Protected permission="appointments.view"><AppointmentsPage /></Protected>,
     '/patients': <Protected permission="patients.view"><PatientsPage /></Protected>,
     '/users': <Protected permission="users.view"><UsersPage /></Protected>, '/roles': <Protected permission="roles.view"><RolesPage /></Protected>, '/permissions': <Protected permission="permissions.view"><PermissionsPage /></Protected>,
     '/clinic': <Protected permission="clinic.view"><ClinicPage /></Protected>, '/centers': <Protected permission="centers.view"><CentersPage /></Protected>, '/doctors': <Protected permission="doctors.view"><DoctorsPage /></Protected>,
@@ -26,5 +29,7 @@ function Workspace() {
 }
 
 export default function App() {
+  const route = useRoute(); const [path, query = ''] = route.split('?');
+  if (path === '/inicio') return <PublicHomePage section={new URLSearchParams(query).get('section')} />;
   return <AuthProvider><Workspace /></AuthProvider>;
 }

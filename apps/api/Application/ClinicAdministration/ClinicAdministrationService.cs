@@ -47,7 +47,7 @@ public sealed class ClinicAdministrationService(AppDbContext db, IdentitySupport
             clinic.Name = Text(request.Name); clinic.LegalName = Optional(request.LegalName);
             clinic.Description = Optional(request.Description); clinic.LogoUrl = Optional(request.LogoUrl);
             clinic.Phone = Optional(request.Phone); clinic.Whatsapp = Optional(request.Whatsapp);
-            clinic.Email = Optional(request.Email)?.ToLowerInvariant(); clinic.Website = Optional(request.Website);
+            clinic.Email = Optional(request.Email)?.ToLowerInvariant();
             clinic.TaxId = Optional(request.TaxId); clinic.IsActive = request.IsActive;
             support.Audit("clinic_updated", "Clinic", clinic.Id);
         });
@@ -333,7 +333,8 @@ public sealed class ClinicAdministrationService(AppDbContext db, IdentitySupport
             permissions.Contains("specialties.view") ? await db.Specialties.CountAsync() : null);
     }
     private static ClinicResponse ClinicDto(Clinic x) => new(x.Id, x.Name, x.LegalName, x.Description, x.LogoUrl,
-        x.Phone, x.Whatsapp, x.Email, x.Website, x.TaxId, x.IsActive, x.CreatedAt, x.UpdatedAt);
+        x.Phone, x.Whatsapp, x.Email, x.TaxId, x.IsActive, x.CreatedAt, x.UpdatedAt)
+        { Logo = x.LogoData is null ? null : new(x.LogoContentType!, x.LogoFileName!, x.LogoSize!.Value, x.LogoUpdatedAt!.Value) };
     private static CenterResponse CenterDto(Center x) => new(x.Id, x.ClinicId, x.Name, x.Code, x.Description, x.Address,
         x.City, x.Department, x.Country, x.Phone, x.Whatsapp, x.Email, x.GoogleMapsUrl, x.Latitude, x.Longitude,
         x.IsMain, x.IsActive, x.CreatedAt, x.UpdatedAt);

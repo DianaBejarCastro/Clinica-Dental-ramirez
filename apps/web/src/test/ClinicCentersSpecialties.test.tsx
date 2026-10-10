@@ -23,6 +23,8 @@ const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit
   const method = init?.method ?? 'GET';
   const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {};
   if (path === '/api/auth/refresh') return response(session);
+  if (path === '/api/admin/clinic/social-networks') return response([]);
+  if (path === '/api/admin/clinic/social-networks') return response([]);
   if (failure?.path === path && failure.method === method) return response({ title: failure.message }, 400);
   if (path === '/api/admin/clinic') {
     if (method === 'PUT') clinic = { ...clinic, ...body };
@@ -70,7 +72,7 @@ function requestBody(path: string, method: string) {
 beforeEach(() => {
   setSession(null);
   failure = null;
-  clinic = { ...timestamp, id: 'clinic-1', name: 'Clínica RAMÍREZ', legalName: 'Ramírez SRL', description: null, logoUrl: null, phone: '22223333', whatsapp: null, email: 'clinic@example.com', website: null, taxId: null, isActive: true };
+  clinic = { ...timestamp, id: 'clinic-1', name: 'Clínica RAMÍREZ', legalName: 'Ramírez SRL', description: null, logoUrl: null, phone: '22223333', whatsapp: null, email: 'clinic@example.com', taxId: null, isActive: true };
   centers = [{ ...timestamp, id: 'center-1', clinicId: clinic.id, name: 'Sucursal Central', code: 'CENTRAL', description: null, address: 'Calle 1', city: 'La Paz', department: 'La Paz', country: 'Bolivia', phone: null, whatsapp: null, email: null, googleMapsUrl: 'https://maps.example.com/central', latitude: null, longitude: null, isMain: true, isActive: true }];
   specialties = [{ ...timestamp, id: 'specialty-1', name: 'Ortodoncia', code: 'ORTHODONTICS', description: 'Atención especializada', isActive: true, doctorCount: 2 }];
   fetchMock.mockClear();
@@ -82,6 +84,7 @@ describe('Clínica', () => {
     mount(<ClinicPage />, ['clinic.view', 'clinic.update']);
     expect(await screen.findByDisplayValue('Clínica RAMÍREZ')).toBeTruthy();
     expect(screen.getByDisplayValue('clinic@example.com')).toBeTruthy();
+    expect(screen.queryByLabelText('Sitio web')).toBeNull();
     expect(screen.getByDisplayValue('Ramírez SRL')).toBeTruthy();
   });
   it('actualiza datos mediante PUT y conserva estado', async () => {
@@ -92,6 +95,7 @@ describe('Clínica', () => {
     await user.type(name, 'Clínica Renovada');
     await user.click(screen.getByRole('button', { name: 'Guardar clínica' }));
     expect(await screen.findByText('Datos de la clínica actualizados.')).toBeTruthy();
+    expect(requestBody('/api/admin/clinic', 'PUT')).not.toHaveProperty('website');
     expect(requestBody('/api/admin/clinic', 'PUT')).toMatchObject({ name: 'Clínica Renovada', legalName: 'Ramírez SRL', email: 'clinic@example.com', isActive: true });
   });
   it('muestra error al cargar', async () => {

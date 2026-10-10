@@ -7,6 +7,8 @@ namespace ClinicaRamirez.Api.Persistence;
 
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    public DbSet<ClinicSocialNetwork> ClinicSocialNetworks => Set<ClinicSocialNetwork>();
+    public DbSet<ClinicaRamirez.Api.Domain.Appointments.Appointment> Appointments => Set<ClinicaRamirez.Api.Domain.Appointments.Appointment>();
     public DbSet<PatientProfile> PatientProfiles => Set<PatientProfile>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
@@ -26,7 +28,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.ConfigureClinicAdministration();
+        b.ConfigureClinicSocialNetworks();
         b.ConfigurePatients();
+        b.ConfigureAppointments();
         b.Entity<User>(e => {
             e.HasKey(x => x.Id);
             e.Property(x => x.FirstName).HasMaxLength(100).IsRequired();
@@ -128,6 +132,24 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     private void PreparePatients()
     {
+        foreach (var entry in ChangeTracker.Entries<ClinicSocialNetwork>())
+        {
+            if (entry.State == EntityState.Deleted) throw new InvalidOperationException("Utilice desactivación lógica de redes sociales.");
+            if (entry.State == EntityState.Added) entry.Entity.CreatedAt = DateTime.UtcNow;
+            if (entry.State is EntityState.Added or EntityState.Modified) entry.Entity.UpdatedAt = DateTime.UtcNow;
+        }
+        foreach (var entry in ChangeTracker.Entries<ClinicSocialNetwork>())
+        {
+            if (entry.State == EntityState.Deleted) throw new InvalidOperationException("Utilice desactivación lógica de redes sociales.");
+            if (entry.State == EntityState.Added) entry.Entity.CreatedAt = DateTime.UtcNow;
+            if (entry.State is EntityState.Added or EntityState.Modified) entry.Entity.UpdatedAt = DateTime.UtcNow;
+        }
+        foreach (var entry in ChangeTracker.Entries<ClinicaRamirez.Api.Domain.Appointments.Appointment>())
+        {
+            if (entry.State == EntityState.Deleted) throw new InvalidOperationException("Utilice cancelación de citas.");
+            if (entry.State == EntityState.Added) entry.Entity.CreatedAt = DateTime.UtcNow;
+            if (entry.State is EntityState.Added or EntityState.Modified) entry.Entity.UpdatedAt = DateTime.UtcNow;
+        }
         foreach (var entry in ChangeTracker.Entries<PatientProfile>())
         {
             if (entry.State == EntityState.Deleted) throw new InvalidOperationException("Utilice desactivación lógica de pacientes.");

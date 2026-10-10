@@ -1,10 +1,28 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
 import { setSession } from '../services/api';
 const user = { id: '1', firstName: 'Ana', lastName: 'Prueba', email: 'ana@example.com', roles: ['ADMINISTRATOR'], permissions: ['users.view', 'roles.view', 'permissions.view'] };
 const session = { accessToken: 'test-access', expiresAt: '', user };
+it('login muestra logo público sin bloquear el formulario durante la carga', async () => {
+  render(<App />); const submit = await screen.findByRole('button', { name: 'Ingresar' });
+  expect((submit as HTMLButtonElement).disabled).toBe(false);
+  const image = screen.getByAltText('Logo de la clínica') as HTMLImageElement;
+  expect(image.getAttribute('src')).toContain('/api/clinic/logo');
+  fireEvent.load(image);
+  expect(image.hidden).toBe(false); expect(screen.queryByLabelText('Monograma de la clínica')).toBeNull();
+});
+it('login conserva R al fallar el logo y permite iniciar sesión', async () => {
+  render(<App />); const u = userEvent.setup(); await screen.findByRole('button', { name: 'Ingresar' });
+  fireEvent.error(screen.getByAltText('Logo de la clínica'));
+  expect(screen.getByLabelText('Monograma de la clínica').textContent).toBe('R');
+  expect(screen.queryByAltText('Logo de la clínica')).toBeNull();
+  await u.type(screen.getByLabelText('Email'), user.email);
+  await u.type(screen.getByLabelText('Contraseña'), 'valid-test-password');
+  await u.click(screen.getByRole('button', { name: 'Ingresar' }));
+  expect(await screen.findByText('Hola, Ana.')).toBeTruthy();
+});
 let authenticated = false;
 let loginFails = false;
 const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {

@@ -22,6 +22,77 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Appointments.Appointment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("AppointmentDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("CenterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DoctorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeOnly>("EndTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("SpecialtyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("SpecialtyId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("CenterId", "AppointmentDate");
+
+                    b.HasIndex("PatientId", "AppointmentDate");
+
+                    b.HasIndex("DoctorId", "AppointmentDate", "StartTime");
+
+                    b.ToTable("Appointments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Appointments_Status", "\"Status\" IN ('SCHEDULED','CONFIRMED','IN_PROGRESS','COMPLETED','CANCELLED','NO_SHOW')");
+
+                            t.HasCheckConstraint("CK_Appointments_Time", "\"StartTime\" < \"EndTime\"");
+                        });
+                });
+
             modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.Center", b =>
                 {
                     b.Property<Guid>("Id")
@@ -147,6 +218,23 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                         .HasMaxLength(250)
                         .HasColumnType("character varying(250)");
 
+                    b.Property<string>("LogoContentType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<byte[]>("LogoData")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("LogoFileName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<long?>("LogoSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("LogoUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("LogoUrl")
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)");
@@ -167,10 +255,6 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Website")
-                        .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)");
-
                     b.Property<string>("Whatsapp")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
@@ -182,6 +266,74 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                             t.HasCheckConstraint("CK_Clinics_Name", "length(btrim(\"Name\")) > 0");
 
                             t.HasCheckConstraint("CK_Clinics_Singleton", "\"Id\" = '00000000-0000-0000-0000-000000000001'::uuid");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicSocialNetwork", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ClinicId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("LogoContentType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<byte[]>("LogoData")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("LogoFileName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<long?>("LogoSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClinicId");
+
+                    b.HasIndex("ClinicId", "DisplayOrder");
+
+                    b.HasIndex("ClinicId", "IsActive");
+
+                    b.HasIndex("ClinicId", "Url")
+                        .IsUnique();
+
+                    b.ToTable("ClinicSocialNetworks", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ClinicSocialNetworks_Name", "length(btrim(\"Name\")) > 0 AND \"Name\" = btrim(\"Name\")");
+
+                            t.HasCheckConstraint("CK_ClinicSocialNetworks_Order", "\"DisplayOrder\" >= 0");
+
+                            t.HasCheckConstraint("CK_ClinicSocialNetworks_Url", "\"Url\" ~* '^https?://[^[:space:]]+$'");
                         });
                 });
 
@@ -770,7 +922,50 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Appointments.Appointment", b =>
+                {
+                    b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.Center", null)
+                        .WithMany()
+                        .HasForeignKey("CenterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicaRamirez.Api.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.DoctorProfile", null)
+                        .WithMany()
+                        .HasForeignKey("DoctorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicaRamirez.Api.Domain.Patients.PatientProfile", null)
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.Specialty", null)
+                        .WithMany()
+                        .HasForeignKey("SpecialtyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.Center", b =>
+                {
+                    b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.Clinic", "Clinic")
+                        .WithMany()
+                        .HasForeignKey("ClinicId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Clinic");
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicSocialNetwork", b =>
                 {
                     b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.Clinic", "Clinic")
                         .WithMany()

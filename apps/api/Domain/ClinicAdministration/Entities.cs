@@ -14,11 +14,16 @@ public sealed class Clinic : IAdministrativeRecord
     public string Name { get; set; } = "";
     public string? LegalName { get; set; }
     public string? Description { get; set; }
+    // Legado: conservado por compatibilidad; la carga de logos usa almacenamiento binario.
     public string? LogoUrl { get; set; }
+    public byte[]? LogoData { get; set; }
+    public string? LogoContentType { get; set; }
+    public string? LogoFileName { get; set; }
+    public long? LogoSize { get; set; }
+    public DateTime? LogoUpdatedAt { get; set; }
     public string? Phone { get; set; }
     public string? Whatsapp { get; set; }
     public string? Email { get; set; }
-    public string? Website { get; set; }
     public string? TaxId { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
