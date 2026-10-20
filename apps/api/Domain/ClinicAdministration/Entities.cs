@@ -45,7 +45,6 @@ public sealed class Center : IAdministrativeRecord
     public string? Phone { get; set; }
     public string? Whatsapp { get; set; }
     public string? Email { get; set; }
-    public string? GoogleMapsUrl { get; set; }
     public decimal? Latitude { get; set; }
     public decimal? Longitude { get; set; }
     public bool IsMain { get; set; }
@@ -59,12 +58,7 @@ public sealed class DoctorProfile : IAdministrativeRecord
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
-    public string? ProfessionalLicense { get; set; }
-    public string? Ci { get; set; }
-    public DateOnly? BirthDate { get; set; }
-    public string? Gender { get; set; }
-    public string? Phone { get; set; }
-    public string? Address { get; set; }
+    public string ProfessionalLicense { get; set; } = "";
     public string? PhotoUrl { get; set; }
     public string? Bio { get; set; }
     public bool IsActive { get; set; } = true;

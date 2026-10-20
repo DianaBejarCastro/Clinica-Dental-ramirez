@@ -17,6 +17,7 @@ const onChanged = vi.fn(); const createURL = vi.fn(() => 'blob:logo-preview'); c
 const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
   const path = new URL(String(input)).pathname;
   if (path === '/api/auth/refresh') return Response.json(session());
+  if (path === '/api/admin/clinic/site-images/hero') return Response.json({ title: 'No hay portada.' }, { status: 404 });
   if (path === '/api/admin/clinic/social-networks') return Response.json([]);
   if (path === '/api/admin/clinic/social-networks') return Response.json([]);
   if (path === '/api/admin/clinic/logo') {

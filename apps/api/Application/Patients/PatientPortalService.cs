@@ -18,7 +18,7 @@ public sealed class PatientPortalService(AppDbContext db, IdentitySupport suppor
     {
         var id = await OwnProfile(ct);
         return await db.PatientProfiles.AsNoTracking().Where(x => x.Id == id).Select(x => new PatientAccountResponse(
-            x.FirstName, x.LastName, x.Ci, x.BirthDate, x.Gender, x.Phone, x.Email)).SingleAsync(ct);
+            x.User.FirstName, x.User.LastName, x.User.Ci, x.User.BirthDate, x.User.Gender, x.User.Phone, x.User.Email)).SingleAsync(ct);
     }
     public async Task<PatientAppointmentResponse[]> Appointments(CancellationToken ct)
     {

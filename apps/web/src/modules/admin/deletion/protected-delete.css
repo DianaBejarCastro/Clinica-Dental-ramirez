@@ -1,0 +1,9 @@
+.protected-delete-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: var(--space-4, 1rem); background: rgb(10 30 45 / 45%); }
+.protected-delete-dialog { width: min(100%, 30rem); max-height: 90dvh; overflow: auto; padding: var(--space-6, 1.5rem); background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+.protected-delete-dialog h2 { margin-top: 0; }
+.protected-delete-dialog label { display: grid; gap: .5rem; }
+.protected-delete-dialog input { width: 100%; }
+.protected-delete-dialog .actions { margin-top: 1rem; justify-content: flex-end; }
+button.protected-delete-trigger { color: var(--color-danger); }
+button.protected-delete-confirm { background: var(--color-danger); color: var(--color-surface); border-color: var(--color-danger); }
+.protected-delete-dialog :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }

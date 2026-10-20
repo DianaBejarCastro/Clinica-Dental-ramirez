@@ -1,7 +1,9 @@
+import { notifyClinicNameChanged } from '../../../layouts/SidebarClinicName';
 import { useEffect, useState, type FormEvent } from 'react';
 import { api } from '../../../services/api';
 import { Feedback, Fields, FormActions, PageTitle, readFields, useAction, usePermissions, type FieldSpec } from '../shared';
 import type { Clinic } from '../types';
+import ClinicCoverUploader from './ClinicCoverUploader';
 import ClinicLogoUploader from './ClinicLogoUploader';
 import ClinicSocialNetworks from './ClinicSocialNetworks';
 
@@ -18,9 +20,9 @@ export default function ClinicPage() {
   useEffect(() => { api<Clinic>('/api/admin/clinic').then(setClinic).catch(e => action.setError(e.message)); }, []);
   function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const body = { ...readFields(event, fields), isActive: clinic!.isActive };
-    void action.run(async () => { const saved = await api<Clinic>('/api/admin/clinic', 'PUT', body); setClinic(saved); }, 'Datos de la clínica actualizados.');
+    void action.run(async () => { const saved = await api<Clinic>('/api/admin/clinic', 'PUT', body); setClinic(saved); notifyClinicNameChanged(); }, 'Datos de la clínica actualizados.');
   }
   return <><PageTitle title="Clínica" description="Información institucional y canales de contacto." /><Feedback {...action} />
     {clinic ? <><ClinicLogoUploader logo={clinic.logo ?? null} onChanged={logo => setClinic(value => value ? { ...value, logo } : value)} />
-      <section className="card"><form onSubmit={save} className="editor"><Fields fields={fields} value={clinic} disabled={!can('clinic.update') || action.busy} />{can('clinic.update') && <FormActions busy={action.busy} label="Guardar clínica" />}</form><p className="muted">Estos datos corresponden a toda la clínica.</p></section><ClinicSocialNetworks /></> : !action.error && <p role="status">Cargando clínica…</p>}</>;
+      <section className="card"><form onSubmit={save} className="editor"><Fields fields={fields} value={clinic} disabled={!can('clinic.update') || action.busy} />{can('clinic.update') && <FormActions busy={action.busy} label="Guardar clínica" />}</form><p className="muted">Estos datos corresponden a toda la clínica.</p></section><ClinicCoverUploader /><ClinicSocialNetworks /></> : !action.error && <p role="status">Cargando clínica…</p>}</>;
 }

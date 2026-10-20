@@ -1,3 +1,4 @@
+import { localToday } from '../patient/PatientFields';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 
@@ -28,7 +29,7 @@ export function StateBadge({ active }: { active: boolean }) {
 export interface FieldSpec { name: string; label: string; type?: string; required?: boolean; maxLength?: number; min?: number; max?: number; step?: string }
 export function Fields({ fields, value = {}, disabled = false }: { fields: FieldSpec[]; value?: object; disabled?: boolean }) {
   const values = value as Record<string, unknown>;
-  return <>{fields.map(field => <label key={field.name}>{field.label}{field.type === 'textarea' ? <textarea name={field.name} defaultValue={String(values[field.name] ?? '')} maxLength={field.maxLength ?? 2000} rows={3} disabled={disabled} required={field.required} /> : <input name={field.name} type={field.type ?? 'text'} defaultValue={String(values[field.name] ?? '')} required={field.required} maxLength={field.maxLength ?? 250} min={field.min} max={field.max} step={field.step} disabled={disabled} />}</label>)}</>;
+  return <>{fields.map(field => <label key={field.name}>{field.label}{field.type === 'textarea' ? <textarea name={field.name} defaultValue={String(values[field.name] ?? '')} maxLength={field.maxLength ?? 2000} rows={3} disabled={disabled} required={field.required} /> : <input name={field.name} type={field.type ?? 'text'} defaultValue={String(values[field.name] ?? '')} required={field.required} maxLength={field.maxLength ?? 250} min={field.min} max={field.name === 'birthDate' ? localToday() : field.max} step={field.step} disabled={disabled} />}</label>)}</>;
 }
 export function readFields(event: FormEvent<HTMLFormElement>, fields: FieldSpec[]) {
   const data = new FormData(event.currentTarget);

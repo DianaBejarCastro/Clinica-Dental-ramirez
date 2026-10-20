@@ -1,12 +1,15 @@
 ﻿:root {
-  --color-bg: #f3f6fa; --color-surface: #ffffff; --color-primary: #2563a6;
-  --color-primary-hover: #1c4f88; --color-primary-soft: #eaf2fc;
+  --color-bg: #f3f6fa; --color-surface: #ffffff; --color-brand: #018281; --color-primary: #016f6e;
+  --color-primary-hover: #005f5e; --color-primary-active: #004f4e; --color-primary-soft: #eaf7f6;
+  --color-primary-border: #b8dedc; --color-primary-text: #123d3c; --color-focus: rgb(1 130 129 / 20%);
   --color-text: #24384b; --color-muted: #607489; --color-border: #dce4ed;
   --color-subtle: #f7f9fc; --color-success: #23734c; --color-success-soft: #eaf5ee;
   --color-danger: #b13b3b; --color-danger-soft: #fff0ef;
   --color-warning: #8a5b13; --color-warning-soft: #fff5df;
-  --color-sidebar: #163b60; --color-sidebar-text: #dce9f6; --color-sidebar-muted: #b4cbe1;
-  --color-sidebar-hover: #204a73; --color-sidebar-active: #2a5680; --color-sidebar-border: #365775;
+  --color-sidebar: #015b5b; --color-sidebar-top: #016f6e; --color-sidebar-text: #f0faf9; --color-sidebar-muted: #cce7e5;
+  --color-sidebar-hover: rgb(255 255 255 / 10%); --color-sidebar-active: rgb(255 255 255 / 16%); --color-sidebar-border: rgb(255 255 255 / 35%);
+  --color-sidebar-light: #f4fbfa; --color-sidebar-transition: #ddf3f2; --color-sidebar-bottom: #005f5e;
+  --color-logo-surface: #f7fcfc; --color-danger-hover: #922f2f;
   --radius-sm: 6px; --radius-md: 10px; --radius-lg: 12px;
   --shadow-sm: 0 2px 8px rgb(24 51 82 / 4%);
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
@@ -21,7 +24,7 @@ a { color: var(--color-primary); }
 button { background: var(--color-primary); color: var(--color-surface); border: 1px solid var(--color-primary); border-radius: var(--radius-sm); padding: 9px 15px; cursor: pointer; font-weight: 600; transition: background-color 150ms, border-color 150ms; }
 button:hover { background: var(--color-primary-hover); border-color: var(--color-primary-hover); }
 button:disabled { opacity: .5; cursor: default; }
-button.secondary { color: var(--color-text); background: var(--color-surface); border-color: var(--color-border); }
+button.secondary { color: var(--color-primary); background: var(--color-surface); border-color: var(--color-primary-border); }
 button.secondary:hover { background: var(--color-primary-soft); border-color: var(--color-primary); }
 input:not([type=checkbox]), select, textarea { width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); }
 :is(input:not([type=checkbox]), select, textarea):focus { border-color: var(--color-primary); }
@@ -40,9 +43,9 @@ small { display: block; margin-top: var(--space-1); }
 .brand { display: flex; gap: var(--space-3); align-items: center; font-size: 9px; letter-spacing: .07em; }
 .brand strong { display: block; font-size: 17px; letter-spacing: .04em; }
 .shell { display: flex; min-height: 100vh; }
-.shell aside { width: 236px; flex-shrink: 0; background: var(--color-sidebar); color: var(--color-sidebar-text); padding: var(--space-6) var(--space-4); display: flex; flex-direction: column; gap: var(--space-6); }
-.shell aside > .eyebrow { color: var(--color-sidebar-muted); margin: 0; padding: 0 var(--space-2); }
-.account { margin-top: auto; display: grid; gap: var(--space-2); overflow-wrap: anywhere; border-top: 1px solid var(--color-sidebar-border); padding-top: var(--space-5); }
+.shell aside { width: 236px; flex-shrink: 0; height: 100vh; height: 100dvh; position: sticky; top: 0; align-self: flex-start; overflow: hidden; background: linear-gradient(180deg, rgb(255 255 255 / 6%), rgb(255 255 255 / 0%) 20%), linear-gradient(180deg, var(--color-brand), var(--color-sidebar-top) 55%, var(--color-sidebar-bottom)); color: var(--color-sidebar-text); padding: var(--space-6) var(--space-4); display: flex; flex-direction: column; gap: var(--space-6); }
+.shell aside > .eyebrow { flex-shrink: 0; color: var(--color-sidebar-muted); margin: 0; padding: 0 var(--space-2); }
+.account { flex-shrink: 0; margin-top: 0; display: grid; gap: var(--space-2); overflow-wrap: anywhere; border-top: 1px solid var(--color-sidebar-border); padding-top: var(--space-5); }
 .account small { color: var(--color-sidebar-muted); }
 .account button.secondary { color: var(--color-sidebar-text); border-color: var(--color-sidebar-border); background: transparent; }
 .account button.secondary:hover { background: var(--color-sidebar-hover); }
@@ -93,9 +96,10 @@ legend { font-weight: 600; font-size: 13px; }
 .loading { padding: var(--space-10); text-align: center; }
 @media(max-width: 1100px) { .shell aside { width: 220px; padding-inline: var(--space-3); } }
 @media(max-width: 850px) {
-  .shell { display: block; } .shell aside { width: 100%; padding: var(--space-4); gap: var(--space-4); }
+  .shell { display: block; } .shell aside { position: relative; width: 100%; height: min(36rem, 100vh); height: min(36rem, 100dvh); padding: var(--space-4); gap: var(--space-4); }
   .shell aside > .eyebrow { display: none; }
   .account { display: flex; align-items: center; flex-wrap: wrap; padding-top: var(--space-4); }
+  .shell aside > .brand { min-height: 180px; }
   .account small { margin: 0; } .workspace { padding: var(--space-5); }
   .workspace > header { margin-bottom: var(--space-6); }
   .login { grid-template-columns: 1fr; } .login-brand { padding: var(--space-8); }
@@ -104,3 +108,24 @@ legend { font-weight: 600; font-size: 13px; }
 }
 @media(max-width: 480px) { .workspace { padding: var(--space-4); } .card { padding: var(--space-4); } .workspace > header { align-items: flex-start; } .header-account { align-items: flex-end; flex-direction: column; gap: var(--space-1); } }
 @media(prefers-reduced-motion: reduce) { button { transition: none; } }
+
+/* Shared brand interactions across administration and role portals. */
+a:hover { color: var(--color-primary-active); }
+button:not(:disabled):active { background: var(--color-primary-active); border-color: var(--color-primary-active); }
+button.secondary:not(:disabled):active { background: var(--color-primary-soft); color: var(--color-primary-active); }
+:is(input, select, textarea):focus-visible { border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-focus); }
+input:is([type=checkbox], [type=radio]) { accent-color: var(--color-primary); }
+.shell aside > .brand { flex-shrink: 0; min-height: 160px; align-content: center; background: transparent; color: var(--color-sidebar-text); padding: var(--space-3); border: 0; border-radius: 0; box-shadow: none; }
+.shell .account a { color: var(--color-sidebar-text); text-decoration: underline; }
+.shell .account a:hover { color: var(--color-surface); }
+.shell .account button.secondary:active { background: var(--color-sidebar-active); color: var(--color-sidebar-text); border-color: var(--color-sidebar-border); }
+.login-brand .brand { background: var(--color-logo-surface); color: var(--color-primary-text); padding: var(--space-4); border-radius: var(--radius-md); }
+button:is(.danger, .protected-delete-confirm):not(:disabled) { background: var(--color-danger); border-color: var(--color-danger); color: var(--color-surface); }
+button:is(.danger, .protected-delete-confirm):not(:disabled):is(:hover, :active) { background: var(--color-danger-hover); border-color: var(--color-danger-hover); }
+button.protected-delete-trigger:not(:disabled) { color: var(--color-danger); border-color: var(--color-danger); }
+button.protected-delete-trigger:not(:disabled):is(:hover, :active) { background: var(--color-danger-soft); color: var(--color-danger-hover); border-color: var(--color-danger-hover); }
+
+.shell aside > .brand { flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--space-3); }
+.shell .brand .sidebar-clinic-name { font-family: inherit; font-size: 15px; line-height: 1.4; font-weight: 600; letter-spacing: normal; color: var(--color-sidebar-text); overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; min-height: 2.8em; }
+.shell .brand .clinic-brand-logo:has(img:not([hidden])) { flex-basis: auto; }
+.shell .brand .clinic-brand-logo img { filter: drop-shadow(0 0 1px rgb(255 255 255 / 55%)); }

@@ -1,8 +1,13 @@
 export interface NavigationItem { label: string; route: string; permission?: string }
 export interface NavigationGroup { label: string; items: NavigationItem[] }
+export interface NavigationConfiguration { items: NavigationItem[]; groups: NavigationGroup[] }
+export const doctorNavigation: NavigationConfiguration = { items: [{ label: 'Mis citas', route: '/doctor/appointments' }], groups: [] };
 export const overview: NavigationItem = { label: 'Resumen', route: '/' };
 export const navigationGroups: NavigationGroup[] = [
   { label: 'Administración', items: [
+    { label: 'Administradores', route: '/administrators', permission: 'users.view' },
+    { label: 'Cajeros', route: '/cashiers', permission: 'users.view' },
+    { label: 'Secretarias', route: '/secretaries', permission: 'users.view' },
     { label: 'Usuarios', route: '/users', permission: 'users.view' },
     { label: 'Roles', route: '/roles', permission: 'roles.view' },
     { label: 'Permisos', route: '/permissions', permission: 'permissions.view' },
@@ -21,3 +26,5 @@ export const navigationGroups: NavigationGroup[] = [
     { label: 'Agenda / Citas', route: '/appointments', permission: 'appointments.view' },
   ] },
 ];
+
+export const cashierNavigation = { items: [{ label: "Cobros", route: "/cashier/payments", permission: "payments.view" }], groups: [] };

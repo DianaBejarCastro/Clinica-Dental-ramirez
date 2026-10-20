@@ -5,8 +5,13 @@ public sealed class User
     public Guid Id { get; set; } = Guid.NewGuid();
     public string FirstName { get; set; } = "";
     public string LastName { get; set; } = "";
-    public string Email { get; set; } = "";
-    public string PasswordHash { get; set; } = "";
+    public string? Email { get; set; }
+    public string? PasswordHash { get; set; }
+    public bool CanLogin { get; set; } = true;
+    public string? Ci { get; set; }
+    public DateOnly? BirthDate { get; set; }
+    public string? Gender { get; set; }
+    public string? Address { get; set; }
     public string? Phone { get; set; }
     public bool IsActive { get; set; } = true;
     public bool EmailVerified { get; set; }

@@ -6,7 +6,7 @@ export const appointmentStates = {
 } as const;
 export type AppointmentStatus = keyof typeof appointmentStates;
 export interface Appointment {
-  id: string; patientId: string; doctorId: string; centerId: string; specialtyId: string;
+  id: string; patientId: string; patientName?: string; doctorName?: string; centerName?: string; doctorId: string; centerId: string; specialtyId: string;
   appointmentDate: string; startTime: string; endTime: string; status: AppointmentStatus;
   reason: string | null; notes: string | null; createdByUserId: string | null; createdAt: string; updatedAt: string;
 }

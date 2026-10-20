@@ -21,7 +21,9 @@ namespace ClinicaRamirez.Api.Tests;
 public sealed class PatientRegistrationTests(IdentityFixture f) : IClassFixture<IdentityFixture>
 {
     private const string Path = "/api/auth/register/patient";
-    private PatientRegistrationRequest Data() => new(" Ana ", " Paciente ", Guid.NewGuid() + "@EXAMPLE.COM", f.Password, f.Password, "CI" + Guid.NewGuid().ToString("N").ToUpperInvariant());
+    private PatientRegistrationRequest Data() => new() { FirstName = " Ana ", LastName = " Paciente ", Email = Guid.NewGuid() + "@EXAMPLE.COM", Password = f.Password, ConfirmPassword = f.Password,
+        Ci = "CI" + Guid.NewGuid().ToString("N").ToUpperInvariant(), BirthDate = new(1995, 5, 10), Phone = "70000000", EmergencyContactName = "Test contact", EmergencyContactPhone = "71111111", BloodType = "UNKNOWN" };
+
     private HttpClient Client()
     {
         var client = f.WithWebHostBuilder(b => b.UseSetting("REGISTRATION_RATE_LIMIT", "1000")).CreateClient(new() { HandleCookies = false });
@@ -29,23 +31,37 @@ public sealed class PatientRegistrationTests(IdentityFixture f) : IClassFixture<
     }
     private async Task Register(HttpClient c, PatientRegistrationRequest data) => Assert.Equal(HttpStatusCode.Created, (await c.PostAsJsonAsync(Path, data)).StatusCode);
     private async Task Login(HttpClient c, string email) { var login = await f.Login(c, email); c.DefaultRequestHeaders.Authorization = new("Bearer", login.Body.AccessToken); }
+    [Theory][InlineData("firstName")][InlineData("lastName")][InlineData("ci")][InlineData("birthDate")]
+    [InlineData("phone")][InlineData("emergencyContactName")][InlineData("emergencyContactPhone")][InlineData("bloodType")]
+    [InlineData("email")][InlineData("password")][InlineData("confirmPassword")]
+    public async Task CamposRequeridos(string field) {
+        using var c = Client(); var json = JsonSerializer.SerializeToNode(Data(), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+        json[field] = null; Assert.Equal(HttpStatusCode.BadRequest, (await c.PostAsJsonAsync(Path, json)).StatusCode);
+    }
+    [Theory][InlineData(false)][InlineData(true)] public async Task FechaLocalHoyValidaFuturaRechazada(bool future) {
+        using var c = Client(); var data = Data() with { BirthDate = ClinicaRamirez.Api.DTOs.LocalBirthDateAttribute.Today.AddDays(future ? 1 : 0), Gender = null };
+        Assert.Equal(future ? HttpStatusCode.BadRequest : HttpStatusCode.Created, (await c.PostAsJsonAsync(Path, data)).StatusCode);
+    }
+    [Fact] public async Task GrupoSanguineoControlado() {
+        using var c = Client(); Assert.Equal(HttpStatusCode.BadRequest, (await c.PostAsJsonAsync(Path, Data() with { BloodType = "B" })).StatusCode);
+    }
     [Fact] public async Task RegistroTransaccionalHashRolAuditoriaYLogin()
     {
         using var c = Client(); var data = Data(); await Register(c, data);
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var user = await db.Users.SingleAsync(x => x.Email == data.Email.ToLowerInvariant()); var patient = await db.PatientProfiles.SingleAsync(x => x.UserId == user.Id);
-        Assert.Equal("Ana", user.FirstName); Assert.True(user.IsActive); Assert.True(patient.IsActive); Assert.Equal(data.Ci, patient.Ci);
-        Assert.NotEqual(data.Password, user.PasswordHash); Assert.NotEqual(PasswordVerificationResult.Failed, scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>().VerifyHashedPassword(user, user.PasswordHash, data.Password));
+        var user = await db.Users.SingleAsync(x => x.Email == data.Email!.ToLowerInvariant()); var patient = await db.PatientProfiles.SingleAsync(x => x.UserId == user.Id);
+        Assert.Equal("Ana", user.FirstName); Assert.True(user.IsActive); Assert.True(patient.IsActive); Assert.Equal(data.Ci, patient.User.Ci);
+        Assert.NotEqual(data.Password, user.PasswordHash); Assert.NotEqual(PasswordVerificationResult.Failed, scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>().VerifyHashedPassword(user, user.PasswordHash!, data.Password));
         Assert.Equal(new[] { "PATIENT" }, await db.UserRoles.Where(x => x.UserId == user.Id).Select(x => x.Role.Code).ToArrayAsync());
         var audit = await db.AuditLogs.SingleAsync(x => x.EntityId == patient.Id && x.Action == "patient_self_registered"); Assert.Null(audit.MetadataJson); Assert.Null(audit.UserId);
-        await Login(c, data.Email); Assert.Equal(HttpStatusCode.OK, (await c.GetAsync("/api/patient/me")).StatusCode);
+        await Login(c, data.Email!); Assert.Equal(HttpStatusCode.OK, (await c.GetAsync("/api/patient/me")).StatusCode);
         foreach (var path in new[] { "/api/admin/users", "/api/admin/patients", "/api/admin/appointments" }) Assert.Equal(HttpStatusCode.Forbidden, (await c.GetAsync(path)).StatusCode);
     }
     [Theory][InlineData("PATIENT", true)][InlineData("DOCTOR", true)][InlineData("ADMINISTRATOR", true)][InlineData("PATIENT", false)]
     public async Task EmailGlobalIncluyeOtrosRolesEInactivos(string role, bool active)
     {
         var data = Data(); using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var user = new User { FirstName = "Existente", LastName = "Prueba", Email = data.Email.ToLowerInvariant(), PasswordHash = "no-login", IsActive = active };
+        var user = new User { FirstName = "Existente", LastName = "Prueba", Email = data.Email!.ToLowerInvariant(), PasswordHash = "no-login", IsActive = active };
         db.Users.Add(user); db.UserRoles.Add(new UserRole { User = user, RoleId = await db.Roles.Where(x => x.Code == role).Select(x => x.Id).SingleAsync() }); await db.SaveChangesAsync();
         using var c = Client(); var response = await c.PostAsJsonAsync(Path, data); Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Contains("Ya existe una cuenta", await response.Content.ReadAsStringAsync());
@@ -54,7 +70,7 @@ public sealed class PatientRegistrationTests(IdentityFixture f) : IClassFixture<
     {
         using var c = Client(); var first = Data(); await Register(c, first); var second = Data() with { Ci = first.Ci!.ToLowerInvariant() };
         Assert.Equal(HttpStatusCode.Conflict, (await c.PostAsJsonAsync(Path, second)).StatusCode);
-        using var scope = f.Services.CreateScope(); Assert.False(await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.AnyAsync(x => x.Email == second.Email.ToLowerInvariant()));
+        using var scope = f.Services.CreateScope(); Assert.False(await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.AnyAsync(x => x.Email == second.Email!.ToLowerInvariant()));
     }
     [Theory][InlineData("short", "short")][InlineData("LongPassword123", "DifferentPassword123")]
     public async Task ValidaPasswordYConfirmacion(string password, string confirmation)
@@ -82,19 +98,19 @@ public sealed class PatientRegistrationTests(IdentityFixture f) : IClassFixture<
         var data = Data(); using var scope = f.Services.CreateScope(); var original = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await using (var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(original.Database.GetConnectionString()).AddInterceptors(new FailPatientSave()).Options))
         {
-            var service = new PatientRegistrationService(db, new IdentitySupport(db, new HttpContextAccessor()), new PasswordHasher<User>());
+            var service = new PatientRegistrationService(new PatientsService(db, new IdentitySupport(db, new HttpContextAccessor()), new PatientAccountService(db, new IdentitySupport(db, new HttpContextAccessor()), new PasswordHasher<User>())));
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.Register(data, default));
         }
-        Assert.False(await original.Users.AnyAsync(x => x.Email == data.Email.ToLowerInvariant()));
-        Assert.False(await original.PatientProfiles.AnyAsync(x => x.Email == data.Email.ToLowerInvariant()));
+        Assert.False(await original.Users.AnyAsync(x => x.Email == data.Email!.ToLowerInvariant()));
+        Assert.False(await original.PatientProfiles.AnyAsync(x => x.User.Email == data.Email!.ToLowerInvariant()));
     }
     [Fact] public async Task PortalAisladoIgnoraPatientIdArbitrarioYRechazaNoPatient()
     {
-        using var c = Client(); var first = Data(); var second = Data() with { FirstName = "Otro" }; await Register(c, first); await Register(c, second); await Login(c, first.Email);
+        using var c = Client(); var first = Data(); var second = Data() with { FirstName = "Otro" }; await Register(c, first); await Register(c, second); await Login(c, first.Email!);
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var mine = await db.PatientProfiles.SingleAsync(x => x.Email == first.Email.ToLowerInvariant()); var other = await db.PatientProfiles.SingleAsync(x => x.Email == second.Email.ToLowerInvariant());
+        var mine = await db.PatientProfiles.SingleAsync(x => x.User.Email == first.Email!.ToLowerInvariant()); var other = await db.PatientProfiles.SingleAsync(x => x.User.Email == second.Email!.ToLowerInvariant());
         var doctorUser = new User { FirstName = "Doctor", LastName = "Prueba", Email = Guid.NewGuid() + "@example.com", PasswordHash = "test" };
-        var doctor = new DoctorProfile { User = doctorUser }; var center = new Center { ClinicId = Clinic.SingletonId, Name = "Centro", Code = "T" + Guid.NewGuid().ToString("N").ToUpperInvariant(), Address = "Dirección", Country = "Bolivia" };
+        var doctor = new DoctorProfile { ProfessionalLicense = "TEST-" + Guid.NewGuid().ToString("N").ToUpperInvariant(), User = doctorUser }; var center = new Center { ClinicId = Clinic.SingletonId, Name = "Centro", Code = "T" + Guid.NewGuid().ToString("N").ToUpperInvariant(), Address = "Dirección", Country = "Bolivia" };
         db.DoctorProfiles.Add(doctor); db.Centers.Add(center); await db.SaveChangesAsync();
         var specialty = await db.Specialties.Select(x => x.Id).FirstAsync();
         foreach (var id in new[] { mine.Id, other.Id }) db.Appointments.Add(new Appointment { PatientId = id, DoctorId = doctor.Id, CenterId = center.Id, SpecialtyId = specialty, AppointmentDate = new DateOnly(2027, 1, 1), StartTime = new TimeOnly(id == mine.Id ? 9 : 10, 0), EndTime = new TimeOnly(id == mine.Id ? 10 : 11, 0) });

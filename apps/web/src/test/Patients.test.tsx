@@ -1,4 +1,5 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { localToday } from '../modules/patient/PatientFields';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vitest';
 import App from '../App';
@@ -6,7 +7,7 @@ import { setSession } from '../services/api';
 import type { Patient } from '../modules/admin/patients/types';
 
 const basePatient: Patient = {
-  id: 'patient-1', userId: null, firstName: 'Ana', lastName: 'Paciente', ci: 'CI-123', birthDate: '1995-05-10',
+  id: 'patient-1', userId: 'person-1', canLogin: false, firstName: 'Ana', lastName: 'Paciente', ci: 'CI-123', birthDate: '1995-05-10',
   gender: null, phone: '70000000', email: 'clinical@example.test', address: 'Calle 1',
   emergencyContactName: 'Contacto', emergencyContactPhone: '71111111', bloodType: 'O+', notes: 'Nota sintética',
   isActive: true, createdAt: '2026-10-02T12:00:00Z', updatedAt: '2026-10-02T12:00:00Z',
@@ -30,13 +31,14 @@ const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit
       return Response.json({ items: patients.slice((page - 1) * 10, page * 10), total: patients.length, page, pageSize: 10 });
     }
     if (method === 'POST') {
-      const created = { ...basePatient, ...body, id: 'patient-new' };
+      const created = { ...basePatient, ...body, id: 'patient-new', userId: 'created-user', canLogin: !!body.account };
       patients = [...patients, created]; return Response.json(created, { status: 201 });
     }
   }
   const id = path.split('/')[4]; const patient = patients.find(p => p.id === id);
   if (!patient) return Response.json({ title: 'Paciente inexistente.' }, { status: 404 });
   if (method === 'GET') return Response.json(patient);
+  if (method === 'POST' && path.endsWith('/account')) { patient.canLogin = true; return Response.json(patient); }
   if (method === 'PUT' || method === 'PATCH') {
     Object.assign(patient, body);
     return method === 'PATCH' ? new Response(null, { status: 204 }) : Response.json(patient);
@@ -52,7 +54,7 @@ beforeEach(() => {
 const writes = (method: string) => fetchMock.mock.calls.filter(([, init]) => init?.method === method && String(init.body ?? '').includes('firstName'));
 
 it('lista datos clínicos y distingue pacientes con y sin cuenta', async () => {
-  patients.push({ ...basePatient, id: 'patient-2', firstName: 'Luis', userId: '10000000-0000-0000-0000-000000000001' });
+  patients.push({ ...basePatient, id: 'patient-2', firstName: 'Luis', canLogin: true, userId: '10000000-0000-0000-0000-000000000001' });
   render(<App />);
   await screen.findByText('Ana Paciente');
   const table = within(screen.getByRole('table'));
@@ -64,16 +66,17 @@ it('lista datos clínicos y distingue pacientes con y sin cuenta', async () => {
   expect(table.getAllByText('clinical@example.test')).toHaveLength(2);
   expect(screen.getByRole('link', { name: 'Pacientes' }).getAttribute('aria-current')).toBe('page');
 });
-it('crea paciente sin User ni contraseña', async () => {
+it('crea paciente sin acceso ni contraseña', async () => {
   render(<App />); const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: 'Crear paciente' }));
   await user.type(screen.getByLabelText('Nombre'), 'María'); await user.type(screen.getByLabelText('Apellido'), 'Nueva');
+  fillClinical();
   expect(screen.queryByLabelText(/contraseña/i)).toBeNull();
   await user.click(screen.getByRole('button', { name: 'Guardar paciente' }));
   expect(await screen.findByText('María Nueva')).toBeTruthy();
   const body = JSON.parse(String(writes('POST')[0][1]?.body));
-  expect(body).toMatchObject({ firstName: 'María', lastName: 'Nueva', userId: null, isActive: true });
-  expect(body.password).toBeUndefined();
+  expect(body).toMatchObject({ firstName: 'María', lastName: 'Nueva', account: null, isActive: true });
+  expect(body.password).toBeUndefined(); expect(body.userId).toBeUndefined();
 });
 it('edita datos y conserva la cuenta vinculada', async () => {
   patients[0].userId = '10000000-0000-0000-0000-000000000001';
@@ -83,7 +86,7 @@ it('edita datos y conserva la cuenta vinculada', async () => {
   expect((screen.getByLabelText('Notas') as HTMLTextAreaElement).value).toBe('Nota sintética');
   await user.click(screen.getByRole('button', { name: 'Guardar paciente' }));
   expect(await screen.findByText('Editada Paciente')).toBeTruthy();
-  expect(JSON.parse(String(writes('PUT')[0][1]?.body))).toMatchObject({ userId: patients[0].userId, notes: 'Nota sintética' });
+  expect(JSON.parse(String(writes('PUT')[0][1]?.body))).toMatchObject({ notes: 'Nota sintética' });
 });
 it.each([true, false])('cambia estado desde isActive=%s con permiso', async active => {
   patients[0].isActive = active;
@@ -144,4 +147,41 @@ it('presenta error de listado sin mostrar datos vacíos como exitosos', async ()
   failure = { method: 'GET', status: 403, title: 'Acceso denegado.' }; render(<App />);
   expect((await screen.findByRole('alert')).textContent).toBe('Acceso denegado.');
   expect(screen.queryByRole('table')).toBeNull(); expect(screen.queryByText('Cargando pacientes…')).toBeNull();
+});
+
+function fillClinical() {
+  for (const [label, value] of [['CI', 'CI-NEW'], ['Fecha de nacimiento', '2000-01-01'], ['Teléfono', '70000000'], ['Contacto de emergencia', 'Contacto'], ['Teléfono de emergencia', '71111111']])
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  fireEvent.change(screen.getByLabelText('Grupo sanguíneo'), { target: { value: 'UNKNOWN' } });
+}
+it('toggle crea cuenta opcional con datos separados', async () => {
+  render(<App />); const user = userEvent.setup(); await user.click(await screen.findByRole('button', { name: 'Crear paciente' }));
+  expect((screen.getByLabelText('Crear cuenta de acceso para este paciente') as HTMLInputElement).checked).toBe(false);
+  expect(screen.queryByLabelText('Email de acceso')).toBeNull();
+  await user.click(screen.getByLabelText('Crear cuenta de acceso para este paciente'));
+  fillClinical(); fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Con' } }); fireEvent.change(screen.getByLabelText('Apellido'), { target: { value: 'Cuenta' } });
+  fireEvent.change(screen.getByLabelText('Email de acceso'), { target: { value: 'login@example.test' } });
+  fireEvent.change(screen.getByLabelText('Contraseña', { exact: true }), { target: { value: 'ValidPassword123!' } });
+  fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'ValidPassword123!' } });
+  await user.click(screen.getByRole('button', { name: 'Guardar paciente' })); await screen.findByText('Con Cuenta');
+  expect(JSON.parse(String(writes('POST')[0][1]?.body)).account.email).toBe('login@example.test');
+});
+it('cuenta posterior para el mismo User sin acceso', async () => {
+  render(<App />); const user = userEvent.setup(); await user.click(await screen.findByRole('button', { name: 'Crear cuenta de acceso' }));
+  fireEvent.change(screen.getByLabelText('Email de acceso'), { target: { value: 'later@example.test' } });
+  fireEvent.change(screen.getByLabelText('Contraseña', { exact: true }), { target: { value: 'ValidPassword123!' } });
+  fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'ValidPassword123!' } });
+  await user.click(screen.getByRole('button', { name: 'Crear cuenta' })); await screen.findByText('Cuenta vinculada.');
+  expect(within(screen.getByRole('table')).getByText('Cuenta vinculada')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Crear cuenta de acceso' })).toBeNull();
+});
+it('fechas futuras bloqueadas y campos clínicos obligatorios en edición', async () => {
+  render(<App />); await userEvent.click(await screen.findByRole('button', { name: 'Editar' }));
+  const birth = await screen.findByLabelText('Fecha de nacimiento') as HTMLInputElement;
+  expect(birth.max).toBe(localToday());
+  for (const label of ['CI', 'Fecha de nacimiento', 'Teléfono', 'Contacto de emergencia', 'Teléfono de emergencia', 'Grupo sanguíneo']) expect((screen.getByLabelText(label) as HTMLInputElement).required).toBe(true);
+  fireEvent.change(birth, { target: { value: '2999-01-01' } });
+  fireEvent.submit(screen.getByRole('button', { name: 'Guardar paciente' }).closest('form')!);
+  expect(screen.getByRole('alert').textContent).toContain('futura'); expect(writes('PUT')).toHaveLength(0);
+  expect(screen.getByRole('combobox', { name: 'Grupo sanguíneo' })).toBeTruthy();
 });

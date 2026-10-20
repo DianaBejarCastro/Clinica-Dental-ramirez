@@ -27,7 +27,6 @@ public class CenterUpdateRequest
     [MaxLength(30)] public string? Phone { get; init; }
     [MaxLength(30)] public string? Whatsapp { get; init; }
     [MaxLength(254), EmailAddress] public string? Email { get; init; }
-    [MaxLength(2048), HttpUrl] public string? GoogleMapsUrl { get; init; }
     [Range(-90, 90)] public decimal? Latitude { get; init; }
     [Range(-180, 180)] public decimal? Longitude { get; init; }
     public bool IsMain { get; init; }
@@ -42,27 +41,27 @@ public class SpecialtyUpdateRequest
     public bool IsActive { get; init; } = true;
 }
 public sealed class SpecialtyCreateRequest : SpecialtyUpdateRequest;
+[System.Text.Json.Serialization.JsonUnmappedMemberHandling(System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow)]
 public class DoctorUpdateRequest
 {
-    [MaxLength(100)] public string? ProfessionalLicense { get; init; }
-    [MaxLength(50)] public string? Ci { get; init; }
-    public DateOnly? BirthDate { get; init; }
+    [Required, MaxLength(100)] public string FirstName { get; init; } = "";
+    [Required, MaxLength(100)] public string LastName { get; init; } = "";
+    [Required, MaxLength(100)] public string ProfessionalLicense { get; init; } = "";
+    [Required, MaxLength(50)] public string Ci { get; init; } = "";
+    [Required, ClinicaRamirez.Api.DTOs.LocalBirthDate] public DateOnly? BirthDate { get; init; }
     [MaxLength(50)] public string? Gender { get; init; }
-    [MaxLength(30)] public string? Phone { get; init; }
+    [Required, MaxLength(30)] public string Phone { get; init; } = "";
     [MaxLength(500)] public string? Address { get; init; }
     [MaxLength(2048), HttpUrl] public string? PhotoUrl { get; init; }
     [MaxLength(4000)] public string? Bio { get; init; }
     public bool IsActive { get; init; } = true;
 }
-public sealed class DoctorCreateRequest : DoctorUpdateRequest, IValidatableObject
+[System.Text.Json.Serialization.JsonUnmappedMemberHandling(System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow)]
+public sealed class DoctorCreateRequest : DoctorUpdateRequest
 {
-    public Guid? UserId { get; init; }
-    public UserCreateRequest? NewUser { get; init; }
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        if ((UserId is null) == (NewUser is null) || UserId == Guid.Empty)
-            yield return new ValidationResult("Indique un usuario existente o los datos de un usuario nuevo.", [nameof(UserId), nameof(NewUser)]);
-    }
+    [Required, EmailAddress, MaxLength(254)] public string Email { get; init; } = "";
+    [Required, StringLength(128, MinimumLength = 12)] public string Password { get; init; } = "";
+    [Required, MaxLength(128), Compare(nameof(Password))] public string ConfirmPassword { get; init; } = "";
 }
 public sealed record AssignDoctorCentersRequest([Required, MaxLength(1000)] Guid[] CenterIds);
 public sealed record AssignDoctorSpecialtiesRequest([Required, MaxLength(1000)] Guid[] SpecialtyIds);
@@ -87,12 +86,12 @@ public sealed record ClinicResponse(Guid Id, string Name, string? LegalName, str
 }
 public sealed record ClinicLogoResponse(string ContentType, string FileName, long Size, DateTime UpdatedAt);
 public sealed record CenterResponse(Guid Id, Guid ClinicId, string Name, string Code, string? Description, string Address,
-    string? City, string? Department, string Country, string? Phone, string? Whatsapp, string? Email, string? GoogleMapsUrl,
+    string? City, string? Department, string Country, string? Phone, string? Whatsapp, string? Email,
     decimal? Latitude, decimal? Longitude, bool IsMain, bool IsActive, DateTime CreatedAt, DateTime UpdatedAt);
 public sealed record SpecialtyResponse(Guid Id, string Code, string Name, string? Description, bool IsActive,
     int DoctorCount, DateTime CreatedAt, DateTime UpdatedAt);
 public sealed record AssignmentResponse(Guid Id, string Code, string Name, bool IsActive);
-public sealed record DoctorUserResponse(Guid Id, string FirstName, string LastName, string Email, bool IsActive);
+public sealed record DoctorUserResponse(Guid Id, string FirstName, string LastName, string? Email, bool IsActive);
 public sealed record DoctorResponse(Guid Id, Guid UserId, DoctorUserResponse User, string? ProfessionalLicense, string? Ci,
     DateOnly? BirthDate, string? Gender, string? Phone, string? Address, string? PhotoUrl, string? Bio, bool IsActive,
     DateTime CreatedAt, DateTime UpdatedAt, AssignmentResponse[] Specialties, AssignmentResponse[] Centers);

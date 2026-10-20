@@ -18,7 +18,12 @@ public sealed class AppointmentCreateRequest : AppointmentUpdateRequest;
 public sealed record AppointmentStatusRequest([Required] string Status);
 public sealed record AppointmentResponse(Guid Id, Guid PatientId, Guid DoctorId, Guid CenterId, Guid SpecialtyId,
     DateOnly AppointmentDate, TimeOnly StartTime, TimeOnly EndTime, string Status, string? Reason, string? Notes,
-    Guid? CreatedByUserId, DateTime CreatedAt, DateTime UpdatedAt);
+    Guid? CreatedByUserId, DateTime CreatedAt, DateTime UpdatedAt)
+{
+    public string PatientName { get; init; } = "";
+    public string DoctorName { get; init; } = "";
+    public string CenterName { get; init; } = "";
+}
 public sealed record AppointmentListResponse(AppointmentResponse[] Items, int Total, int Page, int PageSize);
 public sealed record AvailabilitySlot(TimeOnly StartTime, TimeOnly EndTime);
 public sealed record AvailabilityResponse(Guid DoctorId, Guid CenterId, Guid SpecialtyId, DateOnly Date,

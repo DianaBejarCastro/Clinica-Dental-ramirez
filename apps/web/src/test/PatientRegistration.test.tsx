@@ -1,3 +1,4 @@
+import { localToday } from '../modules/patient/PatientFields';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -22,6 +23,7 @@ beforeEach(() => {
   window.history.replaceState(null, '', '#/register'); fetchMock.mockClear(); vi.stubGlobal('fetch', fetchMock);
 });
 async function fill(confirmation = 'SafePassword123!') {
+  for (const [name, value] of Object.entries({ ci: 'CI-TEST', birthDate: '2000-01-01', phone: '70000000', emergencyContactName: 'Contacto', emergencyContactPhone: '71111111', bloodType: 'UNKNOWN' })) fireEvent.change(document.querySelector(`[name="${name}"]`)!, { target: { value } });
   await userEvent.type(screen.getByLabelText('Nombre'), 'Ana'); await userEvent.type(screen.getByLabelText('Apellido'), 'Paciente');
   await userEvent.type(screen.getByLabelText('Email'), user.email); await userEvent.type(screen.getByLabelText('Contraseña', { exact: true }), 'SafePassword123!');
   await userEvent.type(screen.getByLabelText('Confirmar contraseña'), confirmation);
@@ -31,8 +33,8 @@ it('login muestra Regístrate y abre formulario público', async () => {
   await userEvent.click(await screen.findByRole('link', { name: 'Regístrate' })); expect(await screen.findByRole('heading', { name: 'Crear cuenta de paciente' })).toBeTruthy();
 });
 it('formulario sin rol ni estado ni cuenta administrativa', () => {
-  render(<App />); expect(screen.getByLabelText('CI (opcional)')).toBeTruthy(); expect(screen.getByLabelText('Fecha de nacimiento (opcional)')).toBeTruthy();
-  expect(screen.queryByRole('combobox')).toBeNull(); expect(screen.queryByLabelText(/Rol|UserId|Estado|Permisos/)).toBeNull();
+  render(<App />); expect(screen.getByLabelText('CI')).toBeTruthy(); expect(screen.getByLabelText('Fecha de nacimiento')).toBeTruthy();
+  expect(screen.getByRole('combobox', { name: 'Grupo sanguíneo' })).toBeTruthy(); expect(screen.queryByLabelText(/Rol|UserId|Estado|Permisos/)).toBeNull();
   expect(fetchMock).not.toHaveBeenCalled(); expect(screen.getByAltText('Logo de la clínica')).toBeTruthy();
 });
 it('validación de confirmación evita envío', async () => {
@@ -77,4 +79,14 @@ it('paciente con ruta admin vuelve a portal y Mis citas usa endpoint propio', as
   await userEvent.click(screen.getByRole('link', { name: 'Mis citas' })); expect(await screen.findByText('No tienes citas registradas.')).toBeTruthy();
   expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/api/patient/appointments'))).toBe(true);
   expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/admin/'))).toBe(false);
+});
+
+it('exige datos clínicos y bloquea nacimiento futuro incluso al enviar directamente', async () => {
+  render(<App />); await fill();
+  const birth = screen.getByLabelText('Fecha de nacimiento') as HTMLInputElement; expect(birth.max).toBe(localToday());
+  for (const label of ['CI', 'Fecha de nacimiento', 'Teléfono', 'Contacto de emergencia', 'Teléfono de emergencia', 'Grupo sanguíneo', 'Email']) expect((screen.getByLabelText(label) as HTMLInputElement).required).toBe(true);
+  expect((screen.getByLabelText('Género') as HTMLInputElement).required).toBe(false);
+  fireEvent.change(birth, { target: { value: '2999-01-01' } }); fireEvent.submit(screen.getByRole('button', { name: 'Crear cuenta' }).closest('form')!);
+  expect(screen.getByRole('alert').textContent).toContain('futura'); expect(fetchMock).not.toHaveBeenCalled();
+  expect(screen.queryByLabelText('Notas')).toBeNull();
 });

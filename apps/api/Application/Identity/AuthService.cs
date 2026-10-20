@@ -29,7 +29,7 @@ public sealed class AuthService(AppDbContext db, IPasswordHasher<User> hasher, I
         var expires = DateTime.UtcNow.AddMinutes(jwt.AccessMinutes);
         var claims = new List<Claim> {
             new("sub", user.Id.ToString()), new("user_id", user.Id.ToString()),
-            new("email", user.Email), new("sid", session.Id.ToString()),
+            new("email", user.Email!), new("sid", session.Id.ToString()),
             new("jti", Guid.NewGuid().ToString())
         };
         claims.AddRange(current.Roles.Select(role => new Claim("roles", role)));
@@ -45,7 +45,7 @@ public sealed class AuthService(AppDbContext db, IPasswordHasher<User> hasher, I
         var user = await db.Users.SingleOrDefaultAsync(x => x.Email == email);
         if (user is not null) { await support.LockSessions(user.Id); await db.Entry(user).ReloadAsync(); }
         var result = hasher.VerifyHashedPassword(user ?? Dummy, user?.PasswordHash ?? DummyHash, request.Password);
-        if (user is null || !user.IsActive || result == PasswordVerificationResult.Failed)
+        if (user is null || !user.IsActive || !user.CanLogin || string.IsNullOrWhiteSpace(user.Email) || string.IsNullOrWhiteSpace(user.PasswordHash) || result == PasswordVerificationResult.Failed)
         {
             support.Audit("login_failed", "User", user?.Id, user?.Id);
             await db.SaveChangesAsync();
@@ -76,7 +76,7 @@ public sealed class AuthService(AppDbContext db, IPasswordHasher<User> hasher, I
         var old = rows.SingleOrDefault();
         if (old is null) throw new ApiException(401, "Sesión inválida.");
         var user = await db.Users.SingleAsync(x => x.Id == old.UserId);
-        if (old.RevokedAt != null || old.ExpiresAt <= DateTime.UtcNow || !user.IsActive)
+        if (old.RevokedAt != null || old.ExpiresAt <= DateTime.UtcNow || !user.IsActive || !user.CanLogin || string.IsNullOrWhiteSpace(user.Email) || string.IsNullOrWhiteSpace(user.PasswordHash))
         {
             if (old.RevokedAt != null)
             {

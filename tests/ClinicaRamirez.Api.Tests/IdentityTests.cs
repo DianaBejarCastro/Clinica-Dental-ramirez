@@ -25,7 +25,7 @@ public sealed class IdentityFixture : WebApplicationFactory<Program>, IAsyncLife
         .UseSetting("ConnectionStrings:DefaultConnection", connection)
         .UseSetting("JWT_SECRET", Convert.ToBase64String(RandomNumberGenerator.GetBytes(48)))
         .UseSetting("BOOTSTRAP_ADMIN_EMAIL", Email).UseSetting("BOOTSTRAP_ADMIN_PASSWORD", Password)
-        .UseSetting("LOGIN_RATE_LIMIT", "1000").UseSetting("Logging:LogLevel:Default", "Critical");
+        .UseSetting("HARD_DELETE_RATE_LIMIT", "1000").UseSetting("LOGIN_RATE_LIMIT", "1000").UseSetting("Logging:LogLevel:Default", "Critical");
     public async Task InitializeAsync()
     {
         var supplied = Environment.GetEnvironmentVariable("IDENTITY_TEST_CONNECTION")

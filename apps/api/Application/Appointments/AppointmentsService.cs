@@ -27,11 +27,11 @@ public sealed class AppointmentsService(AppDbContext db, IdentitySupport support
         var query = db.Appointments.AsNoTracking();
         var total = await query.CountAsync();
         var items = await query.OrderBy(x => x.AppointmentDate).ThenBy(x => x.StartTime).ThenBy(x => x.Id)
-            .Skip((page - 1) * pageSize).Take(pageSize).ToArrayAsync();
-        return new(items.Select(Dto).ToArray(), total, page, pageSize);
+            .Skip((page - 1) * pageSize).Take(pageSize).Select(Response).ToArrayAsync();
+        return new(items, total, page, pageSize);
     }
-    public async Task<AppointmentResponse> Get(Guid id) => Dto(await db.Appointments.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id)
-        ?? throw new ApiException(404, "Cita inexistente."));
+    public async Task<AppointmentResponse> Get(Guid id) => await db.Appointments.AsNoTracking().Where(x => x.Id == id).Select(Response).SingleOrDefaultAsync()
+        ?? throw new ApiException(404, "Cita inexistente.");
     public async Task<AppointmentResponse> Create(AppointmentCreateRequest request)
     {
         var appointment = new Appointment { CreatedByUserId = support.Actor };
@@ -137,6 +137,11 @@ public sealed class AppointmentsService(AppDbContext db, IdentitySupport support
         a.Reason = string.IsNullOrWhiteSpace(r.Reason) ? null : r.Reason.Trim();
         a.Notes = string.IsNullOrWhiteSpace(r.Notes) ? null : r.Notes.Trim();
     }
-    private static AppointmentResponse Dto(Appointment a) => new(a.Id, a.PatientId, a.DoctorId, a.CenterId, a.SpecialtyId,
-        a.AppointmentDate, a.StartTime, a.EndTime, a.Status, a.Reason, a.Notes, a.CreatedByUserId, a.CreatedAt, a.UpdatedAt);
+    private System.Linq.Expressions.Expression<Func<Appointment, AppointmentResponse>> Response => a => new AppointmentResponse(a.Id, a.PatientId, a.DoctorId, a.CenterId, a.SpecialtyId,
+        a.AppointmentDate, a.StartTime, a.EndTime, a.Status, a.Reason, a.Notes, a.CreatedByUserId, a.CreatedAt, a.UpdatedAt)
+        {
+            PatientName = db.PatientProfiles.Where(p => p.Id == a.PatientId).Select(p => p.User.FirstName + " " + p.User.LastName).FirstOrDefault() ?? "",
+            DoctorName = db.DoctorProfiles.Where(d => d.Id == a.DoctorId).Select(d => d.User.FirstName + " " + d.User.LastName).FirstOrDefault() ?? "",
+            CenterName = db.Centers.Where(c => c.Id == a.CenterId).Select(c => c.Name).FirstOrDefault() ?? ""
+        };
 }

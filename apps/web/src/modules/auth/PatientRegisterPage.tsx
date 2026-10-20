@@ -1,3 +1,5 @@
+import BackLink from '../../components/BackLink';
+import { PatientFields, PatientAccountFields, patientData, patientError } from '../patient/PatientFields';
 import { useState, type FormEvent } from 'react';
 import { apiUrl } from '../../services/api';
 import ClinicLogo from '../admin/clinic/ClinicLogo';
@@ -15,12 +17,12 @@ export default function PatientRegisterPage() {
     if (password !== confirmPassword) { setError('Las contraseñas no coinciden.'); return; }
     const text = (key: string) => String(form.get(key) ?? '').trim();
     if (!text('firstName') || !text('lastName')) { setError('Nombre y apellido son obligatorios.'); return; }
+    const clinicalError = patientError(form); if (clinicalError) { setError(clinicalError); return; }
     setBusy(true);
     try {
       const response = await fetch(apiUrl('/api/auth/register/patient'), { method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'X-Clinic-Request': '1' },
-        body: JSON.stringify({ firstName: text('firstName'), lastName: text('lastName'), email: text('email'), password, confirmPassword,
-          ci: text('ci') || null, birthDate: text('birthDate') || null, gender: text('gender') || null, phone: text('phone') || null }) });
+        body: JSON.stringify({ ...patientData(form), email: text('email'), password, confirmPassword }) });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         setError(response.status === 429 ? 'Demasiados intentos. Espera un momento antes de volver a intentar.' :
@@ -32,17 +34,10 @@ export default function PatientRegisterPage() {
     finally { setBusy(false); }
   }
   return <main className="login patient-register"><section className="login-brand"><ClinicLogo /><p>CLÍNICA DENTAL RAMÍREZ</p><h1>Tu sonrisa,<br />más cerca.</h1><p>Crea tu cuenta de paciente.</p></section>
-    <section className="login-form"><a className="login-back" href="#/inicio">← Volver al inicio</a><h2>Crear cuenta de paciente</h2>
+    <section className="login-form"><BackLink href="#/inicio">Volver al inicio</BackLink><h2>Crear cuenta de paciente</h2>
       <form onSubmit={submit}><fieldset disabled={busy} className="registration-fields">
-        <label>Nombre<input name="firstName" required maxLength={100} autoComplete="given-name" /></label>
-        <label>Apellido<input name="lastName" required maxLength={100} autoComplete="family-name" /></label>
-        <label>CI (opcional)<input name="ci" maxLength={50} /></label>
-        <label>Fecha de nacimiento (opcional)<input name="birthDate" type="date" autoComplete="bday" /></label>
-        <label>Género (opcional)<input name="gender" maxLength={50} /></label>
-        <label>Teléfono (opcional)<input name="phone" type="tel" maxLength={30} autoComplete="tel" /></label>
-        <label className="full-width">Email<input name="email" type="email" required maxLength={254} autoComplete="email" /></label>
-        <label>Contraseña<input name="password" type="password" required minLength={12} maxLength={128} autoComplete="new-password" /></label>
-        <label>Confirmar contraseña<input name="confirmPassword" type="password" required maxLength={128} autoComplete="new-password" /></label>
+        <PatientFields />
+        <PatientAccountFields publicRegistration />
       </fieldset><p className="muted">Contraseña de 12 a 128 caracteres.</p>
       {error && <p role="alert" className="error">{error}</p>}<button disabled={busy}>{busy ? 'Creando cuenta…' : 'Crear cuenta'}</button></form>
       <p>Ya tengo una cuenta · <a href="#/login">Iniciar sesión</a></p>

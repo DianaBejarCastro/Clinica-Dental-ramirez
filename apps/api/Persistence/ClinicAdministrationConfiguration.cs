@@ -38,7 +38,6 @@ public static class ClinicAdministrationConfiguration
             e.Property(x => x.Phone).HasMaxLength(30);
             e.Property(x => x.Whatsapp).HasMaxLength(30);
             e.Property(x => x.Email).HasMaxLength(254);
-            e.Property(x => x.GoogleMapsUrl).HasMaxLength(2048);
             e.Property(x => x.Latitude).HasPrecision(10, 7);
             e.Property(x => x.Longitude).HasPrecision(10, 7);
             e.HasIndex(x => x.Code).IsUnique();
@@ -56,12 +55,8 @@ public static class ClinicAdministrationConfiguration
             e.HasKey(x => x.Id);
             e.HasOne(x => x.User).WithOne().HasForeignKey<DoctorProfile>(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.UserId).IsUnique();
-            e.Property(x => x.ProfessionalLicense).HasMaxLength(100);
+            e.Property(x => x.ProfessionalLicense).HasMaxLength(100).IsRequired();
             e.HasIndex(x => x.ProfessionalLicense).IsUnique().HasFilter("\"ProfessionalLicense\" IS NOT NULL");
-            e.Property(x => x.Ci).HasMaxLength(50);
-            e.Property(x => x.Gender).HasMaxLength(50);
-            e.Property(x => x.Phone).HasMaxLength(30);
-            e.Property(x => x.Address).HasMaxLength(500);
             e.Property(x => x.PhotoUrl).HasMaxLength(2048);
             e.Property(x => x.Bio).HasMaxLength(4000);
             e.HasIndex(x => x.IsActive);

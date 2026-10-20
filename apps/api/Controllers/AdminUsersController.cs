@@ -8,7 +8,7 @@ namespace ClinicaRamirez.Api.Controllers;
 public sealed class AdminUsersController(AdminService service) : ControllerBase
 {
     [HttpGet, RequirePermission("users.view")]
-    public async Task<ActionResult<UserListResponse>> List([FromQuery] int page = 1, [FromQuery] int pageSize = 50) => Ok(await service.Users(page, pageSize));
+    public async Task<ActionResult<UserListResponse>> List([FromQuery] int page = 1, [FromQuery] int pageSize = 50, [FromQuery] string? q = null) => Ok(await service.Users(page, pageSize, q));
     [HttpGet("{id:guid}"), RequirePermission("users.view")]
     public async Task<ActionResult<UserResponse>> Get(Guid id) => Ok(await service.User(id));
     [HttpPost, RequirePermission("users.create")]

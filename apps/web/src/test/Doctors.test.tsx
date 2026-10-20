@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
 import { setSession } from '../services/api';
@@ -42,6 +42,7 @@ const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit
   const method = init?.method ?? 'GET';
   let status = 200;
   let data: unknown;
+  if (path === '/api/admin/dental-assistants') return Response.json({ items: [], total: 0, page: 1, pageSize: 10 });
   if (path === '/api/auth/refresh') {
     data = { accessToken: 'test-access', expiresAt: '', user: { id: 'admin', firstName: 'Ana', lastName: 'Prueba', email: 'admin@example.test', roles: [], permissions } };
   } else if (path === '/api/admin/doctors' && method === 'GET') {
@@ -50,11 +51,11 @@ const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit
     const items = createdDoctor ? [doctor, createdDoctor] : [doctor];
     data = listFailure ? { title: 'No se pudo cargar los doctores.' } : { items, total: items.length, page: 1, pageSize: 10 };
   } else if (path === '/api/admin/doctors' && method === 'POST') {
-    const { newUser, userId, ...profile } = JSON.parse(String(init?.body));
-    const assignedUserId = userId ?? '40000000-0000-0000-0000-000000000002';
+    const profile = JSON.parse(String(init?.body));
+    const assignedUserId = '40000000-0000-0000-0000-000000000002';
     createdDoctor = {
       ...initialDoctor, ...profile, id: '10000000-0000-0000-0000-000000000002', userId: assignedUserId,
-      user: { id: assignedUserId, firstName: newUser?.firstName ?? 'Carlos', lastName: newUser?.lastName ?? 'Cuenta', email: newUser?.email ?? 'carlos@example.test', isActive: true },
+      user: { id: assignedUserId, firstName: profile.firstName, lastName: profile.lastName, email: profile.email, isActive: true },
       specialties: [], centers: [],
     };
     data = createdDoctor;
@@ -195,8 +196,8 @@ it.each([true, false])('deshabilita el estado sin doctors.disable y preserva isA
   expect(status.disabled).toBe(true);
   expect(status.checked).toBe(isActive);
   expect(screen.queryByRole('button', { name: /^(Activar|Desactivar)$/ })).toBeNull();
-  await user.clear(screen.getByLabelText('Teléfono profesional'));
-  await user.type(screen.getByLabelText('Teléfono profesional'), '71111111');
+  await user.clear(screen.getByLabelText('Teléfono'));
+  await user.type(screen.getByLabelText('Teléfono'), '71111111');
   await user.click(screen.getByRole('button', { name: 'Guardar doctor' }));
   await screen.findByText('Perfil profesional actualizado.');
   expect(requestBody(`/api/admin/doctors/${doctorId}`, 'PUT')).toMatchObject({ phone: '71111111', isActive });
@@ -241,40 +242,44 @@ it.each([
   await screen.findByText('Asignaciones actualizadas.');
   expect(requestBody(`/api/admin/doctors/${doctorId}/${kind}`, 'PUT')).toEqual({ [field]: [] });
   expect(within(screen.getByRole('table')).queryByText(choice)).toBeNull();
+  expect(within(screen.getByRole('table')).getByText('Sin asignaciones')).toBeTruthy();
   await user.click(screen.getByRole('button', { name: button }));
   expect(((await screen.findByRole('checkbox', { name: choice })) as HTMLInputElement).checked).toBe(false);
 });
 
-it.each(['new', 'existing'])('crea un doctor con cuenta %s sin permitir cambiar estado sin doctors.disable', async mode => {
-  permissions.push('doctors.create');
+it('muestra una sucursal asignada aunque la sucursal esté inactiva', async () => {
+  doctor.centers = [centers[2]];
   render(<App />);
-  const user = userEvent.setup();
-  await user.click(await screen.findByRole('button', { name: 'Crear doctor' }));
-  const status = screen.getByRole('checkbox', { name: 'Perfil profesional activo' }) as HTMLInputElement;
-  expect(status.disabled).toBe(true);
-  expect(status.checked).toBe(true);
-  if (mode === 'new') {
-    await user.type(screen.getByLabelText('Nombres'), 'Luis');
-    await user.type(screen.getByLabelText('Apellidos'), 'Prueba');
-    await user.type(screen.getByLabelText('Email de acceso'), 'luis@example.test');
-    await user.type(screen.getByLabelText('Contraseña inicial'), 'test-password-1234');
-  } else {
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Cuenta del doctor' }), 'existing');
-    await user.type(screen.getByPlaceholderText('Selecciona o pega el ID del usuario'), '40000000-0000-0000-0000-000000000002');
+  expect(await screen.findByText('Sede inactiva (Inactiva)')).toBeTruthy();
+  expect(within(screen.getByRole('table')).queryByText('Sin asignaciones')).toBeNull();
+});
+
+it('crea doctor con cuenta obligatoria sin selector de usuario', async () => {
+  permissions.push('doctors.create'); render(<App />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Crear doctor' }));
+  expect(screen.queryByRole('combobox', { name: 'Cuenta del doctor' })).toBeNull();
+  expect(document.querySelector('[name="userId"]')).toBeNull();
+  for (const [name, value] of Object.entries({ firstName: 'Luis', lastName: 'Prueba', ci: 'CI-TEST', birthDate: '1990-01-01', phone: '70000000', email: 'luis@example.test', password: 'test-password-1234', confirmPassword: 'test-password-1234', professionalLicense: 'LP-456' })) {
+    const input = document.querySelector(`[name="${name}"]`) as HTMLInputElement;
+    expect(input.required).toBe(true); fireEvent.change(input, { target: { value } });
   }
-  await user.type(screen.getByLabelText('Matrícula profesional'), 'LP-456');
-  await user.click(screen.getByRole('button', { name: 'Guardar doctor' }));
-  await screen.findByText('Doctor creado. Se aseguró el rol DOCTOR en su cuenta.');
-  const body = requestBody('/api/admin/doctors', 'POST');
-  expect(body).toMatchObject({ professionalLicense: 'LP-456', isActive: true });
-  if (mode === 'new') {
-    expect(body.newUser).toEqual({ firstName: 'Luis', lastName: 'Prueba', email: 'luis@example.test', password: 'test-password-1234' });
-    expect(body.userId).toBeUndefined();
-  } else {
-    expect(body.userId).toBe('40000000-0000-0000-0000-000000000002');
-    expect(body.newUser).toBeUndefined();
-  }
-  expect(await screen.findByText(mode === 'new' ? 'Luis Prueba' : 'Carlos Cuenta')).toBeTruthy();
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar doctor' }));
+  await screen.findByText('Luis Prueba');
+  expect(requestBody('/api/admin/doctors', 'POST')).toMatchObject({ professionalLicense: 'LP-456', isActive: true, firstName: 'Luis', email: 'luis@example.test', confirmPassword: 'test-password-1234' });
+  expect(requestBody('/api/admin/doctors', 'POST').userId).toBeUndefined();
+});
+it('bloquea nacimiento futuro y confirmacion distinta', async () => {
+  permissions.push('doctors.create'); render(<App />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Crear doctor' }));
+  const birth = document.querySelector('[name="birthDate"]') as HTMLInputElement;
+  expect(birth.max).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  fireEvent.change(birth, { target: { value: '2999-01-01' } });
+  const form = screen.getByRole('button', { name: 'Guardar doctor' }).closest('form')!;
+  fireEvent.submit(form); expect(screen.getByRole('alert').textContent).toContain('futura');
+  fireEvent.change(birth, { target: { value: '1990-01-01' } });
+  fireEvent.change(document.querySelector('[name="password"]')!, { target: { value: 'test-password-1234' } });
+  fireEvent.submit(form); expect(screen.getByRole('alert').textContent).toContain('no coinciden');
+  expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST' && String(init.body).includes('professionalLicense'))).toBe(false);
 });
 
 it('muestra loading hasta recibir el listado de doctores', async () => {

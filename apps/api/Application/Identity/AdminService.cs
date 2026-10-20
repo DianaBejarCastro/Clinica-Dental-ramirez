@@ -10,14 +10,21 @@ public sealed class AdminService(AppDbContext db, IdentitySupport support, IPass
 {
     private IQueryable<User> UserQuery => db.Users.Include(x => x.UserRoles).ThenInclude(x => x.Role);
     private IQueryable<Role> RoleQuery => db.Roles.Include(x => x.RolePermissions);
-    public async Task<UserListResponse> Users(int page, int pageSize)
+    public async Task<UserListResponse> Users(int page, int pageSize, string? search = null, string? roleCode = null)
     {
         if (page < 1 || page > 100000 || pageSize is < 1 or > 100) throw new ApiException(400, "Paginación inválida.");
-        var items = await UserQuery.AsNoTracking().OrderBy(x => x.Email).Skip((page - 1) * pageSize).Take(pageSize).ToArrayAsync();
-        return new(items.Select(IdentitySupport.UserDto).ToArray(), await db.Users.CountAsync(), page, pageSize);
+        if (search?.Length > 200) throw new ApiException(400, "La búsqueda es demasiado larga.");
+        var query = UserQuery.AsNoTracking();
+        if (roleCode is not null) query = query.Where(x => x.UserRoles.Any(r => r.Role.Code == roleCode));
+        if (!string.IsNullOrWhiteSpace(search)) {
+            var term = search.Trim().ToLowerInvariant();
+            query = query.Where(x => (x.FirstName + " " + x.LastName).ToLower().Contains(term) || (x.Email != null && x.Email.Contains(term)) || (x.Ci != null && x.Ci.ToLower().Contains(term)));
+        }
+        var items = await query.OrderBy(x => x.LastName).ThenBy(x => x.Id).Skip((page - 1) * pageSize).Take(pageSize).ToArrayAsync();
+        return new(await support.UsersDto(items), await query.CountAsync(), page, pageSize);
     }
-    public async Task<UserResponse> User(Guid id) => IdentitySupport.UserDto(
-        await UserQuery.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id) ?? throw new ApiException(404, "Usuario inexistente."));
+    public async Task<UserResponse> User(Guid id) => (await support.UsersDto([
+        await UserQuery.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id) ?? throw new ApiException(404, "Usuario inexistente.")])).Single();
     public async Task<UserResponse> Create(UserCreateRequest request)
     {
         var user = new User { FirstName = request.FirstName.Trim(), LastName = request.LastName.Trim(),
@@ -31,15 +38,26 @@ public sealed class AdminService(AppDbContext db, IdentitySupport support, IPass
     }
     public async Task<UserResponse> Update(Guid id, UserUpdateRequest request)
     {
+        await using var tx = await db.Database.BeginTransactionAsync();
+        await support.LockAdministration();
         var user = await UserQuery.SingleOrDefaultAsync(x => x.Id == id) ?? throw new ApiException(404, "Usuario inexistente.");
-        var email = request.Email.Trim().ToLowerInvariant();
-        if (await db.Users.AnyAsync(x => x.Id != id && x.Email == email)) throw new ApiException(409, "El email ya existe.");
+        var email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim().ToLowerInvariant();
+        if (user.CanLogin && email is null) throw new ApiException(400, "El email es obligatorio para una cuenta de acceso.");
+        var ci = request.Ci?.Trim().ToUpperInvariant() ?? user.Ci;
+        if (ci is not null && await db.Users.AnyAsync(x => x.Id != id && x.Ci == ci)) throw new ApiException(409, "El CI ya se encuentra registrado.");
+        user.Ci = ci; user.BirthDate = request.BirthDate ?? user.BirthDate;
+        user.Gender = request.Gender; user.Address = request.Address;
+        if (await db.Users.AnyAsync(x => x.Id != id && email != null && x.Email == email)) throw new ApiException(409, "El email ya existe.");
         if (user.Email != email) user.EmailVerified = false;
         user.FirstName = request.FirstName.Trim(); user.LastName = request.LastName.Trim();
         user.Email = email; user.Phone = request.Phone?.Trim();
+        if (user.UserRoles.Any(x => x.Role.Code is "PATIENT" or "DOCTOR" or "DENTAL_ASSISTANT") &&
+            (string.IsNullOrWhiteSpace(user.Ci) || user.BirthDate is null || string.IsNullOrWhiteSpace(user.Phone)))
+            throw new ApiException(400, "Los perfiles de dominio requieren CI, fecha de nacimiento y teléfono.");
         support.Audit("user_updated", "User", id);
         await db.SaveChangesAsync();
-        return IdentitySupport.UserDto(user);
+        await tx.CommitAsync();
+        return await User(id);
     }
     public async Task Status(Guid id, bool active)
     {
@@ -61,14 +79,21 @@ public sealed class AdminService(AppDbContext db, IdentitySupport support, IPass
         var ids = roleIds.Distinct().ToArray();
         var roles = await db.Roles.Where(x => ids.Contains(x.Id) && x.IsActive).ToArrayAsync();
         if (roles.Length != ids.Length) throw new ApiException(400, "Roles inexistentes o inactivos.");
-        if (!roles.Any(x => x.Code == "DOCTOR") && await db.DoctorProfiles.AnyAsync(x => x.UserId == id))
-            throw new ApiException(409, "El usuario con perfil profesional debe conservar el rol DOCTOR.");
-        if (!roles.Any(x => x.Code == "PATIENT") && await db.PatientProfiles.AnyAsync(x => x.UserId == id))
-            throw new ApiException(409, "El usuario vinculado a un paciente debe conservar el rol PATIENT.");
+        if (roles.Any(x => x.Code == "ADMINISTRATOR") && (!user.CanLogin || user.Email is null || user.PasswordHash is null))
+            throw new ApiException(409, "El administrador debe tener una cuenta de acceso habilitada.");
+        if (roles.Any(x => x.Code is "PATIENT" or "DOCTOR" or "DENTAL_ASSISTANT"))
+            throw new ApiException(400, "PATIENT, DOCTOR y DENTAL_ASSISTANT se asignan automáticamente desde sus respectivos módulos.");
+        // Domain roles are managed exclusively by their modules; preserve existing grants.
+        var domainRoleIds = user.UserRoles.Where(x => x.Role.Code == "PATIENT" || x.Role.Code == "DOCTOR" || x.Role.Code == "DENTAL_ASSISTANT").Select(x => x.RoleId).ToArray();
+        ids = ids.Concat(domainRoleIds).Distinct().ToArray();
         if (!roles.Any(x => x.Code == "ADMINISTRATOR")) await support.PreserveAdministrator(id);
+        foreach (var removed in user.UserRoles.Where(x => !ids.Contains(x.RoleId)))
+            support.Audit("user_role_removed", "User", id, metadata: new { roleCode = removed.Role.Code });
         db.UserRoles.RemoveRange(user.UserRoles.Where(x => !ids.Contains(x.RoleId)));
-        foreach (var role in roles.Where(r => user.UserRoles.All(x => x.RoleId != r.Id)))
+        foreach (var role in roles.Where(r => user.UserRoles.All(x => x.RoleId != r.Id))) {
             db.UserRoles.Add(new UserRole { UserId = id, RoleId = role.Id, AssignedByUserId = support.Actor });
+            support.Audit("user_role_added", "User", id, metadata: new { roleCode = role.Code });
+        }
         support.Audit("user_roles_updated", "User", id, metadata: new { roleIds = ids });
         await db.SaveChangesAsync();
         await tx.CommitAsync();
@@ -92,8 +117,10 @@ public sealed class AdminService(AppDbContext db, IdentitySupport support, IPass
         if (role.Code == "ADMINISTRATOR" && !request.IsActive) throw new ApiException(409, "No se puede desactivar el rol administrador.");
         if (role.Code == "DOCTOR" && !request.IsActive && await db.DoctorProfiles.AnyAsync())
             throw new ApiException(409, "No se puede desactivar DOCTOR mientras existan perfiles profesionales.");
-        if (role.Code == "PATIENT" && !request.IsActive && await db.PatientProfiles.AnyAsync(x => x.UserId != null))
+        if (role.Code == "PATIENT" && !request.IsActive && await db.PatientProfiles.AnyAsync())
             throw new ApiException(409, "No se puede desactivar PATIENT mientras existan pacientes vinculados.");
+        if (role.Code == "DENTAL_ASSISTANT" && !request.IsActive && await db.DentalAssistantProfiles.AnyAsync())
+            throw new ApiException(409, "No se puede desactivar DENTAL_ASSISTANT mientras existan perfiles.");
         role.Name = request.Name.Trim(); role.Description = request.Description?.Trim(); role.IsActive = request.IsActive;
         support.Audit("role_updated", "Role", id);
         await db.SaveChangesAsync();

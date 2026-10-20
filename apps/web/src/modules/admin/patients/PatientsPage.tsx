@@ -1,23 +1,11 @@
+import { PatientFields, PatientAccountFields, patientData, patientError, accountData } from '../../patient/PatientFields';
+import ProtectedDeleteButton from '../deletion/ProtectedDeleteButton';
 import { useEffect, useState, type FormEvent } from 'react';
 import { api } from '../../../services/api';
-import { Feedback, Fields, FormActions, PageTitle, readFields, StateBadge, useAction, usePermissions, type FieldSpec } from '../shared';
+import { Feedback, FormActions, PageTitle, StateBadge, useAction, usePermissions } from '../shared';
 import type { Patient, PatientList } from './types';
 
-const fields: FieldSpec[] = [
-  { name: 'firstName', label: 'Nombre', required: true, maxLength: 100 },
-  { name: 'lastName', label: 'Apellido', required: true, maxLength: 100 },
-  { name: 'ci', label: 'CI', maxLength: 50 },
-  { name: 'birthDate', label: 'Fecha de nacimiento', type: 'date' },
-  { name: 'gender', label: 'Género', maxLength: 50 },
-  { name: 'phone', label: 'Teléfono', maxLength: 30 },
-  { name: 'email', label: 'Email', type: 'email', maxLength: 254 },
-  { name: 'address', label: 'Dirección', maxLength: 500 },
-  { name: 'emergencyContactName', label: 'Contacto de emergencia', maxLength: 200 },
-  { name: 'emergencyContactPhone', label: 'Teléfono de emergencia', maxLength: 30 },
-  { name: 'bloodType', label: 'Grupo sanguíneo', maxLength: 10 },
-  { name: 'notes', label: 'Notas', type: 'textarea', maxLength: 4000 },
-];
-const accountLabel = (userId: string | null) => userId ? 'Cuenta vinculada' : 'Paciente clínico sin cuenta';
+const accountLabel = (canLogin: boolean) => canLogin ? 'Cuenta vinculada' : 'Paciente clínico sin cuenta';
 
 export default function PatientsPage() {
   const can = usePermissions(); const action = useAction();
@@ -25,7 +13,8 @@ export default function PatientsPage() {
   const [page, setPage] = useState(1); const [revision, setRevision] = useState(0);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Patient | 'new' | null>(null);
-  const [userId, setUserId] = useState('');
+  const [createAccount, setCreateAccount] = useState(false);
+  const [accountPatient, setAccountPatient] = useState<Patient | null>(null);
   const edit = editing && editing !== 'new' ? editing : null;
   const maySave = can(edit ? 'patients.update' : 'patients.create');
   useEffect(() => {
@@ -41,7 +30,10 @@ export default function PatientsPage() {
     event.preventDefault();
     if (!maySave || action.busy) return;
     const data = new FormData(event.currentTarget);
-    const body = { ...readFields(event, fields), userId: userId.trim() || null,
+    const error = patientError(data); if (error) { action.setError(error); return; }
+    let account;
+    try { account = !edit && createAccount ? accountData(data) : null; } catch (e) { action.setError((e as Error).message); return; }
+    const body = { ...patientData(data, true), ...(!edit ? { account } : {}),
       isActive: can('patients.disable') ? data.has('isActive') : edit?.isActive ?? true };
     void action.run(async () => {
       await api(edit ? `/api/admin/patients/${edit.id}` : '/api/admin/patients', edit ? 'PUT' : 'POST', body);
@@ -51,27 +43,32 @@ export default function PatientsPage() {
   function open(patient: Patient) {
     void action.run(async () => {
       const detail = await api<Patient>(`/api/admin/patients/${patient.id}`);
-      setEditing(detail); setUserId(detail.userId ?? '');
+      setEditing(detail); setAccountPatient(null);
     }, '');
   }
   return <>
     <PageTitle title="Pacientes" description="Datos del paciente clínico. La cuenta de acceso es opcional.">
-      {can('patients.create') && <button disabled={action.busy} onClick={() => { setEditing('new'); setUserId(''); }}>Crear paciente</button>}
+      {can('patients.create') && <button disabled={action.busy} onClick={() => { setEditing('new'); setCreateAccount(false); setAccountPatient(null); }}>Crear paciente</button>}
     </PageTitle>
     <Feedback {...action} />
     {editing && maySave && <section className="card">
       <h2>{edit ? 'Editar paciente' : 'Nuevo paciente'}</h2>
       <form className="editor" key={edit?.id ?? 'new'} onSubmit={save}>
-        <Fields fields={fields} value={edit ?? {}} disabled={action.busy} />
-        <label>Usuario vinculado (ID opcional)
-          <input value={userId} onChange={event => setUserId(event.target.value)} disabled={action.busy}
-            pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}" />
-        </label>
-        <p className="muted">{accountLabel(userId.trim() || null)}. Si vinculas una cuenta, debe existir y tener el rol PATIENT. El email clínico no cambia el email de acceso.</p>
+        <PatientFields value={edit ?? {}} admin disabled={action.busy} />
+        {!edit && <fieldset className="full-width"><legend>Cuenta de acceso</legend>
+          <label className="check"><input type="checkbox" checked={createAccount} onChange={e => setCreateAccount(e.target.checked)} disabled={action.busy} />Crear cuenta de acceso para este paciente</label>
+          {createAccount && <div className="editor"><PatientAccountFields disabled={action.busy} /></div>}
+        </fieldset>}
+        {edit && <p className="muted">{accountLabel(edit.canLogin)}. Las credenciales se gestionan por separado.</p>}
         <label className="check"><input type="checkbox" name="isActive" defaultChecked={edit?.isActive ?? true}
           disabled={action.busy || !can('patients.disable')} />Paciente activo</label>
         <FormActions busy={action.busy} label="Guardar paciente" cancel={() => setEditing(null)} />
       </form>
+    </section>}
+    {accountPatient && can('patients.update') && <section className="card"><h2>Crear cuenta de acceso</h2><p>{accountPatient.firstName} {accountPatient.lastName}</p>
+      <form className="editor" onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget); void action.run(async () => {
+        await api(`/api/admin/patients/${accountPatient.id}/account`, 'POST', accountData(form)); setAccountPatient(null); setRevision(v => v + 1);
+      }, 'Cuenta vinculada.'); }}><PatientAccountFields disabled={action.busy} /><FormActions busy={action.busy} label="Crear cuenta" cancel={() => setAccountPatient(null)} /></form>
     </section>}
     <section className="card table-card">
       {loading && <p role="status">Cargando pacientes…</p>}
@@ -79,13 +76,15 @@ export default function PatientsPage() {
         <table><thead><tr><th>Nombre completo</th><th>CI</th><th>Fecha de nacimiento</th><th>Teléfono</th><th>Email</th><th>Cuenta</th><th>Estado</th><th>Acciones</th></tr></thead>
           <tbody>{list.items.map(patient => <tr key={patient.id}>
             <td>{patient.firstName} {patient.lastName}</td><td>{patient.ci ?? '—'}</td><td>{patient.birthDate ?? '—'}</td>
-            <td>{patient.phone ?? '—'}</td><td>{patient.email ?? '—'}</td><td>{accountLabel(patient.userId)}</td><td><StateBadge active={patient.isActive} /></td>
+            <td>{patient.phone ?? '—'}</td><td>{patient.email ?? '—'}</td><td>{accountLabel(patient.canLogin)}</td><td><StateBadge active={patient.isActive} /></td>
             <td><div className="actions">
               {can('patients.update') && <button className="secondary" disabled={action.busy} onClick={() => open(patient)}>Editar</button>}
+              {can('patients.update') && !patient.canLogin && <button className="secondary" disabled={action.busy} onClick={() => { setEditing(null); setAccountPatient(patient); }}>Crear cuenta de acceso</button>}
               {can('patients.disable') && <button className="secondary" disabled={action.busy} onClick={() => void action.run(async () => {
                 await api(`/api/admin/patients/${patient.id}/status`, 'PATCH', { isActive: !patient.isActive });
                 setEditing(null); setRevision(value => value + 1);
               }, 'Estado del paciente actualizado.')}>{patient.isActive ? 'Desactivar' : 'Activar'}</button>}
+              <ProtectedDeleteButton entity="patients" id={patient.id} label={`${patient.firstName} ${patient.lastName}`} onDeleted={() => { setEditing(null); setRevision(v => v + 1); }} />
             </div></td>
           </tr>)}</tbody>
         </table>

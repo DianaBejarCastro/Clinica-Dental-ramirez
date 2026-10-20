@@ -1,6 +1,9 @@
 .env
 .env.local
 .env.*.local
+.env.*
+!.env.example
+!.env.*.example
 node_modules/
 .pnpm-store/
 dist/
@@ -15,3 +18,11 @@ database/backups/*
 !database/backups/.gitkeep
 *.tsbuildinfo
 artifacts/
+coverage/
+TestResults/
+__pycache__/
+*.py[cod]
+*.tmp
+*.temp
+*.orig
+*.rej

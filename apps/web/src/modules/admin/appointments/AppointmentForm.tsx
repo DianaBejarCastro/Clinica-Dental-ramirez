@@ -1,11 +1,12 @@
+import PatientAutocomplete from '../patients/PatientAutocomplete';
 import { useEffect, useState, type FormEvent } from 'react';
 import { api } from '../../../services/api';
 import type { Doctor } from '../types';
 import { Feedback, useAction, usePermissions } from '../shared';
 import { slotKey, timeLabel, type Appointment, type Availability, type Option, type Slot } from './types';
 
-export default function AppointmentForm({ edit, patients, doctors, centers, specialties, saved, close }: {
-  edit: Appointment | null; patients: Option[]; doctors: Doctor[]; centers: Option[]; specialties: Option[];
+export default function AppointmentForm({ edit, doctors, centers, specialties, saved, close }: {
+  edit: Appointment | null; doctors: Doctor[]; centers: Option[]; specialties: Option[];
   saved: () => void; close: () => void;
 }) {
   const can = usePermissions(); const action = useAction();
@@ -43,7 +44,7 @@ export default function AppointmentForm({ edit, patients, doctors, centers, spec
   const maySave = can(edit ? 'appointments.update' : 'appointments.create');
   function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!maySave || action.busy || loading || !selected || loadedKey !== key) return;
+    if (!patientId || !maySave || action.busy || loading || !selected || loadedKey !== key) return;
     const data = new FormData(event.currentTarget);
     const chosen = selected;
     void action.run(async () => {
@@ -71,9 +72,8 @@ export default function AppointmentForm({ edit, patients, doctors, centers, spec
   return <section className="card"><h2>{edit ? 'Editar cita' : 'Nueva cita'}</h2>
     <Feedback {...action} /><Feedback error={slotError} />
     <form className="editor" onSubmit={save}>
-      <label>Paciente<select required value={patientId} disabled={action.busy} onChange={e => setPatient(e.target.value)}>
-        <option value="">Selecciona un paciente</option>{patients.filter(p => p.isActive).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-      </select></label>
+      <PatientAutocomplete initial={edit ? { patientId: edit.patientId, firstName: edit.patientName || `ID: ${edit.patientId}`, lastName: '' } : null}
+        disabled={action.busy} onChange={patient => setPatient(patient?.patientId ?? '')} />
       <label>Especialidad<select required value={specialtyId} disabled={action.busy} onChange={e => { clearSlots(); setSpecialty(e.target.value); setDoctor(''); setCenter(''); }}>
         <option value="">Selecciona una especialidad</option>{specialties.filter(s => s.isActive).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
       </select></label>
@@ -98,7 +98,7 @@ export default function AppointmentForm({ edit, patients, doctors, centers, spec
       {slotError && <button type="button" disabled={action.busy} onClick={() => setRevision(v => v + 1)}>Reintentar disponibilidad</button>}
       <label>Motivo<input name="reason" maxLength={1000} defaultValue={edit?.reason ?? ''} disabled={action.busy} /></label>
       <label>Notas<textarea name="notes" maxLength={4000} defaultValue={edit?.notes ?? ''} disabled={action.busy} /></label>
-      <div className="actions"><button disabled={!maySave || action.busy || loading || !selected || loadedKey !== key}>Guardar cita</button>
+      <div className="actions"><button disabled={!patientId || !maySave || action.busy || loading || !selected || loadedKey !== key}>Guardar cita</button>
         <button type="button" className="secondary" disabled={action.busy} onClick={close}>Cerrar formulario</button></div>
     </form>
   </section>;

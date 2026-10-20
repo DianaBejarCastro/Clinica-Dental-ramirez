@@ -28,11 +28,20 @@ public sealed class IdentitySupport(AppDbContext db, IHttpContextAccessor access
         var roles = await db.UserRoles.Where(x => x.UserId == id && x.Role.IsActive).Select(x => x.Role.Code).ToArrayAsync();
         var permissions = await db.UserRoles.Where(x => x.UserId == id && x.Role.IsActive)
             .SelectMany(x => x.Role.RolePermissions.Select(p => p.Permission.Code)).Distinct().ToArrayAsync();
-        return new(user.Id, user.FirstName, user.LastName, user.Email, roles, permissions);
+        return new(user.Id, user.FirstName, user.LastName, user.Email!, roles, permissions);
     }
     public static UserResponse UserDto(User u) => new(u.Id, u.FirstName, u.LastName, u.Email, u.Phone,
         u.IsActive, u.EmailVerified, u.CreatedAt, u.UpdatedAt, u.LastLoginAt,
-        u.UserRoles.Select(r => new RoleSummary(r.RoleId, r.Role.Code, r.Role.Name)).ToArray());
+        u.UserRoles.Select(r => new RoleSummary(r.RoleId, r.Role.Code, r.Role.Name)).ToArray())
+        { Ci=u.Ci, BirthDate=u.BirthDate, Gender=u.Gender, Address=u.Address, CanLogin=u.CanLogin };
+    public async Task<UserResponse[]> UsersDto(User[] users)
+    {
+        var ids=users.Select(x=>x.Id).ToArray();
+        var doctors=await db.DoctorProfiles.Where(x=>ids.Contains(x.UserId)).Select(x=>x.UserId).ToArrayAsync();
+        var patients=await db.PatientProfiles.Where(x=>ids.Contains(x.UserId)).Select(x=>x.UserId).ToArrayAsync();
+        var assistants=await db.DentalAssistantProfiles.Where(x=>ids.Contains(x.UserId)).Select(x=>x.UserId).ToArrayAsync();
+        return users.Select(x=>UserDto(x) with { HasDoctorProfile=doctors.Contains(x.Id), HasPatientProfile=patients.Contains(x.Id), HasDentalAssistantProfile=assistants.Contains(x.Id) }).ToArray();
+    }
     public static RoleResponse RoleDto(Role r) => new(r.Id, r.Code, r.Name, r.Description,
         r.IsSystem, r.IsActive, r.RolePermissions.Select(x => x.PermissionId).ToArray());
     public async Task RevokeSessions(Guid userId)
@@ -48,7 +57,8 @@ public sealed class IdentitySupport(AppDbContext db, IHttpContextAccessor access
     public async Task PreserveAdministrator(Guid userId)
     {
         var isAdmin = await db.UserRoles.AnyAsync(x => x.UserId == userId && x.User.IsActive && x.Role.Code == "ADMINISTRATOR");
-        if (isAdmin && !await db.UserRoles.AnyAsync(x => x.UserId != userId && x.User.IsActive && x.Role.Code == "ADMINISTRATOR"))
+        if (isAdmin && !await db.UserRoles.AnyAsync(x => x.UserId != userId && x.User.IsActive && x.User.CanLogin
+            && x.User.Email != null && x.User.PasswordHash != null && x.Role.IsActive && x.Role.Code == "ADMINISTRATOR"))
             throw new ApiException(409, "Debe conservarse al menos un administrador activo.");
     }
 }

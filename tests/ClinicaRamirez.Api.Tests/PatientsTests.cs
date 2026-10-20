@@ -19,10 +19,11 @@ public sealed class PatientsTests(IdentityFixture f) : IClassFixture<IdentityFix
         c.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login.Body.AccessToken);
         return c;
     }
-    private static Dictionary<string, object?> Body(Guid? userId = null, string? ci = null) => new()
+    private static Dictionary<string, object?> Body(string? ci = null) => new()
     {
-        ["firstName"] = "Paciente", ["lastName"] = "Prueba", ["userId"] = userId,
-        ["ci"] = ci, ["email"] = "clinical@example.test", ["notes"] = "Nota clínica sintética",
+        ["firstName"] = "Paciente", ["lastName"] = "Prueba",
+        ["ci"] = ci ?? "CI-" + Guid.NewGuid(),
+        ["phone"] = "70000000", ["emergencyContactName"] = "Test contact", ["emergencyContactPhone"] = "71111111", ["bloodType"] = "UNKNOWN", ["notes"] = "Nota clínica sintética",
         ["birthDate"] = "1995-05-10", ["isActive"] = true
     };
     private static async Task<PatientResponse> Create(HttpClient c, Dictionary<string, object?>? body = null)
@@ -33,17 +34,9 @@ public sealed class PatientsTests(IdentityFixture f) : IClassFixture<IdentityFix
         Assert.EndsWith(patient.Id.ToString(), response.Headers.Location!.ToString());
         return patient;
     }
-    private async Task<Guid> User(bool patient = true)
+    private Dictionary<string, object?> WithAccount(string? email = null)
     {
-        var email = await f.CreateUser();
-        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var id = await db.Users.Where(x => x.Email == email).Select(x => x.Id).SingleAsync();
-        if (patient)
-        {
-            var role = await db.Roles.SingleAsync(x => x.Code == "PATIENT");
-            db.UserRoles.Add(new UserRole { UserId = id, RoleId = role.Id }); await db.SaveChangesAsync();
-        }
-        return id;
+        var body = Body(); body["account"] = new { email = email ?? Guid.NewGuid() + "@example.test", password = f.Password, confirmPassword = f.Password }; return body;
     }
     private async Task<HttpClient> WithPermissions(params string[] permissions)
     {
@@ -62,35 +55,86 @@ public sealed class PatientsTests(IdentityFixture f) : IClassFixture<IdentityFix
         c.DefaultRequestHeaders.Authorization = new("Bearer", login.Body.AccessToken); return c;
     }
 
-    [Fact] public async Task CrearSinUserNoCreaCuenta()
+    [Fact] public async Task CrearUserSinAccesoYPerfil()
     {
         using var c = await Admin(); using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var before = await db.Users.CountAsync(); var p = await Create(c);
-        Assert.Null(p.UserId); Assert.Null(p.Ci); Assert.True(p.IsActive);
-        Assert.Equal(before, await db.Users.CountAsync()); Assert.Equal(DateTimeKind.Utc, p.CreatedAt.Kind);
+        Assert.NotEqual(Guid.Empty, p.UserId); Assert.False(p.CanLogin); Assert.Null(p.Email); Assert.NotNull(p.Ci); Assert.True(p.IsActive);
+        Assert.Equal(before + 1, await db.Users.CountAsync());
+        var person = await db.Users.SingleAsync(x => x.Id == p.UserId); Assert.False(person.CanLogin); Assert.Null(person.PasswordHash); Assert.Null(person.Email);
+        Assert.True(await db.UserRoles.AnyAsync(x => x.UserId == p.UserId && x.Role.Code == "PATIENT")); Assert.Equal(DateTimeKind.Utc, p.CreatedAt.Kind);
         Assert.Equal(DateTimeKind.Utc, p.UpdatedAt.Kind);
     }
-    [Fact] public async Task VincularPatientMantieneEmailYPasswordDelUsuario()
+    [Fact] public async Task CrearConCuentaAsignaPatientYSeparaEmailClinico()
     {
-        using var c = await Admin(); var id = await User();
+        using var c = await Admin(); var email = Guid.NewGuid() + "@example.test";
+        var p = await Create(c, WithAccount(email)); Assert.True(p.CanLogin); Assert.Equal(email, p.Email);
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var user = await db.Users.AsNoTracking().SingleAsync(x => x.Id == id);
-        var p = await Create(c, Body(id)); Assert.Equal(id, p.UserId); Assert.Equal("clinical@example.test", p.Email);
-        var after = await db.Users.AsNoTracking().SingleAsync(x => x.Id == id);
-        Assert.Equal(user.Email, after.Email); Assert.Equal(user.PasswordHash, after.PasswordHash);
+        Assert.Equal(email, (await db.Users.SingleAsync(x => x.Id == p.UserId)).Email);
+        Assert.True(await db.UserRoles.AnyAsync(x => x.UserId == p.UserId && x.Role.Code == "PATIENT"));
+        var update = Body();
+        Assert.Equal(HttpStatusCode.OK, (await c.PutAsJsonAsync($"{Path}/{p.Id}", update)).StatusCode);
+        Assert.Equal(email, (await db.Users.AsNoTracking().SingleAsync(x => x.Id == p.UserId)).Email);
     }
-    [Fact] public async Task RechazaUsuarioSinPatient()
+    [Fact] public async Task NoAceptaUserIdManual()
     {
-        using var c = await Admin(); Assert.Equal(HttpStatusCode.BadRequest, (await c.PostAsJsonAsync(Path, Body(await User(false)))).StatusCode);
+        using var c = await Admin(); var body = Body(); body["userId"] = Guid.NewGuid();
+        Assert.Equal(HttpStatusCode.BadRequest, (await c.PostAsJsonAsync(Path, body)).StatusCode);
+        var p = await Create(c);
+        Assert.Equal(HttpStatusCode.BadRequest, (await c.PutAsJsonAsync($"{Path}/{p.Id}", body)).StatusCode);
     }
-    [Fact] public async Task UsuarioInexistente404()
+    [Fact] public async Task EmailDuplicadoReviertePerfilYCuenta()
     {
-        using var c = await Admin(); Assert.Equal(HttpStatusCode.NotFound, (await c.PostAsJsonAsync(Path, Body(Guid.NewGuid()))).StatusCode);
+        using var c = await Admin(); using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var users = await db.Users.CountAsync(); var profiles = await db.PatientProfiles.CountAsync();
+        Assert.Equal(HttpStatusCode.Conflict, (await c.PostAsJsonAsync(Path, WithAccount(f.Email.ToUpperInvariant()))).StatusCode);
+        Assert.Equal(users, await db.Users.CountAsync()); Assert.Equal(profiles, await db.PatientProfiles.CountAsync());
     }
-    [Fact] public async Task UsuarioVinculado409()
+    [Fact] public async Task CuentaPosteriorSoloUnaVezYLogin()
     {
-        using var c = await Admin(); var id = await User(); await Create(c, Body(id));
-        Assert.Equal(HttpStatusCode.Conflict, (await c.PostAsJsonAsync(Path, Body(id))).StatusCode);
+        using var c = await Admin(); var p = await Create(c); var email = Guid.NewGuid() + "@example.test";
+        var account = new { email, password = f.Password, confirmPassword = f.Password };
+        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var usersBefore = await db.Users.CountAsync();
+        var response = await c.PostAsJsonAsync($"{Path}/{p.Id}/account", account); Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var updated = (await response.Content.ReadFromJsonAsync<PatientResponse>())!; Assert.Equal(p.UserId, updated.UserId); Assert.True(updated.CanLogin);
+        Assert.Equal(HttpStatusCode.Conflict, (await c.PostAsJsonAsync($"{Path}/{p.Id}/account", account)).StatusCode);
+        using var patientClient = f.Client(); var login = await f.Login(patientClient, email); Assert.Contains("PATIENT", login.Body.User.Roles);
+        Assert.Equal(usersBefore, await db.Users.CountAsync());
+    }
+
+    [Fact] public async Task SinAccesoNoAutenticaPeroApareceEnIdentidades()
+    {
+        using var c = await Admin(); var p = await Create(c);
+        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = await db.Users.SingleAsync(x => x.Id == p.UserId);
+        user.Email = Guid.NewGuid() + "@example.test"; await db.SaveChangesAsync();
+        using var anonymous = f.Client();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.PostAsJsonAsync("/api/auth/login", new { email = user.Email, password = f.Password })).StatusCode);
+        var list = (await c.GetFromJsonAsync<ClinicaRamirez.Api.DTOs.Identity.UserListResponse>("/api/admin/users?pageSize=100"))!;
+        Assert.Contains(list.Items, x => x.Id == p.UserId && !x.CanLogin);
+        Assert.Equal(await db.Users.CountAsync(), list.Total);
+    }
+
+    [Fact] public async Task DeshabilitarCredencialesRechazaAccessYRefresh()
+    {
+        using var c = await Admin(); var email = Guid.NewGuid() + "@example.test"; var p = await Create(c, WithAccount(email));
+        using var loginClient = f.Client(); var login = await f.Login(loginClient, email);
+        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = await db.Users.SingleAsync(x => x.Id == p.UserId); user.CanLogin = false; user.PasswordHash = null; await db.SaveChangesAsync();
+        loginClient.DefaultRequestHeaders.Authorization = new("Bearer", login.Body.AccessToken);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await loginClient.GetAsync("/api/patient/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await IdentityFixture.Refresh(loginClient, login.Cookie)).StatusCode);
+    }
+
+    [Fact] public void PerfilNoDuplicaDatosPersonales()
+    {
+        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var profile = db.Model.FindEntityType(typeof(ClinicaRamirez.Api.Domain.Patients.PatientProfile))!;
+        foreach (var name in new[] { "FirstName", "LastName", "Ci", "BirthDate", "Gender", "Phone", "Email", "Address" })
+            Assert.Null(profile.FindProperty(name));
+        Assert.False(profile.FindProperty("UserId")!.IsNullable);
+        Assert.Equal(DeleteBehavior.Restrict, profile.GetForeignKeys().Single().DeleteBehavior);
     }
     [Fact] public async Task CiDuplicadoNormalizado409InclusoInactivo()
     {
@@ -98,11 +142,8 @@ public sealed class PatientsTests(IdentityFixture f) : IClassFixture<IdentityFix
         await c.PatchAsJsonAsync($"{Path}/{p.Id}/status", new { isActive = false });
         Assert.Equal(HttpStatusCode.Conflict, (await c.PostAsJsonAsync(Path, Body(ci: " " + ci.ToLowerInvariant() + " "))).StatusCode);
     }
-    [Fact] public async Task PermiteMultiplesCiYUserNulos()
-    {
-        using var c = await Admin(); var a = await Create(c, Body(ci: "  ")); var b = await Create(c);
-        Assert.Null(a.Ci); Assert.Null(b.Ci); Assert.NotEqual(a.Id, b.Id);
-    }
+    [Fact] public async Task CiVacioRechazado()
+    { using var c = await Admin(); Assert.Equal(HttpStatusCode.BadRequest, (await c.PostAsJsonAsync(Path, Body(ci: "  "))).StatusCode); }
     [Fact] public async Task ListaPaginada()
     {
         using var c = await Admin(); await Create(c);
@@ -115,18 +156,17 @@ public sealed class PatientsTests(IdentityFixture f) : IClassFixture<IdentityFix
         using var c = await Admin(); var p = await Create(c);
         var detail = await c.GetFromJsonAsync<PatientResponse>($"{Path}/{p.Id}"); Assert.Equal(p, detail);
     }
-    [Fact] public async Task EditaYVinculaPacienteExistente()
+    [Fact] public async Task EditaSinRecrearCuenta()
     {
-        using var c = await Admin(); var p = await Create(c); var id = await User();
-        var body = Body(id); body["firstName"] = "Actualizado";
+        using var c = await Admin(); var p = await Create(c, WithAccount()); var body = Body(); body["firstName"] = "Actualizado";
+        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); var count = await db.Users.CountAsync();
         var response = await c.PutAsJsonAsync($"{Path}/{p.Id}", body); Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var updated = (await response.Content.ReadFromJsonAsync<PatientResponse>())!;
-        Assert.Equal(id, updated.UserId); Assert.Equal("Actualizado", updated.FirstName);
-        Assert.Equal(p.CreatedAt, updated.CreatedAt); Assert.True(updated.UpdatedAt >= p.UpdatedAt);
+        Assert.Equal(p.UserId, updated.UserId); Assert.Equal("Actualizado", updated.FirstName); Assert.Equal(count, await db.Users.CountAsync());
     }
     [Fact] public async Task DesactivaSinBorrarNiDesactivarUsuario()
     {
-        using var c = await Admin(); var userId = await User(); var p = await Create(c, Body(userId));
+        using var c = await Admin(); var p = await Create(c, WithAccount()); var userId = p.UserId;
         Assert.Equal(HttpStatusCode.NoContent, (await c.PatchAsJsonAsync($"{Path}/{p.Id}/status", new { isActive = false })).StatusCode);
         Assert.False((await c.GetFromJsonAsync<PatientResponse>($"{Path}/{p.Id}"))!.IsActive);
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -155,15 +195,15 @@ public sealed class PatientsTests(IdentityFixture f) : IClassFixture<IdentityFix
     }
     [Fact] public async Task AuditoriaSinDatosClinicos()
     {
-        using var c = await Admin(); var p = await Create(c, Body(await User()));
-        await c.PutAsJsonAsync($"{Path}/{p.Id}", Body(p.UserId)); await c.PatchAsJsonAsync($"{Path}/{p.Id}/status", new { isActive = false });
+        using var c = await Admin(); var p = await Create(c, WithAccount());
+        await c.PutAsJsonAsync($"{Path}/{p.Id}", Body()); await c.PatchAsJsonAsync($"{Path}/{p.Id}/status", new { isActive = false });
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var events = await db.AuditLogs.Where(x => x.Entity == "PatientProfile" && x.EntityId == p.Id).ToArrayAsync();
-        foreach (var action in new[] { "patient_created", "patient_updated", "patient_status_changed", "patient_user_linked" })
+        foreach (var action in new[] { "patient_created", "patient_updated", "patient_status_changed", "patient_account_enabled" })
             Assert.Contains(events, x => x.Action == action && x.UserId != null);
         Assert.All(events, x => { Assert.DoesNotContain("clínica", x.MetadataJson ?? ""); Assert.DoesNotContain("clinical@example", x.MetadataJson ?? ""); });
     }
-    [Theory] [InlineData("firstName")] [InlineData("lastName")]
+    [Theory] [InlineData("firstName")] [InlineData("lastName")] [InlineData("ci")] [InlineData("birthDate")] [InlineData("phone")] [InlineData("emergencyContactName")] [InlineData("emergencyContactPhone")] [InlineData("bloodType")]
     public async Task NombresObligatorios(string field)
     {
         using var c = await Admin(); var body = Body(); body[field] = " ";
@@ -187,11 +227,38 @@ public sealed class PatientsTests(IdentityFixture f) : IClassFixture<IdentityFix
     }
     [Fact] public async Task RolPatientProtegidoMientrasVinculado()
     {
-        using var c = await Admin(); var id = await User(); await Create(c, Body(id));
-        Assert.Equal(HttpStatusCode.Conflict, (await c.PutAsJsonAsync($"/api/admin/users/{id}/roles", new { roleIds = Array.Empty<Guid>() })).StatusCode);
+        using var c = await Admin(); var patient = await Create(c, WithAccount()); var id = patient.UserId;
+        Assert.Equal(HttpStatusCode.NoContent, (await c.PutAsJsonAsync($"/api/admin/users/{id}/roles", new { roleIds = Array.Empty<Guid>() })).StatusCode);
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var role = await db.Roles.SingleAsync(x => x.Code == "PATIENT");
         Assert.Equal(HttpStatusCode.Conflict, (await c.PutAsJsonAsync($"/api/admin/roles/{role.Id}", new { name = role.Name, isActive = false })).StatusCode);
+    }
+    [Theory][InlineData(false)][InlineData(true)] public async Task FechaLocalEnAltaYEdicion(bool future) {
+        using var c = await Admin(); var p = await Create(c); var body = Body();
+        body["birthDate"] = ClinicaRamirez.Api.DTOs.LocalBirthDateAttribute.Today.AddDays(future ? 1 : 0).ToString("yyyy-MM-dd");
+        Assert.Equal(future ? HttpStatusCode.BadRequest : HttpStatusCode.Created, (await c.PostAsJsonAsync(Path, body)).StatusCode);
+        body["ci"] = p.Ci;
+        Assert.Equal(future ? HttpStatusCode.BadRequest : HttpStatusCode.OK, (await c.PutAsJsonAsync($"{Path}/{p.Id}", body)).StatusCode);
+    }
+    [Fact] public async Task NoAsignacionManualPatientYConservaExistentes() {
+        using var c = await Admin(); var p = await Create(c, WithAccount());
+        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var role = await db.Roles.SingleAsync(x => x.Code == "PATIENT");
+        var email = await f.CreateUser(); var other = await db.Users.SingleAsync(x => x.Email == email);
+        foreach (var id in new[] { other.Id, p.UserId })
+            Assert.Equal(HttpStatusCode.BadRequest, (await c.PutAsJsonAsync($"/api/admin/users/{id}/roles", new { roleIds = new[] { role.Id } })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await c.PutAsJsonAsync($"/api/admin/users/{p.UserId}/roles", new { roleIds = Array.Empty<Guid>() })).StatusCode);
+        Assert.True(await db.UserRoles.AnyAsync(x => x.UserId == p.UserId && x.RoleId == role.Id));
+        Assert.False(await db.UserRoles.AnyAsync(x => x.UserId == other.Id && x.RoleId == role.Id));
+        Assert.Equal(HttpStatusCode.BadRequest, (await c.PostAsJsonAsync("/api/admin/users", new { firstName = "Test", lastName = "Test", email = Guid.NewGuid() + "@example.test", password = f.Password, roleIds = new[] { role.Id } })).StatusCode);
+    }
+    [Fact] public async Task CuentaPosteriorRespetaAutorizacionYEmailGlobal() {
+        using var c = await Admin(); var p = await Create(c);
+        var account = new { email = f.Email, password = f.Password, confirmPassword = f.Password };
+        Assert.Equal(HttpStatusCode.Conflict, (await c.PostAsJsonAsync($"{Path}/{p.Id}/account", account)).StatusCode);
+        using var denied = await WithPermissions("patients.view");
+        Assert.Equal(HttpStatusCode.Forbidden, (await denied.PostAsJsonAsync($"{Path}/{p.Id}/account", account)).StatusCode);
+        Assert.False((await c.GetFromJsonAsync<PatientResponse>($"{Path}/{p.Id}"))!.CanLogin);
     }
     [Fact] public async Task MigracionYSeedsPreviosCompatibles()
     {

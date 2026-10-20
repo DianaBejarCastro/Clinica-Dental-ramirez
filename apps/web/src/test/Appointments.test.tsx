@@ -5,7 +5,7 @@ import App from '../App';
 import { setSession } from '../services/api';
 import { appointmentStates, type Appointment, type Slot } from '../modules/admin/appointments/types';
 
-const original: Appointment = { id: 'a1', patientId: 'p1', doctorId: 'd1', centerId: 'c1', specialtyId: 's1',
+const original: Appointment = { id: 'a1', patientId: 'p1', patientName: 'Ana Paciente', doctorName: 'Marta Doctor', centerName: 'Central', doctorId: 'd1', centerId: 'c1', specialtyId: 's1',
   appointmentDate: '2030-01-07', startTime: '08:00:00', endTime: '08:30:00', status: 'SCHEDULED',
   reason: 'Control', notes: 'Nota', createdByUserId: 'admin', createdAt: '2026-10-06T12:00:00Z', updatedAt: '2026-10-06T12:00:00Z' };
 const available: Slot = { startTime: '09:00:00', endTime: '09:30:00' };
@@ -18,9 +18,10 @@ const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit
   if (path === '/api/auth/refresh') return Response.json({ accessToken: 'test', expiresAt: '', user: {
     id: 'admin', firstName: 'Admin', lastName: 'Prueba', email: 'admin@example.test', roles: [], permissions,
   } });
-  if (path === '/api/admin/patients') return Response.json({ items: [
-    { id: 'p1', firstName: 'Ana', lastName: 'Paciente', isActive: true }, { id: 'p2', firstName: 'Luis', lastName: 'Paciente', isActive: true },
-  ], total: 2 });
+  if (path === '/api/admin/patients/search') return Response.json([
+    { patientId: 'p1', userId: 'u1', firstName: 'Ana', lastName: 'Paciente', ci: '12345', phone: '71234567', email: 'ana@example.test' },
+    { patientId: 'p2', userId: 'u2', firstName: 'Luis', lastName: 'Paciente' },
+  ]);
   const centers = [{ id: 'c1', name: 'Central', isActive: true }, { id: 'c2', name: 'Norte', isActive: true }];
   const specialties = [{ id: 's1', name: 'General', isActive: true }, { id: 's2', name: 'Ortodoncia', isActive: true }];
   if (path === '/api/admin/centers') return Response.json(centers);
@@ -64,6 +65,20 @@ beforeEach(() => {
 const writes = (method: string) => fetchMock.mock.calls.filter(([url, init]) => String(url).includes('/appointments') && init?.method === method);
 const availabilityCalls = () => fetchMock.mock.calls.filter(([url]) => String(url).includes('/availability?'));
 const table = () => within(screen.getByRole('table'));
+it('presentation never uses UUIDs and retains the seven requested columns without catalog permissions', async () => {
+  permissions = ['appointments.view'];
+  appointments = [{ ...original, patientId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', doctorId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', centerId: 'cccccccc-cccc-cccc-cccc-cccccccccccc' }];
+  render(<App />); await screen.findByText('Ana Paciente');
+  expect(table().getAllByRole('columnheader').map(x => x.textContent)).toEqual(['Fecha / Hora','Paciente','Doctor','Sucursal','Estado','Motivo','Acciones']);
+  expect(table().getByText('Marta Doctor')).toBeTruthy(); expect(table().getByText('Central')).toBeTruthy();
+  for (const id of [appointments[0].patientId, appointments[0].doctorId, appointments[0].centerId]) expect(document.body.textContent).not.toContain(id);
+  expect(fetchMock.mock.calls.some(([url]) => /\/api\/admin\/(doctors|centers|patients)(\?|$)/.test(String(url)))).toBe(false);
+});
+it('missing presentation names have controlled fallbacks', async () => {
+  permissions = ['appointments.view']; appointments = [{ ...original, patientName: '', doctorName: '', centerName: '' }];
+  render(<App />); await screen.findByText('Paciente no disponible');
+  expect(table().getByText('Doctor no disponible')).toBeTruthy(); expect(table().getByText('Sucursal no disponible')).toBeTruthy(); expect(screen.queryByText(/ID:/)).toBeNull();
+});
 async function openNew() {
   const user = userEvent.setup();
   await waitFor(() => expect((screen.getByRole('button', { name: 'Nueva cita' }) as HTMLButtonElement).disabled).toBe(false));
@@ -71,7 +86,8 @@ async function openNew() {
 }
 async function fill() {
   const user = await openNew();
-  await user.selectOptions(screen.getByLabelText('Paciente'), 'p1');
+  await user.type(screen.getByLabelText('Paciente'), 'Ana');
+  await user.click(await screen.findByRole('option', { name: /Ana Paciente/ }));
   await user.selectOptions(screen.getByLabelText('Especialidad'), 's1');
   await user.selectOptions(screen.getByLabelText('Doctor'), 'd1');
   await user.selectOptions(screen.getByLabelText('Sucursal'), 'c1');
@@ -93,7 +109,7 @@ it('restringe ruta y navegación sin appointments.view', async () => {
 it('lista citas con nombres, horas, motivo y navegación', async () => {
   render(<App />); await screen.findByText('Ana Paciente');
   expect(table().getByText('Marta Doctor')).toBeTruthy(); expect(table().getByText('Control')).toBeTruthy();
-  expect(table().getByText('Central')).toBeTruthy(); expect(table().getByText('General')).toBeTruthy();
+  expect(table().getByText('Central')).toBeTruthy(); expect(table().queryByRole('columnheader', { name: 'Especialidad' })).toBeNull();
   expect(table().getByText('Programada', { selector: 'span' })).toBeTruthy();
   expect(screen.getByRole('link', { name: 'Agenda / Citas' }).getAttribute('aria-current')).toBe('page');
 });
@@ -101,6 +117,13 @@ it('abre nueva cita y no ofrece horas de escritura libre', async () => {
   render(<App />); await openNew(); expect(screen.getByRole('heading', { name: 'Nueva cita' })).toBeTruthy();
   expect((screen.getByLabelText('Horario disponible') as HTMLSelectElement).disabled).toBe(true);
   expect(document.querySelector('input[type=time]')).toBeNull(); expect((screen.getByRole('button', { name: 'Guardar cita' }) as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.getByRole('combobox', { name: 'Paciente' }).tagName).toBe('INPUT');
+  expect(fetchMock.mock.calls.some(([url]) => new URL(String(url)).pathname.startsWith('/api/admin/patients'))).toBe(false);
+});
+it('texto modificado invalida paciente y bloquea envío incluso con slot válido', async () => {
+  render(<App />); const user = await choose(); await user.type(screen.getByLabelText('Paciente'), 'modificado');
+  expect((screen.getByRole('button', { name: 'Guardar cita' }) as HTMLButtonElement).disabled).toBe(true);
+  await user.click(screen.getByRole('button', { name: 'Guardar cita' })); expect(writes('POST')).toHaveLength(0);
 });
 it('consulta disponibilidad con todos los parámetros', async () => {
   render(<App />); await fill();
@@ -109,7 +132,9 @@ it('consulta disponibilidad con todos los parámetros', async () => {
 });
 it('muestra disponibilidad vacía e impide guardar', async () => {
   slots = []; render(<App />); const user = await openNew();
-  for (const [label, value] of [['Paciente', 'p1'], ['Especialidad', 's1'], ['Doctor', 'd1'], ['Sucursal', 'c1']])
+  await user.type(screen.getByLabelText('Paciente'), 'Ana');
+  await user.click(await screen.findByRole('option', { name: /Ana Paciente/ }));
+  for (const [label, value] of [ ['Especialidad', 's1'], ['Doctor', 'd1'], ['Sucursal', 'c1']])
     await user.selectOptions(screen.getByLabelText(label), value);
   await user.type(screen.getByLabelText('Fecha'), '2030-01-07');
   expect(await screen.findByText('No hay horarios disponibles para una nueva reserva.')).toBeTruthy();
@@ -207,7 +232,8 @@ it('edita datos conservando explícitamente su reserva actual', async () => {
   await user.click(screen.getByRole('button', { name: 'Editar cita' }));
   await screen.findByRole('option', { name: '08:00 – 08:30 (reserva actual)' });
   await user.selectOptions(screen.getByLabelText('Horario disponible'), 'current');
-  await user.selectOptions(screen.getByLabelText('Paciente'), 'p2');
+  await user.clear(screen.getByLabelText('Paciente')); await user.type(screen.getByLabelText('Paciente'), 'Luis');
+  await user.click(await screen.findByRole('option', { name: /Luis Paciente/ }));
   await user.clear(screen.getByLabelText('Motivo')); await user.type(screen.getByLabelText('Motivo'), 'Editada');
   await user.click(screen.getByRole('button', { name: 'Guardar cita' })); await screen.findByText('Editada');
   expect(JSON.parse(String(writes('PUT')[0][1]?.body))).toMatchObject({ patientId: 'p2', startTime: '08:00:00', endTime: '08:30:00', reason: 'Editada' });
@@ -229,6 +255,6 @@ it('no sobrescribe una cita editada por otro usuario', async () => {
 });
 it('sin acceso a catálogos muestra identificadores sin hacer consultas prohibidas', async () => {
   permissions = ['appointments.view', 'appointments.create']; render(<App />);
-  expect(await screen.findByText('ID: p1')).toBeTruthy(); expect((screen.getByRole('button', { name: 'Nueva cita' }) as HTMLButtonElement).disabled).toBe(true);
+  expect(await screen.findByText('Ana Paciente')).toBeTruthy(); expect(table().getByText('Marta Doctor')).toBeTruthy(); expect(table().getByText('Central')).toBeTruthy(); expect(screen.queryByText(/ID:/)).toBeNull(); expect((screen.getByRole('button', { name: 'Nueva cita' }) as HTMLButtonElement).disabled).toBe(true);
   expect(fetchMock.mock.calls.some(([url]) => /\/(patients|doctors|centers|specialties)(\?|$)/.test(String(url)))).toBe(false);
 });

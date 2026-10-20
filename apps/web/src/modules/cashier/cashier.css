@@ -1,0 +1,15 @@
+.cashier-payments { display: grid; gap: 1rem; min-width: 0; }
+.cashier-payments .card { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.cashier-columns { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.2fr); gap: 1rem; }
+.cashier-columns > div { display: grid; gap: 1rem; align-content: start; min-width: 0; }
+.cashier-treatment-list { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(260px,100%),1fr)); gap: .75rem; }
+.cashier-treatment-list button { display: grid; gap: .4rem; text-align: left; }
+.cashier-treatment-list button[aria-pressed=true] { outline: 2px solid var(--color-primary); background: var(--color-primary-soft); }
+.cashier-totals { display: flex; flex-wrap: wrap; gap: 1rem; }
+.cashier-totals dd { margin: .3rem 0; font-weight: 700; }
+.cashier-payments label { display: grid; gap: .4rem; margin-bottom: .8rem; }
+.cashier-payments fieldset { border: 0; padding: 0; min-width: 0; }
+.cashier-payments input,.cashier-payments select,.cashier-payments textarea { min-width: 0; max-width: 100%; }
+.cashier-payments form button { margin-top: 1rem; }
+.cashier-table { max-width: 100%; overflow-x: auto; }
+@media(max-width:1000px) { .cashier-columns { grid-template-columns: minmax(0,1fr); } }

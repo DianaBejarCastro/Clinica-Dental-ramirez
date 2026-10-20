@@ -23,6 +23,7 @@ const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit
   const method = init?.method ?? 'GET';
   const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {};
   if (path === '/api/auth/refresh') return response(session);
+  if (path === '/api/admin/clinic/site-images/hero') return Response.json({ title: 'No hay portada.' }, { status: 404 });
   if (path === '/api/admin/clinic/social-networks') return response([]);
   if (path === '/api/admin/clinic/social-networks') return response([]);
   if (failure?.path === path && failure.method === method) return response({ title: failure.message }, 400);
@@ -73,7 +74,7 @@ beforeEach(() => {
   setSession(null);
   failure = null;
   clinic = { ...timestamp, id: 'clinic-1', name: 'Clínica RAMÍREZ', legalName: 'Ramírez SRL', description: null, logoUrl: null, phone: '22223333', whatsapp: null, email: 'clinic@example.com', taxId: null, isActive: true };
-  centers = [{ ...timestamp, id: 'center-1', clinicId: clinic.id, name: 'Sucursal Central', code: 'CENTRAL', description: null, address: 'Calle 1', city: 'La Paz', department: 'La Paz', country: 'Bolivia', phone: null, whatsapp: null, email: null, googleMapsUrl: 'https://maps.example.com/central', latitude: null, longitude: null, isMain: true, isActive: true }];
+  centers = [{ ...timestamp, id: 'center-1', clinicId: clinic.id, name: 'Sucursal Central', code: 'CENTRAL', description: null, address: 'Calle 1', city: 'La Paz', department: 'La Paz', country: 'Bolivia', phone: null, whatsapp: null, email: null, latitude: -16.5, longitude: -68.15, isMain: true, isActive: true }];
   specialties = [{ ...timestamp, id: 'specialty-1', name: 'Ortodoncia', code: 'ORTHODONTICS', description: 'Atención especializada', isActive: true, doctorCount: 2 }];
   fetchMock.mockClear();
   vi.stubGlobal('fetch', fetchMock);
@@ -134,7 +135,7 @@ describe.each(catalogs)('$title', catalog => {
     mount(catalog.page, permissions());
     expect(await screen.findByText(catalog.name)).toBeTruthy();
     expect(screen.getByText('Activo')).toBeTruthy();
-    if (catalog.isCenter) expect((screen.getByRole('link', { name: 'Ver mapa' }) as HTMLAnchorElement).href).toBe('https://maps.example.com/central');
+    if (catalog.isCenter) expect((screen.getByRole('link', { name: 'Ver mapa' }) as HTMLAnchorElement).href).toBe('https://www.google.com/maps?q=-16.5,-68.15');
     else {
       expect(screen.getByText('Atención especializada')).toBeTruthy();
       expect(screen.getByRole('columnheader', { name: 'Doctores' })).toBeTruthy();
@@ -149,11 +150,20 @@ describe.each(catalogs)('$title', catalog => {
     expect(screen.queryByLabelText(catalog.stateLabel)).toBeNull();
     await user.type(screen.getByLabelText('Nombre'), catalog.newName);
     await user.type(screen.getByLabelText('Código'), catalog.newCode);
-    if (catalog.isCenter) await user.type(screen.getByLabelText('Dirección'), 'Calle Sur 2');
+    if (catalog.isCenter) {
+      await user.type(screen.getByLabelText('Dirección'), 'Calle Sur 2');
+      expect(screen.queryByLabelText('Google Maps URL')).toBeNull();
+      await user.type(screen.getByLabelText('Latitud'), '-16.5');
+      await user.type(screen.getByLabelText('Longitud'), '-68.15');
+    }
     await user.click(screen.getByRole('button', { name: `Guardar ${catalog.singular}` }));
     expect(await screen.findByText(catalog.saved)).toBeTruthy();
     expect(await screen.findByText(catalog.newName)).toBeTruthy();
     expect(requestBody(path, 'POST')).toMatchObject({ name: catalog.newName, code: catalog.newCode, isActive: true });
+    if (catalog.isCenter) {
+      expect(requestBody(path, 'POST')).toMatchObject({ latitude: -16.5, longitude: -68.15 });
+      expect(requestBody(path, 'POST')).not.toHaveProperty('googleMapsUrl');
+    }
   });
   it.each([true, false])('edita conservando isActive=%s sin permiso disable', async isActive => {
     currentItem().isActive = isActive;

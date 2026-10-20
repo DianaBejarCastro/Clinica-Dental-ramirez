@@ -1,0 +1,27 @@
+.odo-panel { min-width:0; max-width:100%; }
+.odo-heading { display:flex; align-items:start; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+.odo-heading h2 { margin-bottom:.3rem; }.odo-heading p { color:#536a74; }
+.odo-heading label { max-width:100%; min-width:0; }.odo-heading select { max-width:100%; }
+.odo-status { display:flex; flex-wrap:wrap; gap:.75rem 1.5rem; padding:1rem; border:1px solid var(--color-primary-border); border-radius:10px; background:var(--color-primary-soft); font-size:.9rem; }
+.odo-status strong { color:var(--color-primary); }.odo-readonly { border-left:3px solid #617c89; padding:.7rem 1rem; background:#f4f7fa; }
+.odo-dentition { border:0; padding:1rem 0; display:flex; flex-wrap:wrap; gap:.5rem; }.odo-dentition legend { font-weight:600; padding-top:1rem; }
+.odo-workspace { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:1rem; align-items:start; margin:1rem 0; min-width:0; }
+.odo-chart-scroll { min-width:0; max-width:100%; overflow-x:auto; overscroll-behavior-x:contain; border:1px solid #d9e5e8; border-radius:12px; background:linear-gradient(#fbfdfd,#f4f8f8); padding:1rem .5rem; }
+.odo-arches { width:max-content; min-width:100%; }.odo-arch { width:max-content; min-width:100%; }.odo-arch h3 { margin:.8rem 0; text-align:center; font-size:.85rem; color:#4e6973; }
+.odo-teeth { display:flex; justify-content:center; gap:4px; padding:.3rem; }.odo-tooth { width:62px; flex:0 0 62px; border:2px solid transparent; border-radius:9px; padding:3px; }.odo-tooth.selected { border-color:var(--color-primary); background:var(--color-primary-soft); }
+.odo-tooth-pick { display:flex; flex-direction:column; align-items:center; border:0; padding:0; width:100%; background:transparent; color:#244951; }.odo-tooth-pick:hover { background:#dcefed; }.odo-tooth-svg { width:48px; height:74px; }.odo-tooth-pick strong { padding:3px; font-variant-numeric:tabular-nums; }
+.odo-surface-diagram { position:relative; width:50px; height:50px; margin:4px auto; }.odo-surface { position:absolute; border:1px solid #9ab2b9; border-radius:2px; padding:0; background:white; color:#b42332; font-size:16px; line-height:1; min-height:0; }
+.odo-surface.center { left:16px; top:16px; width:18px; height:18px; }.odo-surface.top { left:0; top:0; width:50px; height:15px; }.odo-surface.bottom { left:0; bottom:0; width:50px; height:15px; }.odo-surface.left { left:0; top:16px; width:15px; height:18px; }.odo-surface.right { right:0; top:16px; width:15px; height:18px; }
+.odo-surface.marked { background:#ffe6e8; border-color:#bf4a59; }.odo-surface[aria-pressed=true] { background:var(--color-primary); color:white; outline:2px solid var(--color-primary); outline-offset:1px; }.odo-surface:disabled { opacity:1; cursor:default; }
+.odo-markers { display:flex; flex-wrap:wrap; gap:2px; justify-content:center; min-height:24px; }.odo-mark { font-weight:800; font-size:18px; }.caries { color:#b12639; }.healthy { color:#23733e; }.treatment { color:#325da1; }.missing { color:#394e59; }
+.odo-legend { margin:.6rem 0; }.odo-legend summary { cursor:pointer; color:var(--color-primary); font-weight:600; }.odo-legend p { display:flex; flex-wrap:wrap; gap:1rem; }
+.odo-editor { min-width:0; padding:1rem; border:1px solid #d9e5e8; border-radius:12px; background:white; overflow-wrap:anywhere; }.odo-editor h3 { margin-top:0; }.odo-findings { padding:0; list-style:none; }.odo-findings li { border-bottom:1px solid #e0e9eb; padding:.6rem 0; }.odo-findings p { margin:.4rem 0; font-size:.9rem; }
+.odo-surface-options { display:flex; flex-wrap:wrap; gap:.4rem; border:0; padding:.7rem 0; }.odo-surface-options label { display:flex; align-items:center; gap:.5rem; padding:.5rem; border:1px solid #bfd8d5; border-radius:6px; font-size:.9rem; min-height:44px; }.odo-surface-options input { width:auto; }
+.odo-dialog { width:min(520px,calc(100vw - 2rem)); box-sizing:border-box; border:1px solid #b8dedc; border-radius:16px; padding:1.5rem; color:#183c44; }.odo-dialog::backdrop { background:#102a42aa; }
+.odo-panel :is(button,summary):focus-visible { outline:3px solid var(--color-primary); outline-offset:3px; }
+@media(max-width:1200px){.odo-workspace{grid-template-columns:minmax(0,1fr)}.odo-editor{max-width:100%}}
+@media(max-width:600px){.odo-panel{padding:.8rem}.odo-heading{display:block}.odo-tooth{width:70px;flex-basis:70px}.odo-surface-diagram{width:58px;height:58px}.odo-surface.center{left:19px;top:19px;width:20px;height:20px}.odo-surface.top,.odo-surface.bottom{width:58px;height:18px}.odo-surface.left,.odo-surface.right{top:19px;width:18px;height:20px}.odo-status{gap:.5rem}.odo-dentition button{padding:.7rem}}
+
+.odo-surface.marked.treatment { background:#e2ecff; border-color:#325da1; color:#325da1; }
+.odo-surface.marked.healthy { background:#e3f5e6; border-color:#23733e; color:#23733e; }
+.odo-surface.marked[aria-pressed=true] { background:var(--color-primary); color:white; }

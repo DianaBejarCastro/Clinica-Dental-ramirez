@@ -1,3 +1,4 @@
+import ProtectedDeleteButton from '../deletion/ProtectedDeleteButton';
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { api, apiUrl } from '../../../services/api';
 import { Feedback, useAction, usePermissions } from '../shared';
@@ -63,6 +64,7 @@ export default function ClinicSocialNetworks() {
             const value = await api<SocialNetwork>(`${root}/${item.id}/status`, 'PATCH', { isActive: !item.isActive });
             setItems(current => current.map(x => x.id === value.id ? value : x)); if (editor !== 'new' && editor?.id === value.id) setEditor(value);
           }, 'Estado actualizado.')}>{item.isActive ? 'Desactivar' : 'Activar'}</button></div>}
+        <ProtectedDeleteButton entity="social-networks" id={item.id} label={item.name} onDeleted={() => { setItems(current => current.filter(x => x.id !== item.id)); setEditor(null); }} />
       </li>)}</ul>
     </>}
     {editor && can('clinic.update') && <div className="social-network-editor">

@@ -47,10 +47,10 @@ public sealed class AppointmentsTests(IdentityFixture f) : IClassFixture<Identit
             var user = await db.Users.SingleAsync(x => x.Email == email);
             var role = await db.Roles.SingleAsync(x => x.Code == "DOCTOR");
             db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = role.Id });
-            var patient = new PatientProfile { FirstName = "Paciente", LastName = "Citas" };
+            var patient = new PatientProfile { User = new User { CanLogin = false, Ci = "TEST" + Guid.NewGuid().ToString("N").ToUpperInvariant(), BirthDate = new(1995, 5, 10), Phone = "70000000", FirstName = "Paciente", LastName = "Citas" }, EmergencyContactName = "Test contact", EmergencyContactPhone = "71111111", BloodType = "UNKNOWN",  };
             var center = new Center { ClinicId = Clinic.SingletonId, Code = "C" + Guid.NewGuid().ToString("N").ToUpperInvariant(), Name = "Citas", Address = "Prueba" };
             var specialty = new Specialty { Code = "S" + Guid.NewGuid().ToString("N").ToUpperInvariant(), Name = Guid.NewGuid().ToString() };
-            var doctor = new DoctorProfile { UserId = user.Id };
+            var doctor = new DoctorProfile { ProfessionalLicense = "TEST-" + Guid.NewGuid().ToString("N").ToUpperInvariant(), UserId = user.Id };
             db.AddRange(patient, center, specialty, doctor);
             db.DoctorCenters.Add(new DoctorCenter { DoctorId = doctor.Id, CenterId = center.Id });
             db.DoctorSpecialties.Add(new DoctorSpecialty { DoctorId = doctor.Id, SpecialtyId = specialty.Id });
@@ -87,6 +87,23 @@ public sealed class AppointmentsTests(IdentityFixture f) : IClassFixture<Identit
         Assert.Equal(a, await c.GetFromJsonAsync<AppointmentResponse>($"{Path}/{a.Id}"));
         var list = (await c.GetFromJsonAsync<AppointmentListResponse>($"{Path}?pageSize=100"))!;
         Assert.Contains(list.Items, x => x.Id == a.Id);
+    }
+
+    [Fact] public async Task PresentationNamesRequireOnlyAppointmentView()
+    {
+        using var admin = await Client(); var data = await Setup(); var created = await Create(admin, data);
+        using var viewer = await Client("appointments.view");
+        var list = (await viewer.GetFromJsonAsync<AppointmentListResponse>($"{Path}?pageSize=100"))!;
+        var appointment = Assert.Single(list.Items, x => x.Id == created.Id);
+        Assert.Equal("Paciente Citas", appointment.PatientName);
+        Assert.Equal("Prueba Integración", appointment.DoctorName);
+        Assert.Equal("Citas", appointment.CenterName);
+        Assert.Equal(appointment, await viewer.GetFromJsonAsync<AppointmentResponse>($"{Path}/{created.Id}"));
+        foreach (var catalog in new[] { "patients", "doctors", "centers" })
+            Assert.Equal(HttpStatusCode.Forbidden, (await viewer.GetAsync("/api/admin/" + catalog)).StatusCode);
+        var json = await viewer.GetStringAsync($"{Path}/{created.Id}");
+        foreach (var field in new[] { "passwordHash", "accessToken", "refreshToken", "email", "ci", "user" })
+            Assert.DoesNotContain("\"" + field + "\"", json, StringComparison.OrdinalIgnoreCase);
     }
     [Theory]
     [InlineData("patient")][InlineData("doctor")][InlineData("user")][InlineData("center")][InlineData("specialty")][InlineData("assignment")]

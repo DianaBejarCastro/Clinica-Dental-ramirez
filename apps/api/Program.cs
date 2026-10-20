@@ -1,3 +1,4 @@
+using ClinicaRamirez.Api.Application.DentalCharting;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
@@ -39,13 +40,27 @@ builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connect
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<IdentitySupport>();
+builder.Services.AddScoped<ClinicaRamirez.Api.Application.ClinicalCare.ClinicalCareService>();
+builder.Services.AddScoped<ClinicaRamirez.Api.Application.ClinicalCare.FinancialPayments>();
+builder.Services.AddScoped<ClinicaRamirez.Api.Application.Cashier.CashierService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AdminService>();
+builder.Services.AddScoped<StaffAdministrationService>();
 builder.Services.AddScoped<IdentitySeed>();
 builder.Services.AddScoped<ClinicAdministrationService>();
+builder.Services.AddScoped<ClinicaRamirez.Api.Application.DentalAssistants.DentalAssistantsService>();
 builder.Services.AddScoped<ClinicLogoService>();
+builder.Services.AddScoped<ClinicSiteImageService>();
+builder.Services.AddScoped<ChartingAccess>();
+builder.Services.AddScoped(typeof(ChartExamStore<>));
+builder.Services.AddScoped<OdontogramService>();
+builder.Services.AddScoped<PeriodontalService>();
 builder.Services.AddScoped<ClinicSocialNetworkService>();
+builder.Services.AddScoped<ClinicaRamirez.Api.Application.Deletion.DeletionGuardService>();
+builder.Services.AddHttpClient("LocationSearch", client => client.Timeout = TimeSpan.FromSeconds(8)).RemoveAllLoggers();
+builder.Services.AddSingleton<LocationSearchService>();
 builder.Services.AddScoped<ClinicaRamirez.Api.Application.Patients.PatientsService>();
+builder.Services.AddScoped<ClinicaRamirez.Api.Application.Patients.PatientAccountService>();
 builder.Services.AddScoped<ClinicaRamirez.Api.Application.Patients.PatientRegistrationService>();
 builder.Services.AddScoped<ClinicaRamirez.Api.Application.Patients.PatientPortalService>();
 builder.Services.AddScoped<ClinicaRamirez.Api.Application.Appointments.AppointmentsService>();
@@ -67,7 +82,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         if (!Guid.TryParse(context.Principal?.FindFirstValue("sub"), out var userId)
             || !Guid.TryParse(context.Principal?.FindFirstValue("sid"), out var sessionId)
             || !await db.RefreshTokens.AnyAsync(x => x.Id == sessionId && x.UserId == userId
-                && x.User.IsActive && x.RevokedAt == null && x.ExpiresAt > DateTime.UtcNow))
+                && x.User.IsActive && x.User.CanLogin && x.RevokedAt == null && x.ExpiresAt > DateTime.UtcNow))
             context.Fail("Sesión inválida.");
     }};
 });
@@ -90,6 +105,9 @@ var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string
 builder.Services.AddCors(options => options.AddPolicy("Web",
     policy => policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 builder.Services.AddRateLimiter(options => {
+    options.AddPolicy("hard-delete", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirstValue("sub") ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("HARD_DELETE_RATE_LIMIT", 5), Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     options.AddPolicy("patient-registration", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("REGISTRATION_RATE_LIMIT", 10), Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
@@ -118,8 +136,8 @@ app.Use(async (context, next) => {
     }
     await next();
 });
-app.UseRateLimiter();
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => false });

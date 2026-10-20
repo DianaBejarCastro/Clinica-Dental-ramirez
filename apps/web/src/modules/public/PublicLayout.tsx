@@ -6,7 +6,7 @@ export const sectionHref = (section: string) => `#/inicio?section=${section}`;
 export function PublicHeader() {
   const [open, setOpen] = useState(false); const toggle = useRef<HTMLButtonElement>(null);
   return <header className="public-header"><div className="public-container public-header-inner">
-    <a className="public-brand" href="#/inicio" aria-label="Clínica Dental RAMÍREZ, inicio"><ClinicLogo /><span>CLÍNICA DENTAL<strong>RAMÍREZ</strong></span></a>
+    <a className="public-brand" href="#/inicio" aria-label="Clínica Dental RAMÍREZ, inicio"><ClinicLogo /></a>
     <button ref={toggle} className="public-menu-toggle" type="button" aria-controls="public-menu" aria-expanded={open}
       aria-label={open ? 'Cerrar menú' : 'Abrir menú'} onClick={() => setOpen(value => !value)}>
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d={open ? 'M6 6l12 12M18 6 6 18' : 'M4 6h16M4 12h16M4 18h16'} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>

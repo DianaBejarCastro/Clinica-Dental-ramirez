@@ -88,7 +88,7 @@ it('permite operar con Tab, Enter y Espacio y conserva enlaces nativos', async (
   await user.tab(); expect(document.activeElement).toBe(screen.getByRole('link', { name: 'Resumen' }));
   await user.tab(); const toggle = screen.getByRole('button', { name: 'Administración' }); expect(document.activeElement).toBe(toggle);
   await user.keyboard('{Enter}'); expect(toggle.getAttribute('aria-expanded')).toBe('true');
-  await user.tab(); expect(document.activeElement).toBe(screen.getByRole('link', { name: 'Usuarios' }));
-  expect((document.activeElement as HTMLAnchorElement).getAttribute('href')).toBe('#/users');
+  await user.tab(); expect(document.activeElement).toBe(screen.getByRole('link', { name: 'Administradores' }));
+  expect((document.activeElement as HTMLAnchorElement).getAttribute('href')).toBe('#/administrators');
   await user.tab({ shift: true }); await user.keyboard(' '); expect(toggle.getAttribute('aria-expanded')).toBe('false');
 });

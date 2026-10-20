@@ -1,4 +1,4 @@
-.shell nav.sidebar-navigation { display: grid; gap: 8px; }
+.shell nav.sidebar-navigation { display: grid; gap: 8px; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; align-content: start; overscroll-behavior: contain; }
 .sidebar-navigation .sidebar-group { min-width: 0; }
 .sidebar-navigation .sidebar-group-toggle {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;

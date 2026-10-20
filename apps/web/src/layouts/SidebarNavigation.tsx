@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from 'react';
-import { navigationGroups, overview, type NavigationGroup, type NavigationItem } from './navigation';
+import { navigationGroups, overview, type NavigationConfiguration, type NavigationGroup, type NavigationItem } from './navigation';
 import './sidebar.css';
 
 function GroupIcon({ label }: { label: string }) {
@@ -33,15 +33,15 @@ export function SidebarGroup({ group, path, open, onToggle }: { group: Navigatio
     </div>
   </section>;
 }
-export default function SidebarNavigation({ path, permissions }: { path: string; permissions: string[] }) {
-  const groups = navigationGroups.map(group => ({ ...group,
+export default function SidebarNavigation({ path, permissions, navigation = { items: [overview], groups: navigationGroups } }: { path: string; permissions: string[]; navigation?: NavigationConfiguration }) {
+  const groups = navigation.groups.map(group => ({ ...group,
     items: group.items.filter(item => !item.permission || permissions.includes(item.permission)),
   })).filter(group => group.items.length > 0);
   const activeGroup = groups.find(group => group.items.some(item => item.route === path))?.label ?? null;
   const [openGroup, setOpenGroup] = useState<string | null>(activeGroup);
   useEffect(() => { setOpenGroup(activeGroup); }, [path, activeGroup]);
   return <nav className="sidebar-navigation" aria-label="Navegación principal">
-    <SidebarItem item={overview} path={path} />
+    {navigation.items.filter(item => !item.permission || permissions.includes(item.permission)).map(item => <SidebarItem key={item.route} item={item} path={path} />)}
     {groups.map(group => <SidebarGroup key={group.label} group={group} path={path} open={openGroup === group.label}
       onToggle={() => setOpenGroup(current => current === group.label && activeGroup !== group.label ? null : group.label)} />)}
   </nav>;

@@ -7,9 +7,11 @@ namespace ClinicaRamirez.Api.Persistence;
 
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    public DbSet<ClinicSiteImage> ClinicSiteImages => Set<ClinicSiteImage>();
     public DbSet<ClinicSocialNetwork> ClinicSocialNetworks => Set<ClinicSocialNetwork>();
     public DbSet<ClinicaRamirez.Api.Domain.Appointments.Appointment> Appointments => Set<ClinicaRamirez.Api.Domain.Appointments.Appointment>();
     public DbSet<PatientProfile> PatientProfiles => Set<PatientProfile>();
+    public DbSet<ClinicaRamirez.Api.Domain.DentalAssistants.DentalAssistantProfile> DentalAssistantProfiles => Set<ClinicaRamirez.Api.Domain.DentalAssistants.DentalAssistantProfile>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
@@ -25,25 +27,49 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<DoctorCenter> DoctorCenters => Set<DoctorCenter>();
     public DbSet<DoctorSchedule> DoctorSchedules => Set<DoctorSchedule>();
 
+    private void PrepareClinicalCare()
+    {
+        ChangeTracker.DetectChanges();
+        foreach (var entry in ChangeTracker.Entries().Where(e => e.Entity is ClinicaRamirez.Api.Domain.ClinicalCare.IClinicalRecord))
+        {
+            if (entry.State == EntityState.Deleted || entry.Entity is ClinicaRamirez.Api.Domain.ClinicalCare.IClinicalImmutable && entry.State == EntityState.Modified)
+                throw new InvalidOperationException("El historial clínico es inmutable; utilice una nueva revisión o adenda.");
+            if (entry.Entity is ClinicaRamirez.Api.Domain.ClinicalCare.SoapNote && entry.State == EntityState.Modified
+                && (string?)entry.OriginalValues["Status"] == "SIGNED")
+                throw new InvalidOperationException("Una nota firmada no puede modificarse.");
+        }
+    }
+
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.ConfigureClinicAdministration();
+        b.ConfigureClinicSiteImages();
         b.ConfigureClinicSocialNetworks();
         b.ConfigurePatients();
+        b.ConfigureDentalAssistants();
         b.ConfigureAppointments();
+        b.ConfigureClinicalCare();
+        b.ConfigureDentalCharting();
         b.Entity<User>(e => {
             e.HasKey(x => x.Id);
             e.Property(x => x.FirstName).HasMaxLength(100).IsRequired();
             e.Property(x => x.LastName).HasMaxLength(100).IsRequired();
-            e.Property(x => x.Email).HasMaxLength(254).IsRequired();
-            e.Property(x => x.PasswordHash).HasMaxLength(1024).IsRequired();
+            e.Property(x => x.Email).HasMaxLength(254);
+            e.Property(x => x.PasswordHash).HasMaxLength(1024);
+            e.Property(x => x.Ci).HasMaxLength(50);
+            e.Property(x => x.Gender).HasMaxLength(50);
+            e.Property(x => x.Address).HasMaxLength(500);
+            e.Property(x => x.CanLogin).HasDefaultValue(true);
+            e.HasIndex(x => x.Ci).IsUnique().HasFilter("\"Ci\" IS NOT NULL");
+            e.HasIndex(x => x.LastName);
             e.Property(x => x.Phone).HasMaxLength(30);
             e.Property(x => x.IsActive).HasDefaultValue(true);
-            e.HasIndex(x => x.Email).IsUnique();
+            e.HasIndex(x => x.Email).IsUnique().HasFilter("\"Email\" IS NOT NULL");
             e.ToTable("Users", t => {
                 t.HasCheckConstraint("CK_Users_EmailNormalized", "\"Email\" = lower(btrim(\"Email\")) AND length(\"Email\") > 3");
                 t.HasCheckConstraint("CK_Users_Names", "length(btrim(\"FirstName\")) > 0 AND length(btrim(\"LastName\")) > 0");
-                t.HasCheckConstraint("CK_Users_PasswordHash", "length(\"PasswordHash\") > 0");
+                t.HasCheckConstraint("CK_Users_Login", "(NOT \"CanLogin\" AND \"PasswordHash\" IS NULL) OR (\"CanLogin\" AND \"Email\" IS NOT NULL AND \"PasswordHash\" IS NOT NULL AND length(\"PasswordHash\") > 0)");
+                t.HasCheckConstraint("CK_Users_Ci", "\"Ci\" IS NULL OR (length(\"Ci\") > 0 AND \"Ci\" = upper(btrim(\"Ci\")))");
             });
         });
         b.Entity<Role>(e => {
@@ -105,23 +131,24 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
+        PrepareClinicalCare();
         PreparePatients();
         foreach (var entry in ChangeTracker.Entries())
         {
             if (entry.Entity is IAdministrativeRecord record)
             {
                 if (entry.State == EntityState.Deleted)
-                    throw new InvalidOperationException("Utilice desactivación lógica.");
+                    throw new InvalidOperationException("Utilice desactivaciÃ³n lÃ³gica.");
                 if (entry.State is EntityState.Added or EntityState.Modified)
                     record.UpdatedAt = DateTime.UtcNow;
             }
             if (entry.Entity is AuditLog && entry.State is EntityState.Modified or EntityState.Deleted)
-                throw new InvalidOperationException("La auditoría es inmutable.");
+                throw new InvalidOperationException("La auditorÃ­a es inmutable.");
             if (entry.State == EntityState.Deleted && (entry.Entity is User || entry.Entity is Role))
-                throw new InvalidOperationException("Utilice desactivación lógica.");
+                throw new InvalidOperationException("Utilice desactivaciÃ³n lÃ³gica.");
             if (entry.Entity is User user && entry.State is EntityState.Added or EntityState.Modified)
             {
-                user.Email = user.Email.Trim().ToLowerInvariant();
+                user.Email = user.Email?.Trim().ToLowerInvariant();
                 user.UpdatedAt = DateTime.UtcNow;
             }
             if (entry.Entity is Role role && entry.State is EntityState.Added or EntityState.Modified)
@@ -134,36 +161,49 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     {
         foreach (var entry in ChangeTracker.Entries<ClinicSocialNetwork>())
         {
-            if (entry.State == EntityState.Deleted) throw new InvalidOperationException("Utilice desactivación lógica de redes sociales.");
+            if (entry.State == EntityState.Deleted) throw new InvalidOperationException("Utilice desactivaciÃ³n lÃ³gica de redes sociales.");
             if (entry.State == EntityState.Added) entry.Entity.CreatedAt = DateTime.UtcNow;
             if (entry.State is EntityState.Added or EntityState.Modified) entry.Entity.UpdatedAt = DateTime.UtcNow;
         }
         foreach (var entry in ChangeTracker.Entries<ClinicSocialNetwork>())
         {
-            if (entry.State == EntityState.Deleted) throw new InvalidOperationException("Utilice desactivación lógica de redes sociales.");
+            if (entry.State == EntityState.Deleted) throw new InvalidOperationException("Utilice desactivaciÃ³n lÃ³gica de redes sociales.");
             if (entry.State == EntityState.Added) entry.Entity.CreatedAt = DateTime.UtcNow;
             if (entry.State is EntityState.Added or EntityState.Modified) entry.Entity.UpdatedAt = DateTime.UtcNow;
         }
         foreach (var entry in ChangeTracker.Entries<ClinicaRamirez.Api.Domain.Appointments.Appointment>())
         {
-            if (entry.State == EntityState.Deleted) throw new InvalidOperationException("Utilice cancelación de citas.");
+            if (entry.State == EntityState.Deleted) throw new InvalidOperationException("Utilice cancelaciÃ³n de citas.");
             if (entry.State == EntityState.Added) entry.Entity.CreatedAt = DateTime.UtcNow;
             if (entry.State is EntityState.Added or EntityState.Modified) entry.Entity.UpdatedAt = DateTime.UtcNow;
         }
+        foreach (var entry in ChangeTracker.Entries<User>().Where(e => e.State is EntityState.Added or EntityState.Modified))
+        {
+            var user = entry.Entity;
+            user.Email = string.IsNullOrWhiteSpace(user.Email) ? null : user.Email.Trim().ToLowerInvariant();
+            user.Ci = string.IsNullOrWhiteSpace(user.Ci) ? null : user.Ci.Trim().ToUpperInvariant();
+            if (user.CanLogin ? string.IsNullOrWhiteSpace(user.Email) || string.IsNullOrWhiteSpace(user.PasswordHash) : user.PasswordHash != null)
+                throw new InvalidOperationException("Invalid access credentials invariant.");
+            if (user.BirthDate > ClinicaRamirez.Api.DTOs.LocalBirthDateAttribute.Today)
+                throw new ClinicaRamirez.Api.Application.Identity.ApiException(400, "BirthDate cannot be in the future.");
+            user.UpdatedAt = DateTime.UtcNow;
+        }
         foreach (var entry in ChangeTracker.Entries<PatientProfile>())
         {
-            if (entry.State == EntityState.Deleted) throw new InvalidOperationException("Utilice desactivación lógica de pacientes.");
+            if (entry.State == EntityState.Deleted) throw new InvalidOperationException("Utilice desactivaciÃ³n lÃ³gica de pacientes.");
             if (entry.State == EntityState.Added) entry.Entity.CreatedAt = DateTime.UtcNow;
             if (entry.State is EntityState.Added or EntityState.Modified) entry.Entity.UpdatedAt = DateTime.UtcNow;
         }
     }
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
+        PrepareClinicalCare();
         PreparePatients();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
+        PrepareClinicalCare();
         PreparePatients();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }

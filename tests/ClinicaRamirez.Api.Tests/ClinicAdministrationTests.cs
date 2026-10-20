@@ -11,6 +11,20 @@ namespace ClinicaRamirez.Api.Tests;
 
 public sealed class ClinicAdministrationTests(IdentityFixture f) : IClassFixture<IdentityFixture>
 {
+
+    [Fact]
+    public async Task PublicBrandExposesOnlyCurrentNameWithoutAdministrativeAccess()
+    {
+        using var scope = f.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var expected = await db.Clinics.Select(x => x.Name).SingleAsync();
+        var client = f.Client();
+        var result = await Json(await client.GetAsync("/api/clinic/brand"));
+        Assert.Equal(expected, result.GetProperty("name").GetString());
+        Assert.Single(result.EnumerateObject());
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/admin/clinic")).StatusCode);
+    }
+
     private static string Unique(string prefix) => prefix + Guid.NewGuid().ToString("N");
     private static Guid Id(JsonElement value) => value.GetProperty("id").GetGuid();
 
@@ -54,8 +68,8 @@ public sealed class ClinicAdministrationTests(IdentityFixture f) : IClassFixture
 
     private Dictionary<string, object?> DoctorBody(string? license = null) => new()
     {
-        ["newUser"] = new { firstName = "Doctor", lastName = "Integracion", email = Unique("doctor") + "@example.com", password = f.Password },
-        ["professionalLicense"] = license ?? Unique("LICENSE_"), ["ci"] = "TEST-CI",
+        ["firstName"] = "Doctor", ["lastName"] = "Integracion", ["email"] = Unique("doctor") + "@example.com", ["password"] = f.Password, ["confirmPassword"] = f.Password,
+        ["professionalLicense"] = license ?? Unique("LICENSE_"), ["ci"] = Unique("CI-"),
         ["birthDate"] = "1990-06-15", ["gender"] = "No especificado", ["phone"] = "72000000",
         ["address"] = "Direccion sintetica", ["bio"] = "Biografia sintetica", ["isActive"] = true
     };
@@ -140,6 +154,23 @@ public sealed class ClinicAdministrationTests(IdentityFixture f) : IClassFixture
         await Status(await client.PostAsJsonAsync("/api/admin/centers", CenterBody(created.GetProperty("code").GetString())), HttpStatusCode.Conflict);
     }
 
+    [Theory]
+    [InlineData(null, null)] [InlineData(-16.5, -68.15)]
+    public async Task CenterCoordenadasOpcionalesSinGoogleMapsUrl(double? latitude, double? longitude)
+    {
+        using var client = await Admin();
+        var body = CenterBody(); body["latitude"] = latitude; body["longitude"] = longitude;
+        var created = await Json(await client.PostAsJsonAsync("/api/admin/centers", body), HttpStatusCode.Created);
+        Assert.False(created.TryGetProperty("googleMapsUrl", out _));
+        Assert.Equal(latitude, created.GetProperty("latitude").ValueKind == System.Text.Json.JsonValueKind.Null ? (double?)null : created.GetProperty("latitude").GetDouble());
+        Assert.Equal(longitude, created.GetProperty("longitude").ValueKind == System.Text.Json.JsonValueKind.Null ? (double?)null : created.GetProperty("longitude").GetDouble());
+        body["latitude"] = null; body["longitude"] = null;
+        var updated = await Json(await client.PutAsJsonAsync($"/api/admin/centers/{Id(created)}", body));
+        Assert.False(updated.TryGetProperty("googleMapsUrl", out _));
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, updated.GetProperty("latitude").ValueKind);
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, updated.GetProperty("longitude").ValueKind);
+    }
+
     [Fact]
     public async Task CenterSoloPermiteUnaPrincipalActiva()
     {
@@ -222,21 +253,10 @@ public sealed class ClinicAdministrationTests(IdentityFixture f) : IClassFixture
     }
 
     [Fact]
-    public async Task DoctorVinculaUserExistenteSinRolYAgregaDoctorSinDuplicarUser()
+    public async Task DoctorRechazaVincularUsuarioExistente()
     {
-        var email = await f.CreateUser();
-        using var scope = f.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var user = await db.Users.SingleAsync(x => x.Email == email);
-        var count = await db.Users.CountAsync();
-        Assert.False(await db.UserRoles.AnyAsync(x => x.UserId == user.Id));
-        using var client = await Admin();
-        var body = new { userId = user.Id, professionalLicense = Unique("EXISTING_"), isActive = true };
-        var doctor = await SendCreated(client, "/api/admin/doctors", body);
-        Assert.Equal(user.Id, doctor.GetProperty("userId").GetGuid());
-        Assert.Equal(count, await db.Users.CountAsync());
-        Assert.True(await db.UserRoles.AnyAsync(x => x.UserId == user.Id && x.Role.Code == "DOCTOR"));
-        await Status(await client.PostAsJsonAsync("/api/admin/doctors", body), HttpStatusCode.Conflict);
+        using var client = await Admin(); var body = DoctorBody(); body["userId"] = Guid.NewGuid();
+        await Status(await client.PostAsJsonAsync("/api/admin/doctors", body), HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -257,7 +277,7 @@ public sealed class ClinicAdministrationTests(IdentityFixture f) : IClassFixture
         using var client = await Admin();
         var doctor = await CreateDoctor(client);
         var userId = doctor.GetProperty("userId").GetGuid();
-        await Status(await client.PutAsJsonAsync($"/api/admin/users/{userId}/roles", new { roleIds = Array.Empty<Guid>() }), HttpStatusCode.Conflict);
+        await Status(await client.PutAsJsonAsync($"/api/admin/users/{userId}/roles", new { roleIds = Array.Empty<Guid>() }), HttpStatusCode.NoContent);
         using var scope = f.Services.CreateScope();
         Assert.True(await scope.ServiceProvider.GetRequiredService<AppDbContext>().UserRoles.AnyAsync(x => x.UserId == userId && x.Role.Code == "DOCTOR"));
     }
@@ -278,7 +298,7 @@ public sealed class ClinicAdministrationTests(IdentityFixture f) : IClassFixture
     {
         using var client = await Admin();
         var doctor = await CreateDoctor(client); var id = Id(doctor);
-        var body = new { professionalLicense = doctor.GetProperty("professionalLicense").GetString(), ci = "CI-UPDATED", bio = "Actualizacion profesional", birthDate = "1992-03-04", isActive = true };
+        var body = new { firstName = "Doctor", lastName = "Updated", phone = "70000000", professionalLicense = doctor.GetProperty("professionalLicense").GetString(), ci = "CI-UPDATED", bio = "Actualizacion profesional", birthDate = "1992-03-04", isActive = true };
         var updated = await Json(await client.PutAsJsonAsync($"/api/admin/doctors/{id}", body));
         Assert.Equal("CI-UPDATED", updated.GetProperty("ci").GetString());
         await Status(await client.PatchAsJsonAsync($"/api/admin/doctors/{id}/status", new { isActive = false }), HttpStatusCode.NoContent);
@@ -333,6 +353,24 @@ public sealed class ClinicAdministrationTests(IdentityFixture f) : IClassFixture
         using var scope = f.Services.CreateScope();
         Assert.Equal(2, await scope.ServiceProvider.GetRequiredService<AppDbContext>().DoctorCenters.CountAsync(x => x.DoctorId == doctor && x.IsActive));
         await AuditContains("doctor_centers_updated", doctor);
+    }
+
+    [Theory][InlineData("centers")][InlineData("specialties")]
+    public async Task DesasignacionReflejaFilasFisicasYDeletionCheck(string kind)
+    {
+        using var client = await Admin(); var doctor = Id(await CreateDoctor(client));
+        var a = Id(kind == "centers" ? await CreateCenter(client) : await CreateSpecialty(client));
+        var b = Id(kind == "centers" ? await CreateCenter(client) : await CreateSpecialty(client));
+        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        foreach (var ids in new[] { new[] { a, b }, new[] { b }, Array.Empty<Guid>() }) {
+            object body = kind == "centers" ? new { centerIds = ids } : new { specialtyIds = ids };
+            await Status(await client.PutAsJsonAsync($"/api/admin/doctors/{doctor}/{kind}", body), HttpStatusCode.NoContent);
+            Assert.Equal(ids.Length, kind == "centers" ? await db.DoctorCenters.CountAsync(x => x.DoctorId == doctor) : await db.DoctorSpecialties.CountAsync(x => x.DoctorId == doctor));
+            Assert.Equal(ids.Length, (await Json(await client.GetAsync($"/api/admin/doctors/{doctor}"))).GetProperty(kind).GetArrayLength());
+            var check = await Json(await client.GetAsync($"/api/admin/deletion/doctors/{doctor}/check"), HttpStatusCode.Conflict);
+            var dependencies = check.GetProperty("dependencies").EnumerateArray().Select(x => x.GetProperty("type").GetString()).ToArray();
+            Assert.Equal(ids.Length > 0, dependencies.Contains(kind == "centers" ? "DoctorCenters" : "DoctorSpecialties"));
+        }
     }
 
     [Fact]
@@ -505,15 +543,15 @@ public sealed class ClinicAdministrationTests(IdentityFixture f) : IClassFixture
     }
 
     [Fact]
-    public async Task DesasignarCenterDesactivaHorarioYSuReactivacionEsRechazada()
+    public async Task DesasignarCenterConHorarioEsBloqueadoSinModificarlo()
     {
         using var client = await Admin();
         var (doctor, central, north) = await ScheduleContext(client);
         var path = $"/api/admin/doctors/{doctor}/schedules";
         var schedule = await SendCreated(client, path, ScheduleBody(central));
-        await Status(await client.PutAsJsonAsync($"/api/admin/doctors/{doctor}/centers", new { centerIds = new[] { north } }), HttpStatusCode.NoContent);
-        Assert.False((await Json(await client.GetAsync(path)))[0].GetProperty("isActive").GetBoolean());
-        await Status(await client.PatchAsJsonAsync($"{path}/{Id(schedule)}/status", new { isActive = true }), HttpStatusCode.BadRequest);
+        await Status(await client.PutAsJsonAsync($"/api/admin/doctors/{doctor}/centers", new { centerIds = new[] { north } }), HttpStatusCode.Conflict);
+        Assert.True((await Json(await client.GetAsync(path)))[0].GetProperty("isActive").GetBoolean());
+        Assert.Equal(2, (await Json(await client.GetAsync($"/api/admin/doctors/{doctor}/centers"))).GetArrayLength());
     }
 
     [Theory]
@@ -562,7 +600,7 @@ public sealed class ClinicAdministrationTests(IdentityFixture f) : IClassFixture
             case "doctors":
                 body = DoctorBody();
                 path = $"/api/admin/doctors/{Id(await SendCreated(admin, "/api/admin/doctors", body))}";
-                body.Remove("newUser");
+                body.Remove("email"); body.Remove("password"); body.Remove("confirmPassword");
                 break;
             case "specialties":
                 body = SpecialtyBody();

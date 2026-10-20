@@ -1,0 +1,9 @@
+.patient-autocomplete { position: relative; min-width: 0; }
+.patient-autocomplete > label { display: block; margin-bottom: 6px; }
+.patient-autocomplete > input { width: 100%; }
+.patient-autocomplete [role="status"] { color: var(--color-muted); font-size: .85rem; margin-top: 6px; }
+.patient-results { position: absolute; z-index: 20; inset-inline: 0; margin: 6px 0 0; padding: 4px; list-style: none; max-height: 280px; overflow-y: auto; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); }
+.patient-results [role="option"] { padding: 10px; cursor: pointer; overflow-wrap: anywhere; }
+.patient-results [aria-selected="true"], .patient-results [role="option"]:hover { background: var(--color-primary-soft); }
+.patient-results small { display: block; color: var(--color-muted); }
+.patient-selection { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; }

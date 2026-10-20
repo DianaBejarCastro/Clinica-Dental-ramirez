@@ -32,7 +32,7 @@ public sealed class ClinicAdministrationService(AppDbContext db, IdentitySupport
     private IQueryable<DoctorProfile> DoctorQuery => db.DoctorProfiles.Include(x => x.User)
         .Include(x => x.DoctorSpecialties).ThenInclude(x => x.Specialty)
         .Include(x => x.DoctorCenters).ThenInclude(x => x.Center).AsSplitQuery();
-    private async Task<DoctorProfile> DoctorEntity(Guid id) => await db.DoctorProfiles.SingleOrDefaultAsync(x => x.Id == id)
+    private async Task<DoctorProfile> DoctorEntity(Guid id) => await db.DoctorProfiles.Include(x => x.User).SingleOrDefaultAsync(x => x.Id == id)
         ?? throw new ApiException(404, "Doctor inexistente.");
     private static void ActiveDoctor(DoctorProfile doctor)
     {
@@ -101,7 +101,7 @@ public sealed class ClinicAdministrationService(AppDbContext db, IdentitySupport
         center.Name = Text(request.Name); center.Code = code; center.Description = Optional(request.Description);
         center.Address = Text(request.Address); center.City = Optional(request.City); center.Department = Optional(request.Department);
         center.Country = Text(request.Country); center.Phone = Optional(request.Phone); center.Whatsapp = Optional(request.Whatsapp);
-        center.Email = Optional(request.Email)?.ToLowerInvariant(); center.GoogleMapsUrl = Optional(request.GoogleMapsUrl);
+        center.Email = Optional(request.Email)?.ToLowerInvariant();
         center.Latitude = request.Latitude; center.Longitude = request.Longitude; center.IsMain = request.IsMain; center.IsActive = request.IsActive;
     }
     public async Task<SpecialtyResponse[]> Specialties() => (await db.Specialties.AsNoTracking()
@@ -154,30 +154,17 @@ public sealed class ClinicAdministrationService(AppDbContext db, IdentitySupport
     {
         var doctor = new DoctorProfile();
         await Mutate(async () => {
-            if ((request.UserId is null) == (request.NewUser is null)) throw new ApiException(400, "Seleccione un usuario existente o cree uno nuevo.");
+            ValidateDoctorRequest(request);
+            if (!request.IsActive) throw new ApiException(400, "El doctor debe crearse activo.");
             var role = await db.Roles.SingleOrDefaultAsync(x => x.Code == "DOCTOR" && x.IsActive)
-                ?? throw new ApiException(409, "El rol DOCTOR no está disponible.");
-            User user;
-            if (request.UserId is Guid userId)
-            {
-                user = await db.Users.SingleOrDefaultAsync(x => x.Id == userId) ?? throw new ApiException(404, "Usuario inexistente.");
-                if (await db.DoctorProfiles.AnyAsync(x => x.UserId == userId)) throw new ApiException(409, "El usuario ya tiene un perfil profesional.");
-            }
-            else
-            {
-                var data = request.NewUser!;
-                var email = Text(data.Email).ToLowerInvariant();
-                if (await db.Users.AnyAsync(x => x.Email == email)) throw new ApiException(409, "El email ya existe; vincule el usuario existente.");
-                user = new User { FirstName = Text(data.FirstName), LastName = Text(data.LastName), Email = email, Phone = Optional(data.Phone) };
-                user.PasswordHash = hasher.HashPassword(user, data.Password);
-                db.Users.Add(user); support.Audit("user_created", "User", user.Id);
-            }
-            if (!await db.UserRoles.AnyAsync(x => x.UserId == user.Id && x.RoleId == role.Id))
-            {
-                db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = role.Id, AssignedByUserId = support.Actor });
-                support.Audit("user_roles_updated", "User", user.Id, metadata: new { roleId = role.Id });
-            }
-            doctor.UserId = user.Id;
+                ?? throw new ApiException(409, "El rol DOCTOR no esta disponible.");
+            var email = Text(request.Email).ToLowerInvariant();
+            if (await db.Users.AnyAsync(x => x.Email == email)) throw new ApiException(409, "El email ya existe.");
+            var user = new User { Email = email, CanLogin = true, IsActive = true };
+            user.PasswordHash = hasher.HashPassword(user, request.Password);
+            doctor.User = user; doctor.UserId = user.Id;
+            db.UserRoles.Add(new UserRole { User = user, RoleId = role.Id, AssignedByUserId = support.Actor });
+            support.Audit("user_created", "User", user.Id);
             await ApplyDoctor(doctor, request);
             db.DoctorProfiles.Add(doctor); support.Audit("doctor_created", "DoctorProfile", doctor.Id, metadata: new { userId = user.Id });
         });
@@ -203,13 +190,23 @@ public sealed class ClinicAdministrationService(AppDbContext db, IdentitySupport
     });
     private async Task ApplyDoctor(DoctorProfile doctor, DoctorUpdateRequest request)
     {
-        var license = Optional(request.ProfessionalLicense)?.ToUpperInvariant();
-        if (license is not null && await db.DoctorProfiles.AnyAsync(x => x.Id != doctor.Id && x.ProfessionalLicense == license))
-            throw new ApiException(409, "La matrícula profesional ya existe.");
-        if (request.BirthDate > DateOnly.FromDateTime(DateTime.UtcNow)) throw new ApiException(400, "La fecha de nacimiento no puede ser futura.");
-        doctor.ProfessionalLicense = license; doctor.Ci = Optional(request.Ci); doctor.BirthDate = request.BirthDate;
-        doctor.Gender = Optional(request.Gender); doctor.Phone = Optional(request.Phone); doctor.Address = Optional(request.Address);
+        ValidateDoctorRequest(request);
+        var license = Text(request.ProfessionalLicense).ToUpperInvariant();
+        if (await db.DoctorProfiles.AnyAsync(x => x.Id != doctor.Id && x.ProfessionalLicense == license))
+            throw new ApiException(409, "La matricula profesional ya existe.");
+        var ci = Text(request.Ci).ToUpperInvariant();
+        if (await db.Users.AnyAsync(x => x.Id != doctor.UserId && x.Ci == ci)) throw new ApiException(409, "CI ya registrado.");
+        doctor.ProfessionalLicense = license;
+        doctor.User.FirstName = Text(request.FirstName); doctor.User.LastName = Text(request.LastName);
+        doctor.User.Ci = ci; doctor.User.BirthDate = request.BirthDate;
+        doctor.User.Gender = Optional(request.Gender); doctor.User.Phone = Text(request.Phone); doctor.User.Address = Optional(request.Address);
         doctor.PhotoUrl = Optional(request.PhotoUrl); doctor.Bio = Optional(request.Bio); doctor.IsActive = request.IsActive;
+    }
+    private static void ValidateDoctorRequest(DoctorUpdateRequest request)
+    {
+        var errors = new List<System.ComponentModel.DataAnnotations.ValidationResult>();
+        if (!System.ComponentModel.DataAnnotations.Validator.TryValidateObject(request, new(request), errors, true))
+            throw new ApiException(400, errors[0].ErrorMessage ?? "Datos invalidos.");
     }
     public async Task<AssignmentResponse[]> DoctorSpecialties(Guid doctorId)
     {
@@ -240,10 +237,14 @@ public sealed class ClinicAdministrationService(AppDbContext db, IdentitySupport
         if (await db.Centers.CountAsync(x => ids.Contains(x.Id) && x.IsActive) != ids.Length)
             throw new ApiException(400, "Sucursales inexistentes o inactivas.");
         var current = await db.DoctorCenters.Where(x => x.DoctorId == doctorId).ToArrayAsync();
-        foreach (var assignment in current) assignment.IsActive = ids.Contains(assignment.CenterId);
+        var removed = current.Where(x => !ids.Contains(x.CenterId)).ToArray();
+        var removedIds = removed.Select(x => x.CenterId).ToArray();
+        if (await db.DoctorSchedules.AnyAsync(x => x.DoctorId == doctorId && removedIds.Contains(x.CenterId)))
+            throw new ApiException(409, "No se puede quitar una sucursal con horarios vinculados, incluso inactivos. No se modificó ninguna asignación.");
+        db.DoctorCenters.RemoveRange(removed);
+        foreach (var assignment in current.Where(x => ids.Contains(x.CenterId))) assignment.IsActive = true;
         foreach (var id in ids.Where(id => current.All(x => x.CenterId != id)))
             db.DoctorCenters.Add(new DoctorCenter { DoctorId = doctorId, CenterId = id });
-        await DisableSchedules(db.DoctorSchedules.Where(x => x.DoctorId == doctorId && !ids.Contains(x.CenterId)), "center_unassigned");
         support.Audit("doctor_centers_updated", "DoctorProfile", doctorId, metadata: new { centerIds = ids });
     });
     public async Task<DoctorScheduleResponse[]> Schedules(Guid doctorId)
@@ -336,13 +337,13 @@ public sealed class ClinicAdministrationService(AppDbContext db, IdentitySupport
         x.Phone, x.Whatsapp, x.Email, x.TaxId, x.IsActive, x.CreatedAt, x.UpdatedAt)
         { Logo = x.LogoData is null ? null : new(x.LogoContentType!, x.LogoFileName!, x.LogoSize!.Value, x.LogoUpdatedAt!.Value) };
     private static CenterResponse CenterDto(Center x) => new(x.Id, x.ClinicId, x.Name, x.Code, x.Description, x.Address,
-        x.City, x.Department, x.Country, x.Phone, x.Whatsapp, x.Email, x.GoogleMapsUrl, x.Latitude, x.Longitude,
+        x.City, x.Department, x.Country, x.Phone, x.Whatsapp, x.Email, x.Latitude, x.Longitude,
         x.IsMain, x.IsActive, x.CreatedAt, x.UpdatedAt);
     private static SpecialtyResponse SpecialtyDto(Specialty x) => new(x.Id, x.Code, x.Name, x.Description, x.IsActive,
         x.DoctorSpecialties.Count, x.CreatedAt, x.UpdatedAt);
     private static DoctorResponse DoctorDto(DoctorProfile x) => new(x.Id, x.UserId,
-        new(x.User.Id, x.User.FirstName, x.User.LastName, x.User.Email, x.User.IsActive), x.ProfessionalLicense, x.Ci,
-        x.BirthDate, x.Gender, x.Phone, x.Address, x.PhotoUrl, x.Bio, x.IsActive, x.CreatedAt, x.UpdatedAt,
+        new(x.User.Id, x.User.FirstName, x.User.LastName, x.User.Email, x.User.IsActive), x.ProfessionalLicense, x.User.Ci,
+        x.User.BirthDate, x.User.Gender, x.User.Phone, x.User.Address, x.PhotoUrl, x.Bio, x.IsActive, x.CreatedAt, x.UpdatedAt,
         x.DoctorSpecialties.OrderBy(a => a.Specialty.Name).Select(a => new AssignmentResponse(a.SpecialtyId, a.Specialty.Code, a.Specialty.Name, a.Specialty.IsActive)).ToArray(),
         x.DoctorCenters.Where(a => a.IsActive).OrderBy(a => a.Center.Name).Select(a => new AssignmentResponse(a.CenterId, a.Center.Code, a.Center.Name, a.Center.IsActive)).ToArray());
     private static DoctorScheduleResponse ScheduleDto(DoctorSchedule x) => new(x.Id, x.DoctorId, x.CenterId, x.Center.Name,

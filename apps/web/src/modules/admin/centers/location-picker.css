@@ -1,0 +1,12 @@
+.location-picker { min-width: 0; width: 100%; }
+.location-search { margin-bottom: 16px; }
+.location-search-controls { display: flex; align-items: end; gap: 12px; }
+.location-search-controls label { flex: 1; min-width: 0; }
+.location-search-results { list-style: none; margin: 12px 0; padding: 0; max-height: 240px; overflow: auto; border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.location-search-results button { width: 100%; text-align: left; white-space: normal; overflow-wrap: anywhere; border: 0; border-radius: 0; padding: 12px; }
+@media (max-width: 600px) { .location-search-controls { align-items: stretch; flex-direction: column; } }
+.location-map { height: 320px; width: 100%; max-width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius-md); z-index: 0; }
+.location-coordinates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 12px; }
+.location-marker { background: transparent; border: 0; }
+.location-marker span { display: block; width: 24px; height: 24px; border-radius: 50%; background: var(--color-primary); border: 3px solid var(--color-surface); box-shadow: var(--shadow-sm); }
+@media (max-width: 600px) { .location-map { height: 280px; } .location-coordinates { grid-template-columns: 1fr; } }

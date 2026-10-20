@@ -1,6 +1,6 @@
 export interface Patient {
   id: string;
-  userId: string | null;
+  userId: string; canLogin: boolean;
   firstName: string;
   lastName: string;
   ci: string | null;
