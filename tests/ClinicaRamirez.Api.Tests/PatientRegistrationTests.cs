@@ -22,7 +22,7 @@ public sealed class PatientRegistrationTests(IdentityFixture f) : IClassFixture<
 {
     private const string Path = "/api/auth/register/patient";
     private PatientRegistrationRequest Data() => new() { FirstName = " Ana ", LastName = " Paciente ", Email = Guid.NewGuid() + "@EXAMPLE.COM", Password = f.Password, ConfirmPassword = f.Password,
-        Ci = "CI" + Guid.NewGuid().ToString("N").ToUpperInvariant(), BirthDate = new(1995, 5, 10), Phone = "70000000", EmergencyContactName = "Test contact", EmergencyContactPhone = "71111111", BloodType = "UNKNOWN" };
+        DocumentType="CI", DocumentCountryCode="BO", DocumentNumber= "CI" + Guid.NewGuid().ToString("N").ToUpperInvariant(), BirthDate = new(1995, 5, 10), Phone = "70000000", EmergencyContactName = "Test contact", EmergencyContactPhone = "71111111", BloodType = "UNKNOWN" };
 
     private HttpClient Client()
     {
@@ -30,8 +30,22 @@ public sealed class PatientRegistrationTests(IdentityFixture f) : IClassFixture<
         client.DefaultRequestHeaders.Add("X-Clinic-Request", "1"); return client;
     }
     private async Task Register(HttpClient c, PatientRegistrationRequest data) => Assert.Equal(HttpStatusCode.Created, (await c.PostAsJsonAsync(Path, data)).StatusCode);
+    [Fact]
+    public async Task PassportRegistrationPreservesPrimaryIdentity()
+    {
+        using var c = Client();
+        var data = Data() with { DocumentType = "PASSPORT", DocumentCountryCode = "PE", DocumentNumber = "pa" + Guid.NewGuid().ToString("N") };
+        await Register(c, data);
+        using var scope = f.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = await db.Users.SingleAsync(x => x.Email == data.Email!.ToLowerInvariant());
+        Assert.Equal("PASSPORT", user.DocumentType);
+        Assert.Equal("PE", user.DocumentCountryCode);
+        Assert.Equal(data.DocumentNumber!.ToUpperInvariant(), user.DocumentNumber);
+        Assert.True(user.CanLogin);
+    }
     private async Task Login(HttpClient c, string email) { var login = await f.Login(c, email); c.DefaultRequestHeaders.Authorization = new("Bearer", login.Body.AccessToken); }
-    [Theory][InlineData("firstName")][InlineData("lastName")][InlineData("ci")][InlineData("birthDate")]
+    [Theory][InlineData("firstName")][InlineData("lastName")][InlineData("documentNumber")][InlineData("birthDate")]
     [InlineData("phone")][InlineData("emergencyContactName")][InlineData("emergencyContactPhone")][InlineData("bloodType")]
     [InlineData("email")][InlineData("password")][InlineData("confirmPassword")]
     public async Task CamposRequeridos(string field) {
@@ -50,7 +64,7 @@ public sealed class PatientRegistrationTests(IdentityFixture f) : IClassFixture<
         using var c = Client(); var data = Data(); await Register(c, data);
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var user = await db.Users.SingleAsync(x => x.Email == data.Email!.ToLowerInvariant()); var patient = await db.PatientProfiles.SingleAsync(x => x.UserId == user.Id);
-        Assert.Equal("Ana", user.FirstName); Assert.True(user.IsActive); Assert.True(patient.IsActive); Assert.Equal(data.Ci, patient.User.Ci);
+        Assert.Equal("Ana", user.FirstName); Assert.True(user.IsActive); Assert.True(patient.IsActive); Assert.Equal(data.DocumentNumber, patient.User.DocumentNumber);
         Assert.NotEqual(data.Password, user.PasswordHash); Assert.NotEqual(PasswordVerificationResult.Failed, scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>().VerifyHashedPassword(user, user.PasswordHash!, data.Password));
         Assert.Equal(new[] { "PATIENT" }, await db.UserRoles.Where(x => x.UserId == user.Id).Select(x => x.Role.Code).ToArrayAsync());
         var audit = await db.AuditLogs.SingleAsync(x => x.EntityId == patient.Id && x.Action == "patient_self_registered"); Assert.Null(audit.MetadataJson); Assert.Null(audit.UserId);
@@ -68,7 +82,7 @@ public sealed class PatientRegistrationTests(IdentityFixture f) : IClassFixture<
     }
     [Fact] public async Task CiDuplicadoNoCreaUsuario()
     {
-        using var c = Client(); var first = Data(); await Register(c, first); var second = Data() with { Ci = first.Ci!.ToLowerInvariant() };
+        using var c = Client(); var first = Data(); await Register(c, first); var second = Data() with { DocumentType="CI", DocumentCountryCode="BO", DocumentNumber= first.DocumentNumber!.ToLowerInvariant() };
         Assert.Equal(HttpStatusCode.Conflict, (await c.PostAsJsonAsync(Path, second)).StatusCode);
         using var scope = f.Services.CreateScope(); Assert.False(await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.AnyAsync(x => x.Email == second.Email!.ToLowerInvariant()));
     }

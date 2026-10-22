@@ -10,7 +10,7 @@ public sealed record PatientRegistrationRequest : PatientClinicalRequest
     [Required, MaxLength(128), Compare(nameof(Password))] public string ConfirmPassword { get; init; } = "";
 }
 
-public sealed record PatientAccountResponse(string FirstName, string LastName, string? Ci,
+public sealed record PatientAccountResponse(string FirstName, string LastName, string? DocumentType, string? DocumentNumber, string? DocumentCountryCode,
     DateOnly? BirthDate, string? Gender, string? Phone, string? Email);
 public sealed record PatientAppointmentResponse(Guid Id, DateOnly AppointmentDate, TimeOnly StartTime,
     TimeOnly EndTime, string Status, string Doctor, string Center, string Specialty);

@@ -8,7 +8,9 @@ public abstract record PatientClinicalRequest
 {
     [Required, MaxLength(100)] public string FirstName { get; init; } = "";
     [Required, MaxLength(100)] public string LastName { get; init; } = "";
-    [Required, MaxLength(50)] public string? Ci { get; init; }
+    [Required, MaxLength(50)] public string? DocumentNumber { get; init; }
+    public string? DocumentType { get; init; }
+    [MaxLength(2)] public string? DocumentCountryCode { get; init; }
     [Required, LocalBirthDate] public DateOnly? BirthDate { get; init; }
     [MaxLength(50)] public string? Gender { get; init; }
     [Required, MaxLength(30)] public string? Phone { get; init; }
@@ -37,8 +39,8 @@ public sealed record PatientAccountCreateRequest
 }
 public sealed record PatientStatusRequest(bool IsActive);
 public sealed record PatientResponse(Guid Id, Guid UserId, string FirstName, string LastName,
-    string? Ci, DateOnly? BirthDate, string? Gender, string? Phone, string? Email, string? Address,
+    string? DocumentType, string? DocumentNumber, string? DocumentCountryCode, DateOnly? BirthDate, string? Gender, string? Phone, string? Email, string? Address,
     string? EmergencyContactName, string? EmergencyContactPhone, string? BloodType, string? Notes,
     bool IsActive, DateTime CreatedAt, DateTime UpdatedAt, bool CanLogin);
 public sealed record PatientListResponse(PatientResponse[] Items, int Total, int Page, int PageSize);
-public sealed record PatientSearchResult(Guid PatientId, Guid UserId, string FirstName, string LastName, string? Ci, string? Phone, string? Email);
+public sealed record PatientSearchResult(Guid PatientId, Guid UserId, string FirstName, string LastName, string? DocumentType, string? DocumentNumber, string? DocumentCountryCode, string? Phone, string? Email);

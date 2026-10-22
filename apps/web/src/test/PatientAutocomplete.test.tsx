@@ -4,12 +4,12 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import PatientAutocomplete from '../modules/admin/patients/PatientAutocomplete';
 import { setSession } from '../services/api';
 
-const patient = { patientId: 'profile-id', userId: 'user-id', firstName: 'Andrea', lastName: 'Bejar', ci: '1234556', phone: '71234567', email: 'andrea@gmail.com' };
+const patient = { patientId: 'profile-id', userId: 'user-id', firstName: 'Andrea', lastName: 'Bejar', documentNumber: '1234556', phone: '71234567', email: 'andrea@gmail.com' };
 const changed = vi.fn(); const fetchMock = vi.fn();
 beforeEach(() => { setSession(null); changed.mockReset(); fetchMock.mockReset(); fetchMock.mockImplementation(async () => Response.json([patient])); vi.stubGlobal('fetch', fetchMock); });
 afterEach(() => vi.useRealTimers());
 it('combobox reemplaza select y no consulta al abrir ni con un carácter', async () => {
-  render(<PatientAutocomplete onChange={changed} />); expect(screen.getByPlaceholderText('Buscar por CI, nombre, email o teléfono…')).toBeTruthy();
+  render(<PatientAutocomplete onChange={changed} />); expect(screen.getByPlaceholderText('Buscar por documento, nombre, email o teléfono…')).toBeTruthy();
   expect(document.querySelector('select')).toBeNull(); await userEvent.type(screen.getByRole('combobox'), 'a');
   await new Promise(r => setTimeout(r, 350)); expect(fetchMock).not.toHaveBeenCalled();
 });

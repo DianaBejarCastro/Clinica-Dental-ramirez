@@ -2921,12 +2921,20 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
-                    b.Property<string>("Ci")
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DocumentCountryCode")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("DocumentNumber")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<string>("DocumentType")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
 
                     b.Property<string>("Email")
                         .HasMaxLength(254)
@@ -2970,21 +2978,22 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Ci")
-                        .IsUnique()
-                        .HasFilter("\"Ci\" IS NOT NULL");
-
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasFilter("\"Email\" IS NOT NULL");
 
                     b.HasIndex("LastName");
 
+                    b.HasIndex("DocumentType", "DocumentCountryCode", "DocumentNumber")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Users_IdentityDocument")
+                        .HasFilter("\"DocumentNumber\" IS NOT NULL");
+
                     b.ToTable("Users", null, t =>
                         {
-                            t.HasCheckConstraint("CK_Users_Ci", "\"Ci\" IS NULL OR (length(\"Ci\") > 0 AND \"Ci\" = upper(btrim(\"Ci\")))");
-
                             t.HasCheckConstraint("CK_Users_EmailNormalized", "\"Email\" = lower(btrim(\"Email\")) AND length(\"Email\") > 3");
+
+                            t.HasCheckConstraint("CK_Users_IdentityDocument", "(\"DocumentType\" IS NULL AND \"DocumentNumber\" IS NULL AND \"DocumentCountryCode\" IS NULL) OR (\"DocumentType\" IS NOT NULL AND \"DocumentType\" IN ('CI', 'PASSPORT') AND \"DocumentNumber\" IS NOT NULL AND length(btrim(\"DocumentNumber\")) > 0 AND \"DocumentNumber\" = upper(btrim(\"DocumentNumber\")) AND \"DocumentCountryCode\" IS NOT NULL AND \"DocumentCountryCode\" ~ '^[A-Z]{2}$' AND (\"DocumentType\" <> 'CI' OR \"DocumentCountryCode\" = 'BO'))");
 
                             t.HasCheckConstraint("CK_Users_Login", "(NOT \"CanLogin\" AND \"PasswordHash\" IS NULL) OR (\"CanLogin\" AND \"Email\" IS NOT NULL AND \"PasswordHash\" IS NOT NULL AND length(\"PasswordHash\") > 0)");
 

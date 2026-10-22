@@ -194,11 +194,10 @@ public sealed class ClinicAdministrationService(AppDbContext db, IdentitySupport
         var license = Text(request.ProfessionalLicense).ToUpperInvariant();
         if (await db.DoctorProfiles.AnyAsync(x => x.Id != doctor.Id && x.ProfessionalLicense == license))
             throw new ApiException(409, "La matricula profesional ya existe.");
-        var ci = Text(request.Ci).ToUpperInvariant();
-        if (await db.Users.AnyAsync(x => x.Id != doctor.UserId && x.Ci == ci)) throw new ApiException(409, "CI ya registrado.");
+        await IdentityDocument.Apply(db, doctor.User, request.DocumentType, request.DocumentNumber, request.DocumentCountryCode);
         doctor.ProfessionalLicense = license;
         doctor.User.FirstName = Text(request.FirstName); doctor.User.LastName = Text(request.LastName);
-        doctor.User.Ci = ci; doctor.User.BirthDate = request.BirthDate;
+         doctor.User.BirthDate = request.BirthDate;
         doctor.User.Gender = Optional(request.Gender); doctor.User.Phone = Text(request.Phone); doctor.User.Address = Optional(request.Address);
         doctor.PhotoUrl = Optional(request.PhotoUrl); doctor.Bio = Optional(request.Bio); doctor.IsActive = request.IsActive;
     }
@@ -342,7 +341,7 @@ public sealed class ClinicAdministrationService(AppDbContext db, IdentitySupport
     private static SpecialtyResponse SpecialtyDto(Specialty x) => new(x.Id, x.Code, x.Name, x.Description, x.IsActive,
         x.DoctorSpecialties.Count, x.CreatedAt, x.UpdatedAt);
     private static DoctorResponse DoctorDto(DoctorProfile x) => new(x.Id, x.UserId,
-        new(x.User.Id, x.User.FirstName, x.User.LastName, x.User.Email, x.User.IsActive), x.ProfessionalLicense, x.User.Ci,
+        new(x.User.Id, x.User.FirstName, x.User.LastName, x.User.Email, x.User.IsActive), x.ProfessionalLicense, x.User.DocumentType, x.User.DocumentNumber, x.User.DocumentCountryCode,
         x.User.BirthDate, x.User.Gender, x.User.Phone, x.User.Address, x.PhotoUrl, x.Bio, x.IsActive, x.CreatedAt, x.UpdatedAt,
         x.DoctorSpecialties.OrderBy(a => a.Specialty.Name).Select(a => new AssignmentResponse(a.SpecialtyId, a.Specialty.Code, a.Specialty.Name, a.Specialty.IsActive)).ToArray(),
         x.DoctorCenters.Where(a => a.IsActive).OrderBy(a => a.Center.Name).Select(a => new AssignmentResponse(a.CenterId, a.Center.Code, a.Center.Name, a.Center.IsActive)).ToArray());

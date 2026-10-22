@@ -1,3 +1,4 @@
+import IdentityDocumentFields, { documentData } from '../../components/IdentityDocumentFields';
 import PasswordField from '../../components/PasswordField';
 export function localToday() {
   const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/La_Paz', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
@@ -7,7 +8,7 @@ export function localToday() {
 const fields = [
   { name: 'firstName', label: 'Nombre', required: true, max: 100 },
   { name: 'lastName', label: 'Apellido', required: true, max: 100 },
-  { name: 'ci', label: 'CI', required: true, max: 50 },
+  { name: 'documentNumber', label: 'Número de documento', required: true, max: 50 },
   { name: 'birthDate', label: 'Fecha de nacimiento', required: true, type: 'date' },
   { name: 'gender', label: 'Género', max: 50 },
   { name: 'phone', label: 'Teléfono', required: true, type: 'tel', max: 30 },
@@ -18,7 +19,7 @@ const fields = [
 export const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'UNKNOWN'];
 export function PatientFields({ value = {}, admin = false, disabled = false }: { value?: object; admin?: boolean; disabled?: boolean }) {
   const data = value as Record<string, unknown>;
-  return <>{fields.map(f => <label key={f.name}>{f.label}<input name={f.name} type={f.type ?? 'text'} required={f.required} maxLength={f.max}
+  return <>{fields.map(f => f.name === 'documentNumber' ? <IdentityDocumentFields key={f.name} value={data} disabled={disabled} /> : <label key={f.name}>{f.label}<input name={f.name} type={f.type ?? 'text'} required={f.required} maxLength={f.max}
     max={f.name === 'birthDate' ? localToday() : undefined} defaultValue={String(data[f.name] ?? '')} disabled={disabled} /></label>)}
     <label>Grupo sanguíneo<select name="bloodType" required defaultValue={String(data.bloodType ?? '')} disabled={disabled}>
       <option value="">Selecciona una opción</option>{bloodTypes.map(value => <option key={value} value={value}>{value === 'UNKNOWN' ? 'Desconocido' : value}</option>)}
@@ -28,7 +29,7 @@ export function PatientFields({ value = {}, admin = false, disabled = false }: {
 }
 export function patientData(form: FormData, admin = false) {
   const values = Object.fromEntries(fields.map(f => [f.name, String(form.get(f.name) ?? '').trim() || null]));
-  return { ...values, bloodType: String(form.get('bloodType') ?? ''), ...(admin ? { notes: String(form.get('notes') ?? '').trim() || null } : {}) };
+  return { ...values, ...documentData(form), bloodType: String(form.get('bloodType') ?? ''), ...(admin ? { notes: String(form.get('notes') ?? '').trim() || null } : {}) };
 }
 export function patientError(form: FormData) {
   if (fields.some(f => f.required && !String(form.get(f.name) ?? '').trim())) return 'Completa los datos obligatorios del paciente.';

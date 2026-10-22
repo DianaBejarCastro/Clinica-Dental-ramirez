@@ -13,9 +13,9 @@ public sealed class CashierService(AppDbContext db,FinancialPayments payments)
         q=q?.Trim();if(string.IsNullOrEmpty(q)||q.Length<2||q.Length>200||limit<1||limit>10)throw new ApiException(400,"Busca entre 2 y 200 caracteres; máximo 10 resultados.");
         var term=q.ToLowerInvariant();
         return await db.PatientProfiles.AsNoTracking().Where(x=>(x.User.FirstName+" "+x.User.LastName).ToLower().Contains(term)
-            ||(x.User.Ci!=null&&x.User.Ci.ToLower().Contains(term))||(x.User.Phone!=null&&x.User.Phone.Contains(term))||(x.User.Email!=null&&x.User.Email.ToLower().Contains(term)))
+            ||(x.User.DocumentNumber!=null&&x.User.DocumentNumber.ToLower().Contains(term))||(x.User.Phone!=null&&x.User.Phone.Contains(term))||(x.User.Email!=null&&x.User.Email.ToLower().Contains(term)))
             .OrderBy(x=>x.User.LastName).ThenBy(x=>x.User.FirstName).ThenBy(x=>x.Id).Take(limit)
-            .Select(x=>new CashierPatient(x.Id,x.User.FirstName,x.User.LastName,x.User.Ci,x.User.Phone,x.User.Email)).ToArrayAsync();
+            .Select(x=>new CashierPatient(x.Id,x.User.FirstName,x.User.LastName,x.User.DocumentType, x.User.DocumentNumber, x.User.DocumentCountryCode,x.User.Phone,x.User.Email)).ToArrayAsync();
     }
     private async Task PatientExists(Guid id){if(!await db.PatientProfiles.AnyAsync(x=>x.Id==id))throw new ApiException(404,"Paciente no disponible.");}
     private async Task<CashierTreatment[]> Summaries(Guid? patient=null,Guid? plan=null)
@@ -29,10 +29,10 @@ public sealed class CashierService(AppDbContext db,FinancialPayments payments)
             join doctor in db.Users on d.UserId equals doctor.Id
             where (patient==null||e.PatientProfileId==patient)&&(plan==null||p.Id==plan)
             orderby e.StartedAt descending,p.Id
-            select new{Plan=p.Id,Episode=e.Id,Patient=patientProfile.Id,Name=u.FirstName+" "+u.LastName,u.Ci,u.Phone,u.BirthDate,Title=e.Title,Doctor=doctor.FirstName+" "+doctor.LastName,e.StartedAt,account.AgreedTotal,Paid=db.Set<TreatmentPayment>().Where(x=>x.FinancialAccountId==account.Id).Sum(x=>(decimal?)x.Amount)??0m}).ToArrayAsync();
+            select new{Plan=p.Id,Episode=e.Id,Patient=patientProfile.Id,Name=u.FirstName+" "+u.LastName,u.DocumentType, u.DocumentNumber, u.DocumentCountryCode,u.Phone,u.BirthDate,Title=e.Title,Doctor=doctor.FirstName+" "+doctor.LastName,e.StartedAt,account.AgreedTotal,Paid=db.Set<TreatmentPayment>().Where(x=>x.FinancialAccountId==account.Id).Sum(x=>(decimal?)x.Amount)??0m}).ToArrayAsync();
         var today=LocalBirthDateAttribute.Today;
         if(rows.Any(x=>x.Paid>x.AgreedTotal))throw new ApiException(409,"La cuenta requiere revisión financiera: saldo inconsistente.");
-        return rows.Select(x=>new CashierTreatment(x.Plan,x.Episode,x.Patient,x.Name,x.Ci,x.Phone,x.BirthDate is DateOnly birth?today.Year-birth.Year-(birth.AddYears(today.Year-birth.Year)>today?1:0):null,x.Title,x.Doctor,x.StartedAt,x.AgreedTotal,x.Paid,x.AgreedTotal-x.Paid,x.Paid==x.AgreedTotal?"PAID":"PENDING")).ToArray();
+        return rows.Select(x=>new CashierTreatment(x.Plan,x.Episode,x.Patient,x.Name,x.DocumentType, x.DocumentNumber, x.DocumentCountryCode,x.Phone,x.BirthDate is DateOnly birth?today.Year-birth.Year-(birth.AddYears(today.Year-birth.Year)>today?1:0):null,x.Title,x.Doctor,x.StartedAt,x.AgreedTotal,x.Paid,x.AgreedTotal-x.Paid,x.Paid==x.AgreedTotal?"PAID":"PENDING")).ToArray();
     }
     private Task<CashierPayment[]> History(Guid? patient=null,Guid? plan=null)=>
         (from payment in db.Set<TreatmentPayment>().AsNoTracking()

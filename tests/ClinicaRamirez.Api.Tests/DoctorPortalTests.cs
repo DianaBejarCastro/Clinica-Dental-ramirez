@@ -28,7 +28,7 @@ public sealed class DoctorPortalTests(IdentityFixture f) : IClassFixture<Identit
     {
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var center = new Center { ClinicId = Clinic.SingletonId, Name = "Central portal", Code = "PORTAL_" + Guid.NewGuid().ToString("N").ToUpperInvariant(), Address = "Test" };
-        var patient = new PatientProfile { User = new User { FirstName = "Andrea", LastName = "Bejar", Ci = Guid.NewGuid().ToString("N").ToUpperInvariant(), BirthDate = new(1990,1,1), Phone = "70000000", CanLogin = false }, BloodType = "UNKNOWN", EmergencyContactName = "Test", EmergencyContactPhone = "70000000" };
+        var patient = new PatientProfile { User = new User { FirstName = "Andrea", LastName = "Bejar", DocumentType="CI", DocumentCountryCode="BO", DocumentNumber= Guid.NewGuid().ToString("N").ToUpperInvariant(), BirthDate = new(1990,1,1), Phone = "70000000", CanLogin = false }, BloodType = "UNKNOWN", EmergencyContactName = "Test", EmergencyContactPhone = "70000000" };
         db.Centers.Add(center); db.PatientProfiles.Add(patient);
         var role = await db.Roles.SingleAsync(x => x.Code == "PATIENT"); db.UserRoles.Add(new UserRole { User = patient.User, RoleId = role.Id });
         var a = new Appointment { PatientId = patient.Id, DoctorId = doctor, CenterId = center.Id, SpecialtyId = await db.Specialties.Select(x => x.Id).FirstAsync(), AppointmentDate = date, StartTime = new(hour,0), EndTime = new(hour,30), Reason = "Consulta", Notes = "Private administrative note" };
@@ -57,7 +57,7 @@ public sealed class DoctorPortalTests(IdentityFixture f) : IClassFixture<Identit
         var(c,d)=await Doctor();await Appointment(d.Id,new(2026,10,13),15);await Appointment(d.Id,new(2026,10,13),8);
         var response=await c.GetAsync("/api/doctor/me/appointments?date=2026-10-13");var result=(await response.Content.ReadFromJsonAsync<DoctorAgenda>())!;
         Assert.Equal(8,result.Items[0].StartTime.Hour);var text=await response.Content.ReadAsStringAsync();
-        foreach(var field in new[]{"password","token","notes","doctorId","userId","email","ci"}) Assert.DoesNotContain("\""+field+"\"",text,StringComparison.OrdinalIgnoreCase);
+        foreach(var field in new[]{"password","token","notes","doctorId","userId","email","documentNumber"}) Assert.DoesNotContain("\""+field+"\"",text,StringComparison.OrdinalIgnoreCase);
     }
     [Theory][InlineData(false,true)][InlineData(true,false)] public async Task MissingOrInactiveProfileControlled(bool profile,bool active)
     {var(c,_)=await Doctor(profile,active);Assert.Equal(HttpStatusCode.Forbidden,(await c.GetAsync("/api/doctor/me/appointments?date=2026-10-13")).StatusCode);}

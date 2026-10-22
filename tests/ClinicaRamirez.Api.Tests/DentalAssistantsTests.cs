@@ -18,7 +18,7 @@ public sealed class DentalAssistantsTests(IdentityFixture f) : IClassFixture<Ide
 {
     private const string Path = "/api/admin/dental-assistants";
     private Dictionary<string, object?> Body() => new() {
-        ["firstName"]="Asistente", ["lastName"]="Test", ["ci"]="CI-"+Guid.NewGuid(), ["birthDate"]="1990-01-01",
+        ["firstName"]="Asistente", ["lastName"]="Test", ["documentType"]="CI", ["documentCountryCode"]="BO", ["documentNumber"]="CI-"+Guid.NewGuid(), ["birthDate"]="1990-01-01",
         ["phone"]="70000000", ["email"]=Guid.NewGuid()+"@example.test", ["password"]=f.Password, ["confirmPassword"]=f.Password
     };
     private async Task<HttpClient> Admin() { var c=f.Client(); var login=await f.Login(c); c.DefaultRequestHeaders.Authorization=new("Bearer",login.Body.AccessToken); return c; }
@@ -28,7 +28,7 @@ public sealed class DentalAssistantsTests(IdentityFixture f) : IClassFixture<Ide
         Assert.EndsWith(result.Id.ToString(),r.Headers.Location!.ToString()); return result;
     }
     [Theory]
-    [InlineData("firstName")][InlineData("lastName")][InlineData("ci")][InlineData("birthDate")][InlineData("phone")]
+    [InlineData("firstName")][InlineData("lastName")][InlineData("documentNumber")][InlineData("birthDate")][InlineData("phone")]
     [InlineData("email")][InlineData("password")][InlineData("confirmPassword")]
     public async Task Required(string field) { using var c=await Admin();var body=Body();body.Remove(field);Assert.Equal(HttpStatusCode.BadRequest,(await c.PostAsJsonAsync(Path,body)).StatusCode); }
     [Theory][InlineData("birthDate","2999-01-01")][InlineData("email","invalid")][InlineData("confirmPassword","DifferentPassword123!")][InlineData("password","short")]
@@ -41,7 +41,7 @@ public sealed class DentalAssistantsTests(IdentityFixture f) : IClassFixture<Ide
         using var scope=f.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var user=await db.Users.SingleAsync(x=>x.Id==profile.UserId);
         Assert.True(user.CanLogin);Assert.True(user.IsActive);Assert.True(profile.IsActive);
-        Assert.Equal(body["ci"]!.ToString()!.ToUpperInvariant(),user.Ci);
+        Assert.Equal(body["documentNumber"]!.ToString()!.ToUpperInvariant(),user.DocumentNumber);
         Assert.Equal(PasswordVerificationResult.Success,new PasswordHasher<User>().VerifyHashedPassword(user,user.PasswordHash!,f.Password));
         Assert.True(await db.UserRoles.AnyAsync(x=>x.UserId==user.Id && x.Role.Code=="DENTAL_ASSISTANT"));
         Assert.False(await db.DoctorProfiles.AnyAsync(x=>x.UserId==user.Id));
@@ -50,7 +50,7 @@ public sealed class DentalAssistantsTests(IdentityFixture f) : IClassFixture<Ide
         Assert.Equal(HttpStatusCode.Forbidden,(await login.GetAsync(Path)).StatusCode);
         Assert.DoesNotContain("password",System.Text.Json.JsonSerializer.Serialize(profile).ToLowerInvariant());
     }
-    [Theory][InlineData("ci")][InlineData("email")]
+    [Theory][InlineData("documentNumber")][InlineData("email")]
     public async Task GlobalDuplicatesRollBack(string field)
     {
         using var c=await Admin();var body=Body();await Create(c,body);
@@ -117,7 +117,7 @@ public sealed class DentalAssistantsTests(IdentityFixture f) : IClassFixture<Ide
         using var scope=f.Services.CreateScope();var original=scope.ServiceProvider.GetRequiredService<AppDbContext>();var users=await original.Users.CountAsync();var roles=await original.UserRoles.CountAsync();var profiles=await original.DentalAssistantProfiles.CountAsync();var audits=await original.AuditLogs.CountAsync();
         await using var db=new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(original.Database.GetConnectionString()).AddInterceptors(new FailProfile()).Options);
         var service=new DentalAssistantsService(db,new IdentitySupport(db,new HttpContextAccessor()),new PasswordHasher<User>());
-        await Assert.ThrowsAsync<InvalidOperationException>(()=>service.Create(new DentalAssistantCreateRequest {FirstName="Test",LastName="Test",Ci=Guid.NewGuid().ToString(),BirthDate=new(1990,1,1),Phone="70000000",Email=Guid.NewGuid()+"@example.test",Password=f.Password,ConfirmPassword=f.Password}));
+        await Assert.ThrowsAsync<InvalidOperationException>(()=>service.Create(new DentalAssistantCreateRequest {FirstName="Test",LastName="Test",DocumentType="CI", DocumentCountryCode="BO", DocumentNumber=Guid.NewGuid().ToString(),BirthDate=new(1990,1,1),Phone="70000000",Email=Guid.NewGuid()+"@example.test",Password=f.Password,ConfirmPassword=f.Password}));
         Assert.Equal(users,await original.Users.CountAsync());Assert.Equal(roles,await original.UserRoles.CountAsync());Assert.Equal(profiles,await original.DentalAssistantProfiles.CountAsync());Assert.Equal(audits,await original.AuditLogs.CountAsync());
     }
 }

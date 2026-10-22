@@ -1,3 +1,4 @@
+import IdentityDocumentFields, { documentData } from '../../components/IdentityDocumentFields';
 import { localToday } from '../patient/PatientFields';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useAuth } from '../auth/AuthProvider';
@@ -29,14 +30,14 @@ export function StateBadge({ active }: { active: boolean }) {
 export interface FieldSpec { name: string; label: string; type?: string; required?: boolean; maxLength?: number; min?: number; max?: number; step?: string }
 export function Fields({ fields, value = {}, disabled = false }: { fields: FieldSpec[]; value?: object; disabled?: boolean }) {
   const values = value as Record<string, unknown>;
-  return <>{fields.map(field => <label key={field.name}>{field.label}{field.type === 'textarea' ? <textarea name={field.name} defaultValue={String(values[field.name] ?? '')} maxLength={field.maxLength ?? 2000} rows={3} disabled={disabled} required={field.required} /> : <input name={field.name} type={field.type ?? 'text'} defaultValue={String(values[field.name] ?? '')} required={field.required} maxLength={field.maxLength ?? 250} min={field.min} max={field.name === 'birthDate' ? localToday() : field.max} step={field.step} disabled={disabled} />}</label>)}</>;
+  return <>{fields.map(field => field.name === 'documentNumber' ? <IdentityDocumentFields key={field.name} value={values} required={field.required} disabled={disabled} /> : <label key={field.name}>{field.label}{field.type === 'textarea' ? <textarea name={field.name} defaultValue={String(values[field.name] ?? '')} maxLength={field.maxLength ?? 2000} rows={3} disabled={disabled} required={field.required} /> : <input name={field.name} type={field.type ?? 'text'} defaultValue={String(values[field.name] ?? '')} required={field.required} maxLength={field.maxLength ?? 250} min={field.min} max={field.name === 'birthDate' ? localToday() : field.max} step={field.step} disabled={disabled} />}</label>)}</>;
 }
 export function readFields(event: FormEvent<HTMLFormElement>, fields: FieldSpec[]) {
   const data = new FormData(event.currentTarget);
-  return Object.fromEntries(fields.map(field => {
+  return { ...(fields.some(f => f.name === 'documentNumber') ? documentData(data) : {}), ...Object.fromEntries(fields.map(field => {
     const value = String(data.get(field.name) ?? '').trim();
     return [field.name, value ? field.type === 'number' ? Number(value) : value : field.required ? '' : null];
-  }));
+  })) };
 }
 export function FormActions({ busy, label, cancel }: { busy: boolean; label: string; cancel?: () => void }) {
   return <div className="actions"><button disabled={busy}>{busy ? 'Guardando…' : label}</button>{cancel && <button type="button" className="secondary" disabled={busy} onClick={cancel}>Cancelar</button>}</div>;

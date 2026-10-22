@@ -29,13 +29,13 @@ public sealed class StaffAdministrationService(AppDbContext db, IdentitySupport 
         Validate(request);
         await using var tx = await db.Database.BeginTransactionAsync();
         await support.LockAdministration();
-        var ci = request.Ci.Trim().ToUpperInvariant(); var email = request.Email.Trim().ToLowerInvariant();
-        if (await db.Users.AnyAsync(x => x.Ci == ci)) throw new ApiException(409, "El CI ya se encuentra registrado. Añade el rol desde Usuarios.");
+        var email = request.Email.Trim().ToLowerInvariant();
         if (await db.Users.AnyAsync(x => x.Email == email)) throw new ApiException(409, "El email ya se encuentra registrado.");
         var role = await Role(code);
-        var user = new User { FirstName=request.FirstName.Trim(), LastName=request.LastName.Trim(), Ci=ci,
+        var user = new User { FirstName=request.FirstName.Trim(), LastName=request.LastName.Trim(),
             BirthDate=request.BirthDate, Gender=Optional(request.Gender), Phone=request.Phone.Trim(), Address=Optional(request.Address),
             Email=email, CanLogin=true, IsActive=true };
+        await IdentityDocument.Apply(db, user, request.DocumentType, request.DocumentNumber, request.DocumentCountryCode);
         user.PasswordHash=hasher.HashPassword(user, request.Password);
         db.Users.Add(user);
         db.UserRoles.Add(new UserRole { User=user, RoleId=role.Id, AssignedByUserId=support.Actor });
@@ -51,7 +51,7 @@ public sealed class StaffAdministrationService(AppDbContext db, IdentitySupport 
         await using var tx=await db.Database.BeginTransactionAsync();
         await support.LockAdministration();
         var user=await db.Users.SingleOrDefaultAsync(x=>x.Id==userId) ?? throw new ApiException(404,"Usuario inexistente.");
-        if (string.IsNullOrWhiteSpace(user.FirstName) || string.IsNullOrWhiteSpace(user.LastName) || string.IsNullOrWhiteSpace(user.Ci)
+        if (string.IsNullOrWhiteSpace(user.FirstName) || string.IsNullOrWhiteSpace(user.LastName) || string.IsNullOrWhiteSpace(user.DocumentNumber)
             || user.BirthDate is null || user.BirthDate > LocalBirthDateAttribute.Today || string.IsNullOrWhiteSpace(user.Phone))
             throw new ApiException(409,"Completa los datos personales del usuario antes de añadir este rol.");
         if (code is "DOCTOR" or "DENTAL_ASSISTANT" && (!user.CanLogin || string.IsNullOrWhiteSpace(user.Email) || string.IsNullOrWhiteSpace(user.PasswordHash)))

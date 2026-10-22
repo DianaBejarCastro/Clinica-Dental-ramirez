@@ -1,3 +1,4 @@
+import { documentLabel } from '../../../components/IdentityDocumentFields';
 import type { Context } from './types';
 
 const icons = {
@@ -23,7 +24,7 @@ export default function ClinicalPatientHeader({patient,appointment}:{patient:Con
         </div>
       </div>
       <dl className="clinical-patient-contacts">
-        {([{label:'CI',value:patient.ci,icon:'identity'},{label:'Teléfono',value:patient.phone,icon:'phone'},{label:'Email',value:patient.email,icon:'email'}] as const).map(({label,value,icon})=><div className="clinical-patient-contact" key={label}>
+        {([{label:'Documento',value:documentLabel(patient),icon:'identity'},{label:'Teléfono',value:patient.phone,icon:'phone'},{label:'Email',value:patient.email,icon:'email'}] as const).map(({label,value,icon})=><div className="clinical-patient-contact" key={label}>
           <span className="clinical-patient-icon"><Icon name={icon}/></span><div><dt>{label}</dt><dd>{value||'No registrado'}</dd></div>
         </div>)}
       </dl>

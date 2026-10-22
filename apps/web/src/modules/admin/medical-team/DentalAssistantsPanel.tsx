@@ -1,3 +1,4 @@
+import { documentLabel } from '../../../components/IdentityDocumentFields';
 import PasswordField from '../../../components/PasswordField';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { api } from '../../../services/api';
@@ -6,7 +7,7 @@ import { Feedback, Fields, FormActions, readFields, StateBadge, useAction, usePe
 import { personalFields, accountFields } from './fields';
 
 interface Assistant {
-  id: string; userId: string; firstName: string; lastName: string; ci: string | null;
+  id: string; userId: string; firstName: string; lastName: string; documentNumber: string | null; documentType?: string | null; documentCountryCode?: string | null;
   birthDate: string | null; gender: string | null; phone: string | null; address: string | null;
   email: string | null; isActive: boolean; userIsActive: boolean; canLogin: boolean;
 }
@@ -67,9 +68,9 @@ export default function DentalAssistantsPanel({ creating, closeCreate }: { creat
     <section className="card table-card">
       {loading ? <p role="status">Cargando asistentes dentales…</p> : list && <>
         {list.items.length === 0 ? <p>No hay asistentes dentales en esta página.</p> : <table aria-label="Asistentes dentales">
-          <thead><tr><th>Nombre</th><th>CI</th><th>Email</th><th>Teléfono</th><th>Estado del perfil</th><th>Estado de cuenta</th><th>Acciones</th></tr></thead>
+          <thead><tr><th>Nombre</th><th>Documento</th><th>Email</th><th>Teléfono</th><th>Estado del perfil</th><th>Estado de cuenta</th><th>Acciones</th></tr></thead>
           <tbody>{list.items.map(assistant => <tr key={assistant.id}>
-            <td>{assistant.firstName} {assistant.lastName}</td><td>{assistant.ci ?? '—'}</td><td>{assistant.email ?? '—'}</td><td>{assistant.phone ?? '—'}</td>
+            <td>{assistant.firstName} {assistant.lastName}</td><td>{documentLabel(assistant)}</td><td>{assistant.email ?? '—'}</td><td>{assistant.phone ?? '—'}</td>
             <td><StateBadge active={assistant.isActive} /></td><td><StateBadge active={assistant.userIsActive && assistant.canLogin} /></td>
             <td>{can('doctors.update') && <button className="secondary" disabled={action.busy} onClick={() => void action.run(async () => {
               const current = await api<Assistant>(`${endpoint}/${assistant.id}`); closeCreate(); setEditing(current);

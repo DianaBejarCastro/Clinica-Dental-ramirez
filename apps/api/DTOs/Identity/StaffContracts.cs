@@ -8,7 +8,9 @@ public sealed class StaffCreateRequest
 {
     [Required, MaxLength(100)] public string FirstName { get; init; } = "";
     [Required, MaxLength(100)] public string LastName { get; init; } = "";
-    [Required, MaxLength(50)] public string Ci { get; init; } = "";
+    [Required, MaxLength(50)] public string DocumentNumber { get; init; } = "";
+    public string? DocumentType { get; init; }
+    [MaxLength(2)] public string? DocumentCountryCode { get; init; }
     [Required, LocalBirthDate] public DateOnly? BirthDate { get; init; }
     [MaxLength(50)] public string? Gender { get; init; }
     [Required, MaxLength(30)] public string Phone { get; init; } = "";

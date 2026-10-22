@@ -47,7 +47,9 @@ public class DoctorUpdateRequest
     [Required, MaxLength(100)] public string FirstName { get; init; } = "";
     [Required, MaxLength(100)] public string LastName { get; init; } = "";
     [Required, MaxLength(100)] public string ProfessionalLicense { get; init; } = "";
-    [Required, MaxLength(50)] public string Ci { get; init; } = "";
+    [Required, MaxLength(50)] public string DocumentNumber { get; init; } = "";
+    public string? DocumentType { get; init; }
+    [MaxLength(2)] public string? DocumentCountryCode { get; init; }
     [Required, ClinicaRamirez.Api.DTOs.LocalBirthDate] public DateOnly? BirthDate { get; init; }
     [MaxLength(50)] public string? Gender { get; init; }
     [Required, MaxLength(30)] public string Phone { get; init; } = "";
@@ -92,7 +94,7 @@ public sealed record SpecialtyResponse(Guid Id, string Code, string Name, string
     int DoctorCount, DateTime CreatedAt, DateTime UpdatedAt);
 public sealed record AssignmentResponse(Guid Id, string Code, string Name, bool IsActive);
 public sealed record DoctorUserResponse(Guid Id, string FirstName, string LastName, string? Email, bool IsActive);
-public sealed record DoctorResponse(Guid Id, Guid UserId, DoctorUserResponse User, string? ProfessionalLicense, string? Ci,
+public sealed record DoctorResponse(Guid Id, Guid UserId, DoctorUserResponse User, string? ProfessionalLicense, string? DocumentType, string? DocumentNumber, string? DocumentCountryCode,
     DateOnly? BirthDate, string? Gender, string? Phone, string? Address, string? PhotoUrl, string? Bio, bool IsActive,
     DateTime CreatedAt, DateTime UpdatedAt, AssignmentResponse[] Specialties, AssignmentResponse[] Centers);
 public sealed record DoctorListResponse(DoctorResponse[] Items, int Total, int Page, int PageSize);

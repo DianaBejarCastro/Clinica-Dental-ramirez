@@ -6,7 +6,7 @@ import { setSession } from '../services/api';
 import { localToday } from '../modules/patient/PatientFields';
 
 const endpoint = '/api/admin/dental-assistants';
-const initial = { id: 'assistant', userId: 'person', firstName: 'Ana', lastName: 'Asistente', ci: 'CI-TEST', birthDate: '1990-01-01', phone: '70000000', gender: null, address: null, email: 'ana@example.test', isActive: true, userIsActive: true, canLogin: true };
+const initial = { id: 'assistant', userId: 'person', firstName: 'Ana', lastName: 'Asistente', documentNumber: 'CI-TEST', birthDate: '1990-01-01', phone: '70000000', gender: null, address: null, email: 'ana@example.test', isActive: true, userIsActive: true, canLogin: true };
 let assistants: typeof initial[];
 let permissions: string[];
 let fail = 0;
@@ -32,7 +32,7 @@ beforeEach(() => {
 });
 async function open() { render(<App />); await userEvent.click(await screen.findByRole('button', { name: 'Crear asistente dental' })); }
 function fill() {
-  const values = { firstName: 'Nueva', lastName: 'Asistente', ci: 'CI-NEW', birthDate: '2000-01-01', phone: '71111111', email: 'new@example.test', password: 'TestPassword123!', confirmPassword: 'TestPassword123!' };
+  const values = { firstName: 'Nueva', lastName: 'Asistente', documentNumber: 'CI-NEW', birthDate: '2000-01-01', phone: '71111111', email: 'new@example.test', password: 'TestPassword123!', confirmPassword: 'TestPassword123!' };
   for (const [name, value] of Object.entries(values)) fireEvent.change(document.querySelector(`[name="${name}"]`)!, { target: { value } });
 }
 it('botones juntos, listado separado y formulario sin campos de doctor', async () => {
@@ -42,7 +42,7 @@ it('botones juntos, listado separado y formulario sin campos de doctor', async (
   expect(await screen.findByRole('table', { name: 'Asistentes dentales' })).toBeTruthy();
   expect(screen.getByText('No hay doctores registrados.')).toBeTruthy();
   for (const label of ['Matrícula profesional', 'Foto URL', 'Biografía', 'Usuario existente (ID)']) expect(screen.queryByLabelText(label)).toBeNull();
-  for (const label of ['Nombres', 'Apellidos', 'CI', 'Fecha de nacimiento', 'Teléfono', 'Email de acceso', 'Contraseña', 'Confirmar contraseña'])
+  for (const label of ['Nombres', 'Apellidos', 'Número de documento', 'Fecha de nacimiento', 'Teléfono', 'Email de acceso', 'Contraseña', 'Confirmar contraseña'])
     expect((screen.getByLabelText(label, { exact: true }) as HTMLInputElement).required).toBe(true);
   expect((screen.getByLabelText('Fecha de nacimiento') as HTMLInputElement).max).toBe(localToday());
   expect(screen.getByLabelText('Nombres').closest('form')?.classList.contains('editor')).toBe(true);

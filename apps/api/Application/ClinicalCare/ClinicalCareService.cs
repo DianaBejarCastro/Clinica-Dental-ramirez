@@ -131,7 +131,7 @@ public sealed class ClinicalCareService(AppDbContext db,IdentitySupport support,
         if(e!=null){var n=await db.Set<SoapNote>().AsNoTracking().SingleAsync(x=>x.ClinicalEncounterId==e.Id);encounter=new(e.Id,e.TreatmentEpisodeId,e.Status,e.StartedAt,new(n.Id,n.Subjective,n.Objective,n.Assessment,n.Plan,n.Status,n.Revision,n.SignedAt,n.SignedByUserId));}
         var episodes=await db.Set<TreatmentEpisode>().AsNoTracking().Where(x=>x.PatientProfileId==a.PatientId&&x.PrimaryDoctorProfileId==a.DoctorId).OrderByDescending(x=>x.StartedAt).ToArrayAsync();var episodeDtos=new List<EpisodeDto>();foreach(var ep in episodes)episodeDtos.Add(await EpisodeDto(ep));
         var latest=await Latest(a.PatientId);
-        return new(new(patient.Id,u.FirstName,u.LastName,age,u.Gender,u.Ci,u.Phone,u.Email,patient.BloodType),new(a.Id,a.AppointmentDate,a.StartTime,a.EndTime,a.Reason,await db.Centers.Where(x=>x.Id==a.CenterId).Select(x=>x.Name).SingleAsync(),a.Status),encounter,episodeDtos.ToArray(),latest==null?null:await ReviewDto(latest),e==null||!await Can("treatments.view")?null:await PlanDto(e.TreatmentEpisodeId));
+        return new(new(patient.Id,u.FirstName,u.LastName,age,u.Gender,u.DocumentType, u.DocumentNumber, u.DocumentCountryCode,u.Phone,u.Email,patient.BloodType),new(a.Id,a.AppointmentDate,a.StartTime,a.EndTime,a.Reason,await db.Centers.Where(x=>x.Id==a.CenterId).Select(x=>x.Name).SingleAsync(),a.Status),encounter,episodeDtos.ToArray(),latest==null?null:await ReviewDto(latest),e==null||!await Can("treatments.view")?null:await PlanDto(e.TreatmentEpisodeId));
     }
     public async Task<ClinicalHistory> History(Guid appointmentId)
     {

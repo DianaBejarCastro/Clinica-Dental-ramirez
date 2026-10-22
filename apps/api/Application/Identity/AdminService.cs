@@ -18,7 +18,7 @@ public sealed class AdminService(AppDbContext db, IdentitySupport support, IPass
         if (roleCode is not null) query = query.Where(x => x.UserRoles.Any(r => r.Role.Code == roleCode));
         if (!string.IsNullOrWhiteSpace(search)) {
             var term = search.Trim().ToLowerInvariant();
-            query = query.Where(x => (x.FirstName + " " + x.LastName).ToLower().Contains(term) || (x.Email != null && x.Email.Contains(term)) || (x.Ci != null && x.Ci.ToLower().Contains(term)));
+            query = query.Where(x => (x.FirstName + " " + x.LastName).ToLower().Contains(term) || (x.Email != null && x.Email.Contains(term)) || (x.DocumentNumber != null && x.DocumentNumber.ToLower().Contains(term)));
         }
         var items = await query.OrderBy(x => x.LastName).ThenBy(x => x.Id).Skip((page - 1) * pageSize).Take(pageSize).ToArrayAsync();
         return new(await support.UsersDto(items), await query.CountAsync(), page, pageSize);
@@ -43,17 +43,17 @@ public sealed class AdminService(AppDbContext db, IdentitySupport support, IPass
         var user = await UserQuery.SingleOrDefaultAsync(x => x.Id == id) ?? throw new ApiException(404, "Usuario inexistente.");
         var email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim().ToLowerInvariant();
         if (user.CanLogin && email is null) throw new ApiException(400, "El email es obligatorio para una cuenta de acceso.");
-        var ci = request.Ci?.Trim().ToUpperInvariant() ?? user.Ci;
-        if (ci is not null && await db.Users.AnyAsync(x => x.Id != id && x.Ci == ci)) throw new ApiException(409, "El CI ya se encuentra registrado.");
-        user.Ci = ci; user.BirthDate = request.BirthDate ?? user.BirthDate;
+        if (request.DocumentType != null || request.DocumentNumber != null || request.DocumentCountryCode != null)
+            await IdentityDocument.Apply(db, user, request.DocumentType, request.DocumentNumber, request.DocumentCountryCode);
+        user.BirthDate = request.BirthDate ?? user.BirthDate;
         user.Gender = request.Gender; user.Address = request.Address;
         if (await db.Users.AnyAsync(x => x.Id != id && email != null && x.Email == email)) throw new ApiException(409, "El email ya existe.");
         if (user.Email != email) user.EmailVerified = false;
         user.FirstName = request.FirstName.Trim(); user.LastName = request.LastName.Trim();
         user.Email = email; user.Phone = request.Phone?.Trim();
         if (user.UserRoles.Any(x => x.Role.Code is "PATIENT" or "DOCTOR" or "DENTAL_ASSISTANT") &&
-            (string.IsNullOrWhiteSpace(user.Ci) || user.BirthDate is null || string.IsNullOrWhiteSpace(user.Phone)))
-            throw new ApiException(400, "Los perfiles de dominio requieren CI, fecha de nacimiento y teléfono.");
+            (string.IsNullOrWhiteSpace(user.DocumentNumber) || user.BirthDate is null || string.IsNullOrWhiteSpace(user.Phone)))
+            throw new ApiException(400, "Los perfiles de dominio requieren documento, fecha de nacimiento y teléfono.");
         support.Audit("user_updated", "User", id);
         await db.SaveChangesAsync();
         await tx.CommitAsync();

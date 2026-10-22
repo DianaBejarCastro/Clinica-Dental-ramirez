@@ -69,13 +69,12 @@ public sealed class DentalAssistantsService(AppDbContext db, IdentitySupport sup
     }
     private async Task Apply(User user, DentalAssistantUpdateRequest request)
     {
-        var ci = request.Ci.Trim().ToUpperInvariant();
-        if (await db.Users.AnyAsync(x => x.Id != user.Id && x.Ci == ci)) throw new ApiException(409, "El CI ya se encuentra registrado.");
-        user.FirstName = request.FirstName.Trim(); user.LastName = request.LastName.Trim(); user.Ci = ci;
+        await IdentityDocument.Apply(db, user, request.DocumentType, request.DocumentNumber, request.DocumentCountryCode);
+        user.FirstName = request.FirstName.Trim(); user.LastName = request.LastName.Trim();
         user.BirthDate = request.BirthDate; user.Gender = Optional(request.Gender);
         user.Phone = request.Phone.Trim(); user.Address = Optional(request.Address);
     }
     private static DentalAssistantResponse Dto(DentalAssistantProfile p) => new(p.Id, p.UserId,
-        p.User.FirstName, p.User.LastName, p.User.Ci, p.User.BirthDate, p.User.Gender, p.User.Phone,
+        p.User.FirstName, p.User.LastName, p.User.DocumentType, p.User.DocumentNumber, p.User.DocumentCountryCode, p.User.BirthDate, p.User.Gender, p.User.Phone,
         p.User.Address, p.User.Email, p.IsActive, p.User.IsActive, p.User.CanLogin, p.CreatedAt, p.UpdatedAt);
 }

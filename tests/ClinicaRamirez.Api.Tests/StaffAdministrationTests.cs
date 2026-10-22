@@ -17,7 +17,7 @@ namespace ClinicaRamirez.Api.Tests;
 public sealed class StaffAdministrationTests(IdentityFixture f) : IClassFixture<IdentityFixture>
 {
     private Dictionary<string,object?> Body() => new() {
-        ["firstName"]="Personal", ["lastName"]="Test", ["ci"]="STAFF-"+Guid.NewGuid(), ["birthDate"]="1990-01-01",
+        ["firstName"]="Personal", ["lastName"]="Test", ["documentType"]="CI", ["documentCountryCode"]="BO", ["documentNumber"]="STAFF-"+Guid.NewGuid(), ["birthDate"]="1990-01-01",
         ["phone"]="70000000", ["email"]=Guid.NewGuid()+"@example.test", ["password"]=f.Password, ["confirmPassword"]=f.Password
     };
     private async Task<HttpClient> Admin() { var c=f.Client();var session=await f.Login(c);c.DefaultRequestHeaders.Authorization=new("Bearer",session.Body.AccessToken);return c; }
@@ -30,7 +30,7 @@ public sealed class StaffAdministrationTests(IdentityFixture f) : IClassFixture<
     {
         using var c=await Admin();var body=Body();var user=await Create(c,path,body);
         Assert.True(user.CanLogin);Assert.True(user.IsActive);Assert.Equal(code,Assert.Single(user.Roles).Code);
-        var list=(await c.GetFromJsonAsync<UserListResponse>($"/api/admin/{path}?q={user.Ci}"))!;
+        var list=(await c.GetFromJsonAsync<UserListResponse>($"/api/admin/{path}?q={user.DocumentNumber}"))!;
         Assert.Equal(user.Id,Assert.Single(list.Items).Id);
         using var scope=f.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var saved=await db.Users.SingleAsync(x=>x.Id==user.Id);
@@ -39,11 +39,11 @@ public sealed class StaffAdministrationTests(IdentityFixture f) : IClassFixture<
         Assert.True(await db.AuditLogs.AnyAsync(x=>x.EntityId==user.Id && x.Action==code.ToLower()+"_created"));
         using var login=f.Client();Assert.Contains(code,(await f.Login(login,user.Email)).Body.User.Roles);
     }
-    [Theory][InlineData("firstName")][InlineData("lastName")][InlineData("ci")][InlineData("birthDate")][InlineData("phone")][InlineData("email")][InlineData("password")][InlineData("confirmPassword")]
+    [Theory][InlineData("firstName")][InlineData("lastName")][InlineData("documentNumber")][InlineData("birthDate")][InlineData("phone")][InlineData("email")][InlineData("password")][InlineData("confirmPassword")]
     public async Task RequiredFields(string field) { using var c=await Admin();var body=Body();body.Remove(field);Assert.Equal(HttpStatusCode.BadRequest,(await c.PostAsJsonAsync("/api/admin/cashiers",body)).StatusCode); }
     [Theory][InlineData("birthDate","2999-01-01")][InlineData("confirmPassword","different-password")][InlineData("roleIds","ADMINISTRATOR")]
     public async Task InvalidOrArbitraryRoleRejected(string field,string value) { using var c=await Admin();var body=Body();body[field]=value;Assert.Equal(HttpStatusCode.BadRequest,(await c.PostAsJsonAsync("/api/admin/cashiers",body)).StatusCode); }
-    [Theory][InlineData("ci")][InlineData("email")]
+    [Theory][InlineData("documentNumber")][InlineData("email")]
     public async Task DuplicateDoesNotCreatePartialRows(string field)
     {
         using var c=await Admin();var body=Body();await Create(c,body:body);
@@ -74,7 +74,7 @@ public sealed class StaffAdministrationTests(IdentityFixture f) : IClassFixture<
         var updated=(await c.GetFromJsonAsync<UserResponse>($"/api/admin/users/{person.Id}"))!;
         Assert.Equal(person.Id,updated.Id);Assert.Equal(new[]{"DENTAL_ASSISTANT","DOCTOR","PATIENT","SECRETARY"},updated.Roles.Select(x=>x.Code).Order().ToArray());
         Assert.Equal(users,await db.Users.CountAsync());Assert.Single(await db.DoctorProfiles.Where(x=>x.UserId==person.Id).ToListAsync());Assert.Single(await db.PatientProfiles.Where(x=>x.UserId==person.Id).ToListAsync());Assert.Single(await db.DentalAssistantProfiles.Where(x=>x.UserId==person.Id).ToListAsync());
-        var saved=await db.Users.AsNoTracking().SingleAsync(x=>x.Id==person.Id);Assert.Equal(original.PasswordHash,saved.PasswordHash);Assert.Equal(original.Email,saved.Email);Assert.Equal(original.Ci,saved.Ci);
+        var saved=await db.Users.AsNoTracking().SingleAsync(x=>x.Id==person.Id);Assert.Equal(original.PasswordHash,saved.PasswordHash);Assert.Equal(original.Email,saved.Email);Assert.Equal(original.DocumentNumber,saved.DocumentNumber);
         Assert.Equal(HttpStatusCode.NoContent,(await c.PutAsJsonAsync($"/api/admin/users/{person.Id}/roles",new{roleIds=Array.Empty<Guid>()})).StatusCode);
         var preserved=(await c.GetFromJsonAsync<UserResponse>($"/api/admin/users/{person.Id}"))!;
         Assert.Equal(new[]{"DENTAL_ASSISTANT","DOCTOR","PATIENT"},preserved.Roles.Select(x=>x.Code).Order().ToArray());
@@ -93,16 +93,16 @@ public sealed class StaffAdministrationTests(IdentityFixture f) : IClassFixture<
     {
         using var c=await Admin();var email=await f.CreateUser();using var scope=f.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<AppDbContext>();var user=await db.Users.SingleAsync(x=>x.Email==email);
         Assert.Equal(HttpStatusCode.Conflict,(await c.PostAsJsonAsync($"/api/admin/users/{user.Id}/dental-assistant-profile",new{})).StatusCode);
-        user.Ci="NO-LOGIN-"+Guid.NewGuid();user.BirthDate=new(2000,1,1);user.Phone="70000000";user.CanLogin=false;user.PasswordHash=null;await db.SaveChangesAsync();
+        user.DocumentType="CI";user.DocumentCountryCode="BO";user.DocumentNumber="NO-LOGIN-"+Guid.NewGuid();user.BirthDate=new(2000,1,1);user.Phone="70000000";user.CanLogin=false;user.PasswordHash=null;await db.SaveChangesAsync();
         Assert.Equal(HttpStatusCode.Conflict,(await c.PostAsJsonAsync($"/api/admin/users/{user.Id}/doctor-profile",new{professionalLicense="NO-LOGIN-"+Guid.NewGuid()})).StatusCode);
         Assert.False(await db.DoctorProfiles.AnyAsync(x=>x.UserId==user.Id));Assert.False(await db.DentalAssistantProfiles.AnyAsync(x=>x.UserId==user.Id));
     }
     [Fact] public async Task PatientWithoutAccountCanReceivePatientProfileAndAppearsInGlobalSearch()
     {
         using var c=await Admin();var email=await f.CreateUser();using var scope=f.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<AppDbContext>();var user=await db.Users.SingleAsync(x=>x.Email==email);
-        user.Ci="CLINICAL-"+Guid.NewGuid();user.BirthDate=new(2000,1,1);user.Phone="70000000";user.CanLogin=false;user.PasswordHash=null;await db.SaveChangesAsync();
+        user.DocumentType="CI";user.DocumentCountryCode="BO";user.DocumentNumber="CLINICAL-"+Guid.NewGuid();user.BirthDate=new(2000,1,1);user.Phone="70000000";user.CanLogin=false;user.PasswordHash=null;await db.SaveChangesAsync();
         Assert.Equal(HttpStatusCode.OK,(await c.PostAsJsonAsync($"/api/admin/users/{user.Id}/patient-profile",new{emergencyContactName="Contacto",emergencyContactPhone="70000001",bloodType="UNKNOWN"})).StatusCode);
-        var list=(await c.GetFromJsonAsync<UserListResponse>($"/api/admin/users?q={user.Ci}"))!;Assert.Equal(user.Id,Assert.Single(list.Items).Id);Assert.False(list.Items[0].CanLogin);
+        var list=(await c.GetFromJsonAsync<UserListResponse>($"/api/admin/users?q={user.DocumentNumber}"))!;Assert.Equal(user.Id,Assert.Single(list.Items).Id);Assert.False(list.Items[0].CanLogin);
     }
     [Theory][InlineData("DOCTOR")][InlineData("PATIENT")][InlineData("DENTAL_ASSISTANT")]
     public async Task DomainRolesRejectGenericGrant(string code)
@@ -151,7 +151,7 @@ public sealed class StaffAdministrationTests(IdentityFixture f) : IClassFixture<
             object request=code switch {"DOCTOR"=>new AddDoctorProfileRequest{ProfessionalLicense="ROLLBACK-"+Guid.NewGuid()},"PATIENT"=>new AddPatientProfileRequest{EmergencyContactName="Test",EmergencyContactPhone="70000001",BloodType="UNKNOWN"},_=>new AddDentalAssistantProfileRequest()};
             await Assert.ThrowsAsync<InvalidOperationException>(()=>service.AddProfile(existing.Id,code,request));
         }
-        else await Assert.ThrowsAsync<InvalidOperationException>(()=>service.Create("CASHIER",new StaffCreateRequest{FirstName="Test",LastName="Test",Ci="ROLLBACK-"+Guid.NewGuid(),BirthDate=new(1990,1,1),Phone="70000000",Email=Guid.NewGuid()+"@example.test",Password=f.Password,ConfirmPassword=f.Password}));
+        else await Assert.ThrowsAsync<InvalidOperationException>(()=>service.Create("CASHIER",new StaffCreateRequest{FirstName="Test",LastName="Test",DocumentType="CI", DocumentCountryCode="BO", DocumentNumber="ROLLBACK-"+Guid.NewGuid(),BirthDate=new(1990,1,1),Phone="70000000",Email=Guid.NewGuid()+"@example.test",Password=f.Password,ConfirmPassword=f.Password}));
         Assert.Equal(users,await original.Users.CountAsync());Assert.Equal(roles,await original.UserRoles.CountAsync());Assert.Equal(profiles,await original.DentalAssistantProfiles.CountAsync());Assert.Equal(doctors,await original.DoctorProfiles.CountAsync());Assert.Equal(patients,await original.PatientProfiles.CountAsync());Assert.Equal(audits,await original.AuditLogs.CountAsync());
     }
     [Fact] public async Task UserCreationPermissionAloneCannotGrantAnyRole()
@@ -165,9 +165,9 @@ public sealed class StaffAdministrationTests(IdentityFixture f) : IClassFixture<
     [Fact] public async Task IdentityUpdateHasGlobalCiAndBirthDateValidation()
     {
         using var c=await Admin();var first=await Create(c);var second=await Create(c);
-        var duplicate=await c.PutAsJsonAsync($"/api/admin/users/{second.Id}",new{second.FirstName,second.LastName,second.Email,second.Phone,ci=first.Ci});Assert.Equal(HttpStatusCode.Conflict,duplicate.StatusCode);
+        var duplicate=await c.PutAsJsonAsync($"/api/admin/users/{second.Id}",new{second.FirstName,second.LastName,second.Email,second.Phone,documentType="CI", documentCountryCode="BO", documentNumber=first.DocumentNumber});Assert.Equal(HttpStatusCode.Conflict,duplicate.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest,(await c.PutAsJsonAsync($"/api/admin/users/{second.Id}",new{second.FirstName,second.LastName,second.Email,second.Phone,birthDate="2999-01-01"})).StatusCode);
-        Assert.Equal(second.Ci,(await c.GetFromJsonAsync<UserResponse>($"/api/admin/users/{second.Id}"))!.Ci);
+        Assert.Equal(second.DocumentNumber,(await c.GetFromJsonAsync<UserResponse>($"/api/admin/users/{second.Id}"))!.DocumentNumber);
     }
     [Theory][InlineData("DOCTOR","doctor-profile")][InlineData("PATIENT","patient-profile")][InlineData("DENTAL_ASSISTANT","dental-assistant-profile")]
     public async Task LegacyGrantCanExplicitlyCompleteMissingProfileWithoutDuplicatingRole(string code,string path)

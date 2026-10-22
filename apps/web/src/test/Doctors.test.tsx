@@ -19,7 +19,7 @@ const centers: Assignment[] = [
 const initialDoctor: Doctor = {
   id: doctorId, userId: '40000000-0000-0000-0000-000000000001',
   user: { id: '40000000-0000-0000-0000-000000000001', firstName: 'Lucía', lastName: 'Ramírez', email: 'lucia@example.test', isActive: true },
-  professionalLicense: 'LP-123', ci: '1234567', birthDate: '1985-04-10', gender: null,
+  professionalLicense: 'LP-123', documentNumber: '1234567', birthDate: '1985-04-10', gender: null,
   phone: '70000000', address: null, photoUrl: null, bio: 'Atención odontológica integral.',
   isActive: true, createdAt: '2026-09-30T00:00:00Z', updatedAt: null,
   specialties: [specialties[0]], centers: [centers[0]],
@@ -259,7 +259,7 @@ it('crea doctor con cuenta obligatoria sin selector de usuario', async () => {
   await userEvent.click(await screen.findByRole('button', { name: 'Crear doctor' }));
   expect(screen.queryByRole('combobox', { name: 'Cuenta del doctor' })).toBeNull();
   expect(document.querySelector('[name="userId"]')).toBeNull();
-  for (const [name, value] of Object.entries({ firstName: 'Luis', lastName: 'Prueba', ci: 'CI-TEST', birthDate: '1990-01-01', phone: '70000000', email: 'luis@example.test', password: 'test-password-1234', confirmPassword: 'test-password-1234', professionalLicense: 'LP-456' })) {
+  for (const [name, value] of Object.entries({ firstName: 'Luis', lastName: 'Prueba', documentNumber: 'CI-TEST', birthDate: '1990-01-01', phone: '70000000', email: 'luis@example.test', password: 'test-password-1234', confirmPassword: 'test-password-1234', professionalLicense: 'LP-456' })) {
     const input = document.querySelector(`[name="${name}"]`) as HTMLInputElement;
     expect(input.required).toBe(true); fireEvent.change(input, { target: { value } });
   }

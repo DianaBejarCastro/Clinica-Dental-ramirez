@@ -13,7 +13,7 @@ using Xunit;
 namespace ClinicaRamirez.Api.Tests;
 public sealed class CashierTests(IdentityFixture f):IClassFixture<IdentityFixture>
 {
-    private sealed record Data(HttpClient Client,Guid Actor,Guid Patient,Guid Plan,string Ci,string Email);
+    private sealed record Data(HttpClient Client,Guid Actor,Guid Patient,Guid Plan,string DocumentNumber,string Email);
     private async Task<(HttpClient,Guid)> Login(string role="CASHIER")
     {
         var email=await f.CreateUser();using var s=f.Services.CreateScope();var db=s.ServiceProvider.GetRequiredService<AppDbContext>();var user=await db.Users.SingleAsync(x=>x.Email==email);
@@ -23,12 +23,12 @@ public sealed class CashierTests(IdentityFixture f):IClassFixture<IdentityFixtur
     private async Task<Data> Setup()
     {
         var(c,actor)=await Login();using var s=f.Services.CreateScope();var db=s.ServiceProvider.GetRequiredService<AppDbContext>();var tag=Guid.NewGuid().ToString("N").ToUpperInvariant();
-        var patient=new PatientProfile{User=new User{FirstName="PacienteCaja",LastName=tag,Ci="CAJA-"+tag,BirthDate=new(1990,1,1),Phone="70012345",Email=tag.ToLowerInvariant()+"@example.test",CanLogin=false},BloodType="UNKNOWN",EmergencyContactName="Test",EmergencyContactPhone="70000000"};db.Add(patient);
+        var patient=new PatientProfile{User=new User{FirstName="PacienteCaja",LastName=tag,DocumentType="CI", DocumentCountryCode="BO", DocumentNumber="CAJA-"+tag,BirthDate=new(1990,1,1),Phone="70012345",Email=tag.ToLowerInvariant()+"@example.test",CanLogin=false},BloodType="UNKNOWN",EmergencyContactName="Test",EmergencyContactPhone="70000000"};db.Add(patient);
         db.UserRoles.Add(new(){User=patient.User,RoleId=await db.Roles.Where(x=>x.Code=="PATIENT").Select(x=>x.Id).SingleAsync()});
         var doctor=new DoctorProfile{User=new User{FirstName="Doctor",LastName="Caja",CanLogin=false},ProfessionalLicense=tag};db.Add(doctor);db.UserRoles.Add(new(){User=doctor.User,RoleId=await db.Roles.Where(x=>x.Code=="DOCTOR").Select(x=>x.Id).SingleAsync()});
         var ep=new TreatmentEpisode{PatientProfileId=patient.Id,PrimaryDoctorProfileId=doctor.Id,Title="Tratamiento financiero"};db.Add(ep);
         db.Add(new TreatmentAnamnesis{TreatmentEpisodeId=ep.Id,ChiefComplaint="PRIVATE ANAMNESIS",PainSince="PRIVATE",RecordedByUserId=doctor.UserId});
-        var plan=new TreatmentPlan{TreatmentEpisodeId=ep.Id,Title="Plan",Status="ACCEPTED",AcceptedAt=DateTime.UtcNow};db.Add(plan);db.Add(new TreatmentPlanItem{TreatmentPlanId=plan.Id,ProcedureName="Procedimiento",Description="PRIVATE CLINICAL DETAIL",UnitPrice=250m,Quantity=4,Status="ACCEPTED"});db.Add(new TreatmentFinancialAccount{TreatmentPlanId=plan.Id,AgreedTotal=1000m});await db.SaveChangesAsync();return new(c,actor,patient.Id,plan.Id,patient.User.Ci!,patient.User.Email!);
+        var plan=new TreatmentPlan{TreatmentEpisodeId=ep.Id,Title="Plan",Status="ACCEPTED",AcceptedAt=DateTime.UtcNow};db.Add(plan);db.Add(new TreatmentPlanItem{TreatmentPlanId=plan.Id,ProcedureName="Procedimiento",Description="PRIVATE CLINICAL DETAIL",UnitPrice=250m,Quantity=4,Status="ACCEPTED"});db.Add(new TreatmentFinancialAccount{TreatmentPlanId=plan.Id,AgreedTotal=1000m});await db.SaveChangesAsync();return new(c,actor,patient.Id,plan.Id,patient.User.DocumentNumber!,patient.User.Email!);
     }
     private static string Url(Data d)=>$"/api/cashier/treatments/{d.Plan}";
     private static CashierPaymentRequest Payment(decimal amount=300m)=>new(Guid.NewGuid(),amount,"CASH","REF","Nota financiera");
@@ -38,8 +38,8 @@ public sealed class CashierTests(IdentityFixture f):IClassFixture<IdentityFixtur
     [Theory][InlineData("DOCTOR")][InlineData("PATIENT")][InlineData("NONE")]
     public async Task WithoutFinancialPermissionForbidden(string role){var(c,_)=await Login(role);Assert.Equal(HttpStatusCode.Forbidden,(await c.GetAsync("/api/cashier/patients/search?q=test")).StatusCode);Assert.Equal(HttpStatusCode.Forbidden,(await c.PostAsJsonAsync($"/api/cashier/treatments/{Guid.NewGuid()}/payments",Payment())).StatusCode);}
     [Fact] public async Task UnauthenticatedUnauthorized(){using var c=f.Client();Assert.Equal(HttpStatusCode.Unauthorized,(await c.GetAsync("/api/cashier/patients/search?q=test")).StatusCode);}
-    [Theory][InlineData("ci")][InlineData("name")][InlineData("lastName")][InlineData("phone")][InlineData("email")]
-    public async Task PartialRemoteSearch(string field){var d=await Setup();var q=field switch{"ci"=>d.Ci[5..],"name"=>"PacienteCaja","lastName"=>d.Ci[5..],"phone"=>"001234","email"=>d.Email[..15],_=>""};var list=(await d.Client.GetFromJsonAsync<CashierPatient[]>("/api/cashier/patients/search?q="+Uri.EscapeDataString(q)))!;Assert.True(list.Length<=10);if(field is "ci" or "email" or "lastName")Assert.Contains(list,x=>x.PatientId==d.Patient);else Assert.NotEmpty(list);}
+    [Theory][InlineData("documentNumber")][InlineData("name")][InlineData("lastName")][InlineData("phone")][InlineData("email")]
+    public async Task PartialRemoteSearch(string field){var d=await Setup();var q=field switch{"documentNumber"=>d.DocumentNumber[5..],"name"=>"PacienteCaja","lastName"=>d.DocumentNumber[5..],"phone"=>"001234","email"=>d.Email[..15],_=>""};var list=(await d.Client.GetFromJsonAsync<CashierPatient[]>("/api/cashier/patients/search?q="+Uri.EscapeDataString(q)))!;Assert.True(list.Length<=10);if(field is "documentNumber" or "email" or "lastName")Assert.Contains(list,x=>x.PatientId==d.Patient);else Assert.NotEmpty(list);}
     [Theory][InlineData("")][InlineData("a")][InlineData("ab&limit=11")][InlineData("ab&limit=0")]
     public async Task SearchValidation(string query){var(c,_)=await Login();Assert.Equal(HttpStatusCode.BadRequest,(await c.GetAsync("/api/cashier/patients/search?q="+query)).StatusCode);}
     [Fact] public async Task OnlyPlansWithAccountsReturned(){var d=await Setup();using var s=f.Services.CreateScope();var db=s.ServiceProvider.GetRequiredService<AppDbContext>();var first=await db.Set<TreatmentPlan>().SingleAsync(x=>x.Id==d.Plan);var ep=await db.Set<TreatmentEpisode>().SingleAsync(x=>x.Id==first.TreatmentEpisodeId);var other=new TreatmentEpisode{PatientProfileId=ep.PatientProfileId,PrimaryDoctorProfileId=ep.PrimaryDoctorProfileId,Title="Sin cuenta"};db.Add(other);db.Add(new TreatmentPlan{TreatmentEpisodeId=other.Id,Title="Borrador"});await db.SaveChangesAsync();Assert.Single((await d.Client.GetFromJsonAsync<CashierTreatment[]>($"/api/cashier/patients/{d.Patient}/treatments"))!);}

@@ -1,8 +1,9 @@
+import { documentLabel } from '../../../components/IdentityDocumentFields';
 import { useEffect, useId, useRef, useState } from 'react';
 import { api } from '../../../services/api';
 import './patient-autocomplete.css';
 
-export interface PatientSelection { patientId: string; userId?: string; firstName: string; lastName: string; ci?: string | null; phone?: string | null; email?: string | null }
+export interface PatientSelection { patientId: string; userId?: string; firstName: string; lastName: string; documentNumber?: string | null; documentType?: string | null; documentCountryCode?: string | null; phone?: string | null; email?: string | null }
 const name = (p: PatientSelection) => `${p.firstName} ${p.lastName}`.trim();
 export default function PatientAutocomplete({ initial = null, disabled = false, onChange, searchEndpoint = '/api/admin/patients/search' }: {
   initial?: PatientSelection | null; disabled?: boolean; onChange: (patient: PatientSelection | null) => void; searchEndpoint?: string;
@@ -35,7 +36,7 @@ export default function PatientAutocomplete({ initial = null, disabled = false, 
     <input ref={input} id={id} role="combobox" aria-autocomplete="list" aria-expanded={open && items.length > 0}
       aria-controls={`${id}-results`} aria-activedescendant={open && active >= 0 ? `${id}-option-${active}` : undefined}
       aria-describedby={`${id}-status`} aria-required="true" autoComplete="off" maxLength={200} disabled={disabled}
-      placeholder="Buscar por CI, nombre, email o teléfono…" value={text}
+      placeholder="Buscar por documento, nombre, email o teléfono…" value={text}
       onChange={e => change(e.target.value)} onFocus={() => { if (!selected) setOpen(true); }}
       onKeyDown={e => {
         if (e.key === 'Escape') { e.preventDefault(); generation.current++; setOpen(false); }
@@ -44,7 +45,7 @@ export default function PatientAutocomplete({ initial = null, disabled = false, 
         }
         if (e.key === 'Enter') { e.preventDefault(); if (open && active >= 0 && items[active]) choose(items[active]); }
       }} />
-    {selected && <div className="patient-selection"><small>Paciente seleccionado · {selected.ci ? `CI: ${selected.ci}` : name(selected)}</small>
+    {selected && <div className="patient-selection"><small>Paciente seleccionado · {selected.documentNumber ? documentLabel(selected) : name(selected)}</small>
       <button type="button" className="secondary" disabled={disabled} onClick={() => { change(''); input.current?.focus(); }}>Cambiar paciente</button></div>}
     <div id={`${id}-status`} role="status" aria-live="polite">
       {open && loading && 'Buscando…'}{open && !loading && searched && !items.length && 'No se encontraron coincidencias.'}
@@ -54,7 +55,7 @@ export default function PatientAutocomplete({ initial = null, disabled = false, 
     {open && items.length > 0 && <ul id={`${id}-results`} role="listbox" aria-label="Pacientes encontrados" className="patient-results">
       {items.map((p, index) => <li key={p.patientId} id={`${id}-option-${index}`} role="option" aria-selected={active === index}
         onMouseDown={e => e.preventDefault()} onClick={() => choose(p)} onMouseMove={() => setActive(index)}>
-        <strong>{name(p)}</strong><small>CI: {p.ci ?? '—'} · Teléfono: {p.phone ?? '—'}</small>{p.email && <small>{p.email}</small>}
+        <strong>{name(p)}</strong><small>{documentLabel(p)} · Teléfono: {p.phone ?? '—'}</small>{p.email && <small>{p.email}</small>}
       </li>)}
     </ul>}
   </div>;

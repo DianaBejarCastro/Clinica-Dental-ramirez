@@ -1,3 +1,4 @@
+import { documentLabel } from '../../../components/IdentityDocumentFields';
 import { PatientFields, PatientAccountFields, patientData, patientError, accountData } from '../../patient/PatientFields';
 import ProtectedDeleteButton from '../deletion/ProtectedDeleteButton';
 import { useEffect, useState, type FormEvent } from 'react';
@@ -73,9 +74,9 @@ export default function PatientsPage() {
     <section className="card table-card">
       {loading && <p role="status">Cargando pacientes…</p>}
       {!loading && list && <>
-        <table><thead><tr><th>Nombre completo</th><th>CI</th><th>Fecha de nacimiento</th><th>Teléfono</th><th>Email</th><th>Cuenta</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <table><thead><tr><th>Nombre completo</th><th>Documento</th><th>Fecha de nacimiento</th><th>Teléfono</th><th>Email</th><th>Cuenta</th><th>Estado</th><th>Acciones</th></tr></thead>
           <tbody>{list.items.map(patient => <tr key={patient.id}>
-            <td>{patient.firstName} {patient.lastName}</td><td>{patient.ci ?? '—'}</td><td>{patient.birthDate ?? '—'}</td>
+            <td>{patient.firstName} {patient.lastName}</td><td>{documentLabel(patient)}</td><td>{patient.birthDate ?? '—'}</td>
             <td>{patient.phone ?? '—'}</td><td>{patient.email ?? '—'}</td><td>{accountLabel(patient.canLogin)}</td><td><StateBadge active={patient.isActive} /></td>
             <td><div className="actions">
               {can('patients.update') && <button className="secondary" disabled={action.busy} onClick={() => open(patient)}>Editar</button>}

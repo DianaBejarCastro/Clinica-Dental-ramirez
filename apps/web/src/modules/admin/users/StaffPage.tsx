@@ -1,3 +1,4 @@
+import { documentLabel } from '../../../components/IdentityDocumentFields';
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, type User } from '../../../services/api';
 import { usePermissions, PageTitle, Feedback, FormActions, StateBadge } from '../shared';
@@ -36,9 +37,9 @@ export default function StaffPage({ kind }: { kind: keyof typeof staffScreens })
     {creating && <section className="card"><h2>Crear {screen.singular}</h2><form className="editor" onSubmit={save}>
       <StaffIdentityFields creation /><FormActions busy={busy} label={`Guardar ${screen.singular}`} cancel={() => setCreating(false)} />
     </form></section>}
-    <form className="actions" onSubmit={e => { e.preventDefault(); setPage(1); setSearch(query); }}><label>Buscar por nombre, CI o email<input value={query} onChange={e => setQuery(e.target.value)} maxLength={200} /></label><button className="secondary">Buscar</button></form>
-    <section className="card table-card">{loading ? <p role="status">Cargando…</p> : <><table><thead><tr><th>Nombre</th><th>CI</th><th>Email</th><th>Roles</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{items.map(user => <tr key={user.id}>
-      <td>{user.firstName} {user.lastName}</td><td>{user.ci ?? '—'}</td><td>{user.email ?? '—'}</td><td>{user.roles.map(r => r.name).join(', ')}</td><td><StateBadge active={user.isActive} /></td><td><a href={`#/users?user=${user.id}`}>Administrar usuario</a></td>
+    <form className="actions" onSubmit={e => { e.preventDefault(); setPage(1); setSearch(query); }}><label>Buscar por nombre, documento o email<input value={query} onChange={e => setQuery(e.target.value)} maxLength={200} /></label><button className="secondary">Buscar</button></form>
+    <section className="card table-card">{loading ? <p role="status">Cargando…</p> : <><table><thead><tr><th>Nombre</th><th>Documento</th><th>Email</th><th>Roles</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{items.map(user => <tr key={user.id}>
+      <td>{user.firstName} {user.lastName}</td><td>{documentLabel(user)}</td><td>{user.email ?? '—'}</td><td>{user.roles.map(r => r.name).join(', ')}</td><td><StateBadge active={user.isActive} /></td><td><a href={`#/users?user=${user.id}`}>Administrar usuario</a></td>
     </tr>)}</tbody></table>{!items.length && <p>No hay registros.</p>}</>}
       <div className="pagination"><span>{total} registros · Página {page}</span><button className="secondary" disabled={page === 1 || loading} onClick={() => setPage(p => p - 1)}>Anterior</button><button className="secondary" disabled={page * 10 >= total || loading} onClick={() => setPage(p => p + 1)}>Siguiente</button></div>
     </section></>;

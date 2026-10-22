@@ -47,7 +47,7 @@ it('delegates updates to the existing workflow',async()=>{
  await userEvent.click(screen.getByRole('button',{name:'Revisar / agregar antecedentes'}));expect(update).toHaveBeenCalledOnce();
 });
 it.each(['O+','UNKNOWN',null])('shows patient identity and blood type %s',bloodType=>{
- render(<ClinicalPatientHeader patient={{id:'p',firstName:'Ana',lastName:'Prueba',age:30,gender:'F',ci:'123',phone:'700',email:null,bloodType}} appointment={{id:'a',date:'2026-10-15',startTime:'09:00',endTime:'10:00',reason:'Control',center:'Central',status:'CONFIRMED'}}/>);
+ render(<ClinicalPatientHeader patient={{id:'p',firstName:'Ana',lastName:'Prueba',age:30,gender:'F',documentNumber:'123',phone:'700',email:null,bloodType}} appointment={{id:'a',date:'2026-10-15',startTime:'09:00',endTime:'10:00',reason:'Control',center:'Central',status:'CONFIRMED'}}/>);
  expect(screen.getByText('Ana Prueba')).toBeTruthy();expect(screen.getByText('Grupo sanguíneo')).toBeTruthy();
  expect(screen.getAllByText(bloodType==='UNKNOWN'?'Desconocido':bloodType||'No registrado').length).toBeGreaterThan(0);
  expect(screen.getByText('Control')).toBeTruthy();

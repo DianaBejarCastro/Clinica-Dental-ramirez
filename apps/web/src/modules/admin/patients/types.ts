@@ -3,7 +3,7 @@ export interface Patient {
   userId: string; canLogin: boolean;
   firstName: string;
   lastName: string;
-  ci: string | null;
+  documentNumber: string | null; documentType?: string | null; documentCountryCode?: string | null;
   birthDate: string | null;
   gender: string | null;
   phone: string | null;

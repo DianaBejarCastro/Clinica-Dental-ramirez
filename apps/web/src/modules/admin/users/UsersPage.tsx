@@ -1,3 +1,4 @@
+import { documentLabel } from '../../../components/IdentityDocumentFields';
 import ProtectedDeleteButton from '../deletion/ProtectedDeleteButton';
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, type Role, type User } from '../../../services/api';
@@ -35,7 +36,7 @@ export default function UsersPage({ initialUser = '' }: { initialUser?: string }
     setAssigning(user); setEditing(null); setDomain(null);
   }
   return <><div className="title-row"><div><h1>Usuarios</h1><p className="muted">Identidad, acceso y múltiples roles. Crea personas desde su módulo correspondiente.</p></div></div><Feedback error={error} />
-    <form className="actions" onSubmit={e => { e.preventDefault(); setPage(1); setSearch(query); }}><label>Buscar por nombre, CI o email<input value={query} onChange={e => setQuery(e.target.value)} maxLength={200} /></label><button className="secondary">Buscar</button></form>
+    <form className="actions" onSubmit={e => { e.preventDefault(); setPage(1); setSearch(query); }}><label>Buscar por nombre, documento o email<input value={query} onChange={e => setQuery(e.target.value)} maxLength={200} /></label><button className="secondary">Buscar</button></form>
     {editing && <section className="card"><h2>Editar usuario</h2><form key={editing.id} onSubmit={save} className="editor">
       <StaffIdentityFields value={editing} canLogin={editing.canLogin !== false} /><FormActions busy={busy} label="Guardar usuario" cancel={() => setEditing(null)} />
     </form></section>}
@@ -45,8 +46,8 @@ export default function UsersPage({ initialUser = '' }: { initialUser?: string }
         <FormActions busy={busy} label="Guardar roles" cancel={() => setAssigning(null)} />
       </form></section>}
     {domain && <DomainRoleForm key={`${domain.user.id}-${domain.role.code}`} {...domain} cancel={() => setDomain(null)} done={async () => { setDomain(null); await load(); }} />}
-    <section className="card table-card">{loading ? <p role="status">Cargando usuarios…</p> : <><table><thead><tr><th>Usuario</th><th>CI</th><th>Roles</th><th>Acceso</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{items.map(user => <tr key={user.id}>
-      <td><strong>{user.firstName} {user.lastName}</strong><small>{user.email}</small></td><td>{user.ci ?? '—'}</td><td>{user.roles.map(r => r.name).join(', ') || 'Sin roles'}</td><td>{user.canLogin === false ? 'Sin cuenta de acceso' : 'Cuenta habilitada'}</td><td><span className={`badge ${user.isActive ? '' : 'inactive'}`}>{user.isActive ? 'Activo' : 'Inactivo'}</span></td>
+    <section className="card table-card">{loading ? <p role="status">Cargando usuarios…</p> : <><table><thead><tr><th>Usuario</th><th>Documento</th><th>Roles</th><th>Acceso</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{items.map(user => <tr key={user.id}>
+      <td><strong>{user.firstName} {user.lastName}</strong><small>{user.email}</small></td><td>{documentLabel(user)}</td><td>{user.roles.map(r => r.name).join(', ') || 'Sin roles'}</td><td>{user.canLogin === false ? 'Sin cuenta de acceso' : 'Cuenta habilitada'}</td><td><span className={`badge ${user.isActive ? '' : 'inactive'}`}>{user.isActive ? 'Activo' : 'Inactivo'}</span></td>
       <td><div className="actions">
         {can('users.update') && <button className="secondary" disabled={busy} onClick={() => { setEditing(user); setAssigning(null); setDomain(null); }}>Editar</button>}
         {can('users.disable') && <button className="secondary" disabled={busy} onClick={() => void action(() => api(`/api/admin/users/${user.id}/status`, 'PATCH', { isActive: !user.isActive }))}>{user.isActive ? 'Desactivar' : 'Activar'}</button>}

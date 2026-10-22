@@ -47,7 +47,7 @@ public sealed class PatientIdentityMigrationTests
         Assert.Equal(user, profiles.Single(x => x.Id == linked).UserId);
         var person = profiles.Single(x => x.Id == unlinked).User;
         Assert.False(person.CanLogin); Assert.Null(person.Email); Assert.Null(person.PasswordHash);
-        Assert.Equal("CI-CLINICAL", person.Ci); Assert.Equal("Clinical", person.FirstName);
+        Assert.Equal("CI-CLINICAL", person.DocumentNumber); Assert.Equal("Clinical", person.FirstName);
         var existing = profiles.Single(x => x.Id == linked).User;
         Assert.True(existing.CanLogin); Assert.Equal("existing-hash", existing.PasswordHash);
         Assert.Equal(2, await db.UserRoles.CountAsync(x => x.RoleId == role));

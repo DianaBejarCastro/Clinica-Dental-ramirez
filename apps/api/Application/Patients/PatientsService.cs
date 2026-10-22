@@ -17,19 +17,19 @@ public sealed class PatientsService(AppDbContext db, IdentitySupport support, Pa
         var query = db.PatientProfiles.AsNoTracking().Where(p => p.IsActive);
         foreach (var word in term.Split(' ')) {
             var token = word;
-            query = query.Where(p => (p.User.Ci != null && p.User.Ci.ToLower().Contains(token))
+            query = query.Where(p => (p.User.DocumentNumber != null && p.User.DocumentNumber.ToLower().Contains(token))
                 || (p.User.FirstName + " " + p.User.LastName).ToLower().Contains(token)
                 || (p.User.Email != null && p.User.Email.ToLower().Contains(token))
                 || (p.User.Phone != null && p.User.Phone.Contains(token)));
         }
         // Bounded database query; no additional indexes/extensions for the current volume.
         // Leading-wildcard searches may warrant pg_trgm only after measuring production plans.
-        return await query.OrderBy(p => p.User.Ci != null && p.User.Ci.ToLower() == term ? 0
-            : p.User.Ci != null && p.User.Ci.ToLower().StartsWith(term) ? 1
+        return await query.OrderBy(p => p.User.DocumentNumber != null && p.User.DocumentNumber.ToLower() == term ? 0
+            : p.User.DocumentNumber != null && p.User.DocumentNumber.ToLower().StartsWith(term) ? 1
             : p.User.FirstName.ToLower().StartsWith(term) || p.User.LastName.ToLower().StartsWith(term) ? 2 : 3)
             .ThenBy(p => p.User.LastName).ThenBy(p => p.User.FirstName).ThenBy(p => p.Id)
             .Take(Math.Min(limit, 20))
-            .Select(p => new PatientSearchResult(p.Id, p.UserId, p.User.FirstName, p.User.LastName, p.User.Ci, p.User.Phone, p.User.Email))
+            .Select(p => new PatientSearchResult(p.Id, p.UserId, p.User.FirstName, p.User.LastName, p.User.DocumentType, p.User.DocumentNumber, p.User.DocumentCountryCode, p.User.Phone, p.User.Email))
             .ToArrayAsync(ct);
     }
     private static string? Optional(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
@@ -96,18 +96,16 @@ public sealed class PatientsService(AppDbContext db, IdentitySupport support, Pa
     private async Task Apply(PatientProfile patient, PatientUpdateRequest request)
     {
         PatientAccountService.Validate(request);
-        var ci = request.Ci!.Trim().ToUpperInvariant();
-        if (await db.Users.AnyAsync(x => x.Id != patient.UserId && x.Ci == ci))
-            throw new ApiException(409, "CI ya registrado.");
+        await IdentityDocument.Apply(db, patient.User, request.DocumentType, request.DocumentNumber, request.DocumentCountryCode);
         patient.User.FirstName = Optional(request.FirstName) ?? throw new ApiException(400, "Nombre obligatorio.");
         patient.User.LastName = Optional(request.LastName) ?? throw new ApiException(400, "Apellido obligatorio.");
-        patient.User.Ci = ci; patient.User.BirthDate = request.BirthDate!.Value; patient.User.Gender = Optional(request.Gender);
+         patient.User.BirthDate = request.BirthDate!.Value; patient.User.Gender = Optional(request.Gender);
         patient.User.Phone = request.Phone!.Trim();
         patient.User.Address = Optional(request.Address); patient.EmergencyContactName = request.EmergencyContactName!.Trim();
         patient.EmergencyContactPhone = request.EmergencyContactPhone!.Trim(); patient.BloodType = request.BloodType!;
         patient.Notes = Optional(request.Notes); patient.IsActive = request.IsActive;
     }
-    private static PatientResponse Dto(PatientProfile p) => new(p.Id, p.UserId, p.User.FirstName, p.User.LastName, p.User.Ci,
+    private static PatientResponse Dto(PatientProfile p) => new(p.Id, p.UserId, p.User.FirstName, p.User.LastName, p.User.DocumentType, p.User.DocumentNumber, p.User.DocumentCountryCode,
         p.User.BirthDate, p.User.Gender, p.User.Phone, p.User.Email, p.User.Address, p.EmergencyContactName, p.EmergencyContactPhone,
         p.BloodType, p.Notes, p.IsActive, p.CreatedAt, p.UpdatedAt, p.User.CanLogin);
 }

@@ -33,7 +33,7 @@ public sealed class IdentitySupport(AppDbContext db, IHttpContextAccessor access
     public static UserResponse UserDto(User u) => new(u.Id, u.FirstName, u.LastName, u.Email, u.Phone,
         u.IsActive, u.EmailVerified, u.CreatedAt, u.UpdatedAt, u.LastLoginAt,
         u.UserRoles.Select(r => new RoleSummary(r.RoleId, r.Role.Code, r.Role.Name)).ToArray())
-        { Ci=u.Ci, BirthDate=u.BirthDate, Gender=u.Gender, Address=u.Address, CanLogin=u.CanLogin };
+        { DocumentType=u.DocumentType, DocumentNumber=u.DocumentNumber, DocumentCountryCode=u.DocumentCountryCode, BirthDate=u.BirthDate, Gender=u.Gender, Address=u.Address, CanLogin=u.CanLogin };
     public async Task<UserResponse[]> UsersDto(User[] users)
     {
         var ids=users.Select(x=>x.Id).ToArray();

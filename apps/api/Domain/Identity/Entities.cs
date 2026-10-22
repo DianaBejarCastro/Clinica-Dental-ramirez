@@ -8,7 +8,9 @@ public sealed class User
     public string? Email { get; set; }
     public string? PasswordHash { get; set; }
     public bool CanLogin { get; set; } = true;
-    public string? Ci { get; set; }
+    public string? DocumentType { get; set; }
+    public string? DocumentNumber { get; set; }
+    public string? DocumentCountryCode { get; set; }
     public DateOnly? BirthDate { get; set; }
     public string? Gender { get; set; }
     public string? Address { get; set; }

@@ -17,7 +17,9 @@ public record UserUpdateRequest(
     [EmailAddress, MaxLength(254)] string? Email,
     [MaxLength(30)] string? Phone)
 {
-    [MaxLength(50), MinLength(1)] public string? Ci { get; init; }
+    [MaxLength(50), MinLength(1)] public string? DocumentNumber { get; init; }
+    public string? DocumentType { get; init; }
+    [MaxLength(2)] public string? DocumentCountryCode { get; init; }
     [LocalBirthDate] public DateOnly? BirthDate { get; init; }
     [MaxLength(50)] public string? Gender { get; init; }
     [MaxLength(500)] public string? Address { get; init; }
@@ -36,7 +38,9 @@ public record RoleSummary(Guid Id, string Code, string Name);
 public record UserResponse(Guid Id, string FirstName, string LastName, string? Email, string? Phone,
     bool IsActive, bool EmailVerified, DateTime CreatedAt, DateTime UpdatedAt, DateTime? LastLoginAt, RoleSummary[] Roles)
 {
-    public string? Ci { get; init; }
+    public string? DocumentNumber { get; init; }
+    public string? DocumentType { get; init; }
+    [MaxLength(2)] public string? DocumentCountryCode { get; init; }
     public DateOnly? BirthDate { get; init; }
     public string? Gender { get; init; }
     public string? Address { get; init; }

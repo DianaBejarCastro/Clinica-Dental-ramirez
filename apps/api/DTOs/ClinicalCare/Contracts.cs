@@ -17,7 +17,7 @@ public sealed record PlanInput([Required,MaxLength(200)] string Title);
 public sealed record ProcedureInput([Required,MaxLength(200)] string ProcedureName,[MaxLength(8000)] string? Description,int? ToothNumber,[MaxLength(8000)] string? ToothSurface,decimal UnitPrice,[Range(1,10000)] int Quantity=1,int DisplayOrder=0);
 public sealed record ClinicalStatusInput([Required] string Status);
 public sealed record PaymentInput(Guid IdempotencyKey,decimal Amount,[MaxLength(8000)] string? PaymentMethod,[MaxLength(8000)] string? Reference,[MaxLength(8000)] string? Notes);
-public sealed record ClinicalPatient(Guid Id,string FirstName,string LastName,int? Age,string? Gender,string? Ci,string? Phone,string? Email,string? BloodType = null);
+public sealed record ClinicalPatient(Guid Id,string FirstName,string LastName,int? Age,string? Gender,string? DocumentType, string? DocumentNumber, string? DocumentCountryCode,string? Phone,string? Email,string? BloodType = null);
 public sealed record ClinicalAppointment(Guid Id,DateOnly Date,TimeOnly StartTime,TimeOnly EndTime,string? Reason,string Center,string Status);
 public sealed record EpisodeDto(Guid Id,string Title,string Status,DateTime StartedAt,AnamnesisInput? Anamnesis,DateTime? AnamnesisRecordedAt);
 public sealed record ReviewDto(Guid Id,Guid? StateReviewId,DateTime ReviewedAt,bool NoKnownAllergies,string? Notes,AllergyInput[] Allergies,ConditionInput[] Conditions,MedicationInput[] Medications);

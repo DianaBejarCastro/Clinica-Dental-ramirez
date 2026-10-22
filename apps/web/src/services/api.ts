@@ -2,7 +2,7 @@ export interface CurrentUser { id: string; firstName: string; lastName: string; 
 export interface Session { accessToken: string; expiresAt: string; user: CurrentUser }
 export interface Role { id: string; code: string; name: string; description: string | null; isActive: boolean; isSystem: boolean; permissionIds: string[] }
 export interface Permission { id: string; code: string; name: string; module: string }
-export interface User { id: string; firstName: string; lastName: string; email: string | null; phone: string | null; ci?: string | null; birthDate?: string | null; gender?: string | null; address?: string | null; canLogin?: boolean; hasDoctorProfile?: boolean; hasPatientProfile?: boolean; hasDentalAssistantProfile?: boolean; isActive: boolean; roles: { id: string; code?: string; name: string }[] }
+export interface User { id: string; firstName: string; lastName: string; email: string | null; phone: string | null; documentNumber?: string | null; documentType?: string | null; documentCountryCode?: string | null; birthDate?: string | null; gender?: string | null; address?: string | null; canLogin?: boolean; hasDoctorProfile?: boolean; hasPatientProfile?: boolean; hasDentalAssistantProfile?: boolean; isActive: boolean; roles: { id: string; code?: string; name: string }[] }
 const base = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
 export const apiUrl = (path: string) => base + path;
 let session: Session | null = null;

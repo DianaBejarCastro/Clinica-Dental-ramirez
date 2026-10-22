@@ -19,7 +19,7 @@ const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit
     id: 'admin', firstName: 'Admin', lastName: 'Prueba', email: 'admin@example.test', roles: [], permissions,
   } });
   if (path === '/api/admin/patients/search') return Response.json([
-    { patientId: 'p1', userId: 'u1', firstName: 'Ana', lastName: 'Paciente', ci: '12345', phone: '71234567', email: 'ana@example.test' },
+    { patientId: 'p1', userId: 'u1', firstName: 'Ana', lastName: 'Paciente', documentNumber: '12345', phone: '71234567', email: 'ana@example.test' },
     { patientId: 'p2', userId: 'u2', firstName: 'Luis', lastName: 'Paciente' },
   ]);
   const centers = [{ id: 'c1', name: 'Central', isActive: true }, { id: 'c2', name: 'Norte', isActive: true }];

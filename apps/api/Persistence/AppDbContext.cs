@@ -56,11 +56,13 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             e.Property(x => x.LastName).HasMaxLength(100).IsRequired();
             e.Property(x => x.Email).HasMaxLength(254);
             e.Property(x => x.PasswordHash).HasMaxLength(1024);
-            e.Property(x => x.Ci).HasMaxLength(50);
+            e.Property(x => x.DocumentNumber).HasMaxLength(50);
+            e.Property(x => x.DocumentType).HasMaxLength(8);
+            e.Property(x => x.DocumentCountryCode).HasMaxLength(2);
             e.Property(x => x.Gender).HasMaxLength(50);
             e.Property(x => x.Address).HasMaxLength(500);
             e.Property(x => x.CanLogin).HasDefaultValue(true);
-            e.HasIndex(x => x.Ci).IsUnique().HasFilter("\"Ci\" IS NOT NULL");
+            e.HasIndex(x => new { x.DocumentType, x.DocumentCountryCode, x.DocumentNumber }).IsUnique().HasFilter("\"DocumentNumber\" IS NOT NULL").HasDatabaseName("IX_Users_IdentityDocument");
             e.HasIndex(x => x.LastName);
             e.Property(x => x.Phone).HasMaxLength(30);
             e.Property(x => x.IsActive).HasDefaultValue(true);
@@ -69,7 +71,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
                 t.HasCheckConstraint("CK_Users_EmailNormalized", "\"Email\" = lower(btrim(\"Email\")) AND length(\"Email\") > 3");
                 t.HasCheckConstraint("CK_Users_Names", "length(btrim(\"FirstName\")) > 0 AND length(btrim(\"LastName\")) > 0");
                 t.HasCheckConstraint("CK_Users_Login", "(NOT \"CanLogin\" AND \"PasswordHash\" IS NULL) OR (\"CanLogin\" AND \"Email\" IS NOT NULL AND \"PasswordHash\" IS NOT NULL AND length(\"PasswordHash\") > 0)");
-                t.HasCheckConstraint("CK_Users_Ci", "\"Ci\" IS NULL OR (length(\"Ci\") > 0 AND \"Ci\" = upper(btrim(\"Ci\")))");
+                t.HasCheckConstraint("CK_Users_IdentityDocument", "(\"DocumentType\" IS NULL AND \"DocumentNumber\" IS NULL AND \"DocumentCountryCode\" IS NULL) OR (\"DocumentType\" IS NOT NULL AND \"DocumentType\" IN ('CI', 'PASSPORT') AND \"DocumentNumber\" IS NOT NULL AND length(btrim(\"DocumentNumber\")) > 0 AND \"DocumentNumber\" = upper(btrim(\"DocumentNumber\")) AND \"DocumentCountryCode\" IS NOT NULL AND \"DocumentCountryCode\" ~ '^[A-Z]{2}$' AND (\"DocumentType\" <> 'CI' OR \"DocumentCountryCode\" = 'BO'))");
             });
         });
         b.Entity<Role>(e => {
@@ -181,7 +183,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         {
             var user = entry.Entity;
             user.Email = string.IsNullOrWhiteSpace(user.Email) ? null : user.Email.Trim().ToLowerInvariant();
-            user.Ci = string.IsNullOrWhiteSpace(user.Ci) ? null : user.Ci.Trim().ToUpperInvariant();
+            (user.DocumentType, user.DocumentNumber, user.DocumentCountryCode) = ClinicaRamirez.Api.Application.Identity.IdentityDocument.Normalize(user.DocumentType, user.DocumentNumber, user.DocumentCountryCode);
             if (user.CanLogin ? string.IsNullOrWhiteSpace(user.Email) || string.IsNullOrWhiteSpace(user.PasswordHash) : user.PasswordHash != null)
                 throw new InvalidOperationException("Invalid access credentials invariant.");
             if (user.BirthDate > ClinicaRamirez.Api.DTOs.LocalBirthDateAttribute.Today)

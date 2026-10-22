@@ -7,7 +7,7 @@ import { setSession } from '../services/api';
 import type { Patient } from '../modules/admin/patients/types';
 
 const basePatient: Patient = {
-  id: 'patient-1', userId: 'person-1', canLogin: false, firstName: 'Ana', lastName: 'Paciente', ci: 'CI-123', birthDate: '1995-05-10',
+  id: 'patient-1', userId: 'person-1', canLogin: false, firstName: 'Ana', lastName: 'Paciente', documentNumber: 'CI-123', birthDate: '1995-05-10',
   gender: null, phone: '70000000', email: 'clinical@example.test', address: 'Calle 1',
   emergencyContactName: 'Contacto', emergencyContactPhone: '71111111', bloodType: 'O+', notes: 'Nota sintética',
   isActive: true, createdAt: '2026-10-02T12:00:00Z', updatedAt: '2026-10-02T12:00:00Z',
@@ -60,7 +60,7 @@ it('lista datos clínicos y distingue pacientes con y sin cuenta', async () => {
   const table = within(screen.getByRole('table'));
   expect(table.getByText('Paciente clínico sin cuenta')).toBeTruthy();
   expect(table.getByText('Cuenta vinculada')).toBeTruthy();
-  expect(table.getAllByText('CI-123')).toHaveLength(2);
+  expect(table.getAllByText('CI · CI-123')).toHaveLength(2);
   expect(table.getAllByText('1995-05-10')).toHaveLength(2);
   expect(table.getAllByText('70000000')).toHaveLength(2);
   expect(table.getAllByText('clinical@example.test')).toHaveLength(2);
@@ -150,7 +150,7 @@ it('presenta error de listado sin mostrar datos vacíos como exitosos', async ()
 });
 
 function fillClinical() {
-  for (const [label, value] of [['CI', 'CI-NEW'], ['Fecha de nacimiento', '2000-01-01'], ['Teléfono', '70000000'], ['Contacto de emergencia', 'Contacto'], ['Teléfono de emergencia', '71111111']])
+  for (const [label, value] of [['Número de documento', 'CI-NEW'], ['Fecha de nacimiento', '2000-01-01'], ['Teléfono', '70000000'], ['Contacto de emergencia', 'Contacto'], ['Teléfono de emergencia', '71111111']])
     fireEvent.change(screen.getByLabelText(label), { target: { value } });
   fireEvent.change(screen.getByLabelText('Grupo sanguíneo'), { target: { value: 'UNKNOWN' } });
 }
@@ -179,7 +179,7 @@ it('fechas futuras bloqueadas y campos clínicos obligatorios en edición', asyn
   render(<App />); await userEvent.click(await screen.findByRole('button', { name: 'Editar' }));
   const birth = await screen.findByLabelText('Fecha de nacimiento') as HTMLInputElement;
   expect(birth.max).toBe(localToday());
-  for (const label of ['CI', 'Fecha de nacimiento', 'Teléfono', 'Contacto de emergencia', 'Teléfono de emergencia', 'Grupo sanguíneo']) expect((screen.getByLabelText(label) as HTMLInputElement).required).toBe(true);
+  for (const label of ['Número de documento', 'Fecha de nacimiento', 'Teléfono', 'Contacto de emergencia', 'Teléfono de emergencia', 'Grupo sanguíneo']) expect((screen.getByLabelText(label) as HTMLInputElement).required).toBe(true);
   fireEvent.change(birth, { target: { value: '2999-01-01' } });
   fireEvent.submit(screen.getByRole('button', { name: 'Guardar paciente' }).closest('form')!);
   expect(screen.getByRole('alert').textContent).toContain('futura'); expect(writes('PUT')).toHaveLength(0);

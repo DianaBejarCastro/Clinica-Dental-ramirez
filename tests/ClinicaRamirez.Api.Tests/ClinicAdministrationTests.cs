@@ -69,7 +69,7 @@ public sealed class ClinicAdministrationTests(IdentityFixture f) : IClassFixture
     private Dictionary<string, object?> DoctorBody(string? license = null) => new()
     {
         ["firstName"] = "Doctor", ["lastName"] = "Integracion", ["email"] = Unique("doctor") + "@example.com", ["password"] = f.Password, ["confirmPassword"] = f.Password,
-        ["professionalLicense"] = license ?? Unique("LICENSE_"), ["ci"] = Unique("CI-"),
+        ["professionalLicense"] = license ?? Unique("LICENSE_"), ["documentType"]="CI", ["documentCountryCode"]="BO", ["documentType"]="CI", ["documentCountryCode"]="BO", ["documentNumber"] = Unique("CI-"),
         ["birthDate"] = "1990-06-15", ["gender"] = "No especificado", ["phone"] = "72000000",
         ["address"] = "Direccion sintetica", ["bio"] = "Biografia sintetica", ["isActive"] = true
     };
@@ -298,9 +298,9 @@ public sealed class ClinicAdministrationTests(IdentityFixture f) : IClassFixture
     {
         using var client = await Admin();
         var doctor = await CreateDoctor(client); var id = Id(doctor);
-        var body = new { firstName = "Doctor", lastName = "Updated", phone = "70000000", professionalLicense = doctor.GetProperty("professionalLicense").GetString(), ci = "CI-UPDATED", bio = "Actualizacion profesional", birthDate = "1992-03-04", isActive = true };
+        var body = new { firstName = "Doctor", lastName = "Updated", phone = "70000000", professionalLicense = doctor.GetProperty("professionalLicense").GetString(), documentType="CI", documentCountryCode="BO", documentNumber= "CI-UPDATED", bio = "Actualizacion profesional", birthDate = "1992-03-04", isActive = true };
         var updated = await Json(await client.PutAsJsonAsync($"/api/admin/doctors/{id}", body));
-        Assert.Equal("CI-UPDATED", updated.GetProperty("ci").GetString());
+        Assert.Equal("CI-UPDATED", updated.GetProperty("documentNumber").GetString());
         await Status(await client.PatchAsJsonAsync($"/api/admin/doctors/{id}/status", new { isActive = false }), HttpStatusCode.NoContent);
         Assert.False((await Json(await client.GetAsync($"/api/admin/doctors/{id}"))).GetProperty("isActive").GetBoolean());
         using var scope = f.Services.CreateScope();
@@ -644,7 +644,7 @@ public sealed class ClinicAdministrationTests(IdentityFixture f) : IClassFixture
             Assert.DoesNotContain("password", metadata);
             Assert.DoesNotContain("token", metadata);
             Assert.DoesNotContain(f.Password.ToLowerInvariant(), metadata);
-            Assert.DoesNotContain("test-ci", metadata);
+            Assert.DoesNotContain("test-documentNumber", metadata);
             Assert.DoesNotContain("biografia sintetica", metadata);
         }
     }

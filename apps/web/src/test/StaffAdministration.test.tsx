@@ -12,7 +12,7 @@ const catalog = [
   { id: 'custom', code: 'CUSTOM', name: 'Coordinación' },
 ].map(r => ({ ...r, isActive: true, isSystem: r.id !== 'custom' }));
 let permissions: string[]; let sessionRoles: string[]; let user: ReturnType<typeof initial>; let failure = 0;
-function initial() { return { id: 'person', firstName: 'Ana', lastName: 'Persona', ci: 'CI-123', birthDate: '1990-01-01', email: 'ana@example.test', phone: '70000000', canLogin: true, isActive: true, roles: [catalog[3]] }; }
+function initial() { return { id: 'person', firstName: 'Ana', lastName: 'Persona', documentNumber: 'CI-123', birthDate: '1990-01-01', email: 'ana@example.test', phone: '70000000', canLogin: true, isActive: true, roles: [catalog[3]] }; }
 const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
   const url = new URL(String(input)); const path = url.pathname; const method = init?.method ?? 'GET';
   if (path.endsWith('/refresh')) return Response.json({ accessToken: 'token', user: { id: 'actor', firstName: 'Admin', lastName: 'Test', email: 'admin@example.test', roles: sessionRoles, permissions } });
@@ -37,7 +37,7 @@ beforeEach(() => {
   fetchMock.mockClear(); vi.stubGlobal('fetch', fetchMock);
 });
 function fillStaff() {
-  for (const [name, value] of Object.entries({ firstName: 'Nueva', lastName: 'Persona', ci: 'NEW-CI', birthDate: '2000-01-01', phone: '71111111', email: 'new@example.test', password: 'Password12345!', confirmPassword: 'Password12345!' }))
+  for (const [name, value] of Object.entries({ firstName: 'Nueva', lastName: 'Persona', documentNumber: 'NEW-CI', birthDate: '2000-01-01', phone: '71111111', email: 'new@example.test', password: 'Password12345!', confirmPassword: 'Password12345!' }))
     fireEvent.change(document.querySelector(`[name="${name}"]`)!, { target: { value } });
 }
 it('menú Administración tiene el orden exacto y Usuarios sigue a Secretarias', async () => {
@@ -53,7 +53,7 @@ it.each([['administrators', 'Administradores', 'administrador'], ['cashiers', 'C
   expect(screen.getByLabelText('Nombres').closest('form')?.classList.contains('editor')).toBe(true);
   fillStaff(); await userEvent.click(screen.getByRole('button', { name: `Guardar ${singular}` })); await screen.findByText('Nueva Persona');
   const write = fetchMock.mock.calls.find(([url, init]) => String(url).endsWith(`/api/admin/${route}`) && init?.method === 'POST');
-  const body = JSON.parse(String(write?.[1]?.body)); expect(body.ci).toBe('NEW-CI'); expect(body.roleIds).toBeUndefined();
+  const body = JSON.parse(String(write?.[1]?.body)); expect(body.documentNumber).toBe('NEW-CI'); expect(body.roleIds).toBeUndefined();
 });
 it('gestiona múltiples roles simples sin casillas de dominio', async () => {
   render(<App />); await userEvent.click(await screen.findByRole('button', { name: 'Asignar roles' }));
@@ -92,9 +92,9 @@ it('error de dominio conserva formulario y roles', async () => {
 });
 it('búsqueda explícita y edición común sin credenciales', async () => {
   render(<App />); await screen.findByText('Ana Persona');
-  await userEvent.type(screen.getByLabelText('Buscar por nombre, CI o email'), 'CI-123'); await userEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+  await userEvent.type(screen.getByLabelText('Buscar por nombre, documento o email'), 'CI-123'); await userEvent.click(screen.getByRole('button', { name: 'Buscar' }));
   await userEvent.click(await screen.findByRole('button', { name: 'Editar' }));
-  expect(screen.queryByLabelText('Contraseña')).toBeNull(); expect((screen.getByLabelText('CI') as HTMLInputElement).value).toBe('CI-123');
+  expect(screen.queryByLabelText('Contraseña')).toBeNull(); expect((screen.getByLabelText('Número de documento') as HTMLInputElement).value).toBe('CI-123');
   fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Editada' } }); await userEvent.click(screen.getByRole('button', { name: 'Guardar usuario' }));
   expect(await screen.findByText('Editada Persona')).toBeTruthy();
   expect(fetchMock.mock.calls.some(([url]) => String(url).includes('q=CI-123'))).toBe(true);

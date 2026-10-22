@@ -19,10 +19,10 @@ public sealed class PatientsTests(IdentityFixture f) : IClassFixture<IdentityFix
         c.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login.Body.AccessToken);
         return c;
     }
-    private static Dictionary<string, object?> Body(string? ci = null) => new()
+    private static Dictionary<string, object?> Body(string? documentNumber = null) => new()
     {
         ["firstName"] = "Paciente", ["lastName"] = "Prueba",
-        ["ci"] = ci ?? "CI-" + Guid.NewGuid(),
+        ["documentType"]="CI", ["documentCountryCode"]="BO", ["documentNumber"] = documentNumber ?? "CI-" + Guid.NewGuid(),
         ["phone"] = "70000000", ["emergencyContactName"] = "Test contact", ["emergencyContactPhone"] = "71111111", ["bloodType"] = "UNKNOWN", ["notes"] = "Nota clínica sintética",
         ["birthDate"] = "1995-05-10", ["isActive"] = true
     };
@@ -59,7 +59,7 @@ public sealed class PatientsTests(IdentityFixture f) : IClassFixture<IdentityFix
     {
         using var c = await Admin(); using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var before = await db.Users.CountAsync(); var p = await Create(c);
-        Assert.NotEqual(Guid.Empty, p.UserId); Assert.False(p.CanLogin); Assert.Null(p.Email); Assert.NotNull(p.Ci); Assert.True(p.IsActive);
+        Assert.NotEqual(Guid.Empty, p.UserId); Assert.False(p.CanLogin); Assert.Null(p.Email); Assert.NotNull(p.DocumentNumber); Assert.True(p.IsActive);
         Assert.Equal(before + 1, await db.Users.CountAsync());
         var person = await db.Users.SingleAsync(x => x.Id == p.UserId); Assert.False(person.CanLogin); Assert.Null(person.PasswordHash); Assert.Null(person.Email);
         Assert.True(await db.UserRoles.AnyAsync(x => x.UserId == p.UserId && x.Role.Code == "PATIENT")); Assert.Equal(DateTimeKind.Utc, p.CreatedAt.Kind);
@@ -131,19 +131,19 @@ public sealed class PatientsTests(IdentityFixture f) : IClassFixture<IdentityFix
     {
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var profile = db.Model.FindEntityType(typeof(ClinicaRamirez.Api.Domain.Patients.PatientProfile))!;
-        foreach (var name in new[] { "FirstName", "LastName", "Ci", "BirthDate", "Gender", "Phone", "Email", "Address" })
+        foreach (var name in new[] { "FirstName", "LastName", "DocumentNumber", "BirthDate", "Gender", "Phone", "Email", "Address" })
             Assert.Null(profile.FindProperty(name));
         Assert.False(profile.FindProperty("UserId")!.IsNullable);
         Assert.Equal(DeleteBehavior.Restrict, profile.GetForeignKeys().Single().DeleteBehavior);
     }
     [Fact] public async Task CiDuplicadoNormalizado409InclusoInactivo()
     {
-        using var c = await Admin(); var ci = "CI-" + Guid.NewGuid(); var p = await Create(c, Body(ci: ci));
+        using var c = await Admin(); var documentNumber= "CI-" + Guid.NewGuid(); var p = await Create(c, Body(documentNumber: documentNumber));
         await c.PatchAsJsonAsync($"{Path}/{p.Id}/status", new { isActive = false });
-        Assert.Equal(HttpStatusCode.Conflict, (await c.PostAsJsonAsync(Path, Body(ci: " " + ci.ToLowerInvariant() + " "))).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await c.PostAsJsonAsync(Path, Body(documentNumber: " " + documentNumber.ToLowerInvariant() + " "))).StatusCode);
     }
     [Fact] public async Task CiVacioRechazado()
-    { using var c = await Admin(); Assert.Equal(HttpStatusCode.BadRequest, (await c.PostAsJsonAsync(Path, Body(ci: "  "))).StatusCode); }
+    { using var c = await Admin(); Assert.Equal(HttpStatusCode.BadRequest, (await c.PostAsJsonAsync(Path, Body(documentNumber: "  "))).StatusCode); }
     [Fact] public async Task ListaPaginada()
     {
         using var c = await Admin(); await Create(c);
@@ -203,7 +203,7 @@ public sealed class PatientsTests(IdentityFixture f) : IClassFixture<IdentityFix
             Assert.Contains(events, x => x.Action == action && x.UserId != null);
         Assert.All(events, x => { Assert.DoesNotContain("clínica", x.MetadataJson ?? ""); Assert.DoesNotContain("clinical@example", x.MetadataJson ?? ""); });
     }
-    [Theory] [InlineData("firstName")] [InlineData("lastName")] [InlineData("ci")] [InlineData("birthDate")] [InlineData("phone")] [InlineData("emergencyContactName")] [InlineData("emergencyContactPhone")] [InlineData("bloodType")]
+    [Theory] [InlineData("firstName")] [InlineData("lastName")] [InlineData("documentNumber")] [InlineData("birthDate")] [InlineData("phone")] [InlineData("emergencyContactName")] [InlineData("emergencyContactPhone")] [InlineData("bloodType")]
     public async Task NombresObligatorios(string field)
     {
         using var c = await Admin(); var body = Body(); body[field] = " ";
@@ -237,7 +237,7 @@ public sealed class PatientsTests(IdentityFixture f) : IClassFixture<IdentityFix
         using var c = await Admin(); var p = await Create(c); var body = Body();
         body["birthDate"] = ClinicaRamirez.Api.DTOs.LocalBirthDateAttribute.Today.AddDays(future ? 1 : 0).ToString("yyyy-MM-dd");
         Assert.Equal(future ? HttpStatusCode.BadRequest : HttpStatusCode.Created, (await c.PostAsJsonAsync(Path, body)).StatusCode);
-        body["ci"] = p.Ci;
+        body["documentNumber"] = p.DocumentNumber;
         Assert.Equal(future ? HttpStatusCode.BadRequest : HttpStatusCode.OK, (await c.PutAsJsonAsync($"{Path}/{p.Id}", body)).StatusCode);
     }
     [Fact] public async Task NoAsignacionManualPatientYConservaExistentes() {
