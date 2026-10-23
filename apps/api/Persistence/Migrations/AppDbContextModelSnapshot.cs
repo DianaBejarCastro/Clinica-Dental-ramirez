@@ -3024,6 +3024,337 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                     b.ToTable("UserRoles");
                 });
 
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Inventory.InventoryCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("DisplayOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("InventoryCategories", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("82000000-0000-0000-0000-000000000001"),
+                            Code = "ANESTHESIA",
+                            CreatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 0,
+                            IsActive = true,
+                            Name = "Anestesia",
+                            UpdatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("82000000-0000-0000-0000-000000000002"),
+                            Code = "RESTORATIVE",
+                            CreatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 1,
+                            IsActive = true,
+                            Name = "Restauración",
+                            UpdatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("82000000-0000-0000-0000-000000000003"),
+                            Code = "ENDODONTICS",
+                            CreatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 2,
+                            IsActive = true,
+                            Name = "Endodoncia",
+                            UpdatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("82000000-0000-0000-0000-000000000004"),
+                            Code = "PERIODONTICS",
+                            CreatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 3,
+                            IsActive = true,
+                            Name = "Periodoncia",
+                            UpdatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("82000000-0000-0000-0000-000000000005"),
+                            Code = "ORTHODONTICS",
+                            CreatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 4,
+                            IsActive = true,
+                            Name = "Ortodoncia",
+                            UpdatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("82000000-0000-0000-0000-000000000006"),
+                            Code = "PROTECTION",
+                            CreatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 5,
+                            IsActive = true,
+                            Name = "Protección",
+                            UpdatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("82000000-0000-0000-0000-000000000007"),
+                            Code = "DISINFECTION",
+                            CreatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 6,
+                            IsActive = true,
+                            Name = "Desinfección",
+                            UpdatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("82000000-0000-0000-0000-000000000008"),
+                            Code = "INSTRUMENTS",
+                            CreatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 7,
+                            IsActive = true,
+                            Name = "Instrumental",
+                            UpdatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("82000000-0000-0000-0000-000000000009"),
+                            Code = "IMPRESSION",
+                            CreatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 8,
+                            IsActive = true,
+                            Name = "Impresión",
+                            UpdatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("82000000-0000-0000-0000-000000000010"),
+                            Code = "SURGERY",
+                            CreatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 9,
+                            IsActive = true,
+                            Name = "Cirugía",
+                            UpdatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("82000000-0000-0000-0000-000000000011"),
+                            Code = "GENERAL",
+                            CreatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DisplayOrder = 10,
+                            IsActive = true,
+                            Name = "General",
+                            UpdatedAt = new DateTime(2026, 10, 23, 0, 0, 0, 0, DateTimeKind.Utc)
+                        });
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Inventory.InventoryItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<decimal>("MinimumStock")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(14, 3)
+                        .HasColumnType("numeric(14,3)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("InventoryItems", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_InventoryItems_Minimum", "\"MinimumStock\" >= 0");
+
+                            t.HasCheckConstraint("CK_InventoryItems_Unit", "\"Unit\" IN ('UNIT','BOX','PACKAGE','BOTTLE','SYRINGE','ROLL','PAIR','KIT','BAG','TUBE')");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Inventory.InventoryMovement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AdjustmentDirection")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<Guid>("CenterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("IdempotencyKey")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MovementType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("RecipientDoctorProfileId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CenterId");
+
+                    b.HasIndex("MovementType");
+
+                    b.HasIndex("OccurredAt");
+
+                    b.HasIndex("RecipientDoctorProfileId");
+
+                    b.HasIndex("CreatedByUserId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.ToTable("InventoryMovements", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_InventoryMovements_Adjustment", "(\"MovementType\" = 'ADJUSTMENT' AND \"AdjustmentDirection\" IS NOT NULL AND \"AdjustmentDirection\" IN ('INCREASE','DECREASE') AND \"Notes\" IS NOT NULL AND length(btrim(\"Notes\")) > 0) OR (\"MovementType\" <> 'ADJUSTMENT' AND \"AdjustmentDirection\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_InventoryMovements_Recipient", "\"MovementType\" <> 'WITHDRAWAL' OR \"RecipientDoctorProfileId\" IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_InventoryMovements_Type", "\"MovementType\" IN ('ENTRY','WITHDRAWAL','RETURN','ADJUSTMENT')");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Inventory.InventoryMovementLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("InventoryItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("InventoryMovementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(14, 3)
+                        .HasColumnType("numeric(14,3)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InventoryItemId");
+
+                    b.HasIndex("InventoryMovementId", "InventoryItemId")
+                        .IsUnique();
+
+                    b.ToTable("InventoryMovementLines", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_InventoryMovementLines_Positive", "\"Quantity\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Inventory.InventoryStock", b =>
+                {
+                    b.Property<Guid>("InventoryItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CenterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("QuantityOnHand")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(14, 3)
+                        .HasColumnType("numeric(14,3)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("InventoryItemId", "CenterId");
+
+                    b.HasIndex("CenterId");
+
+                    b.ToTable("InventoryStocks", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_InventoryStocks_NonNegative", "\"QuantityOnHand\" >= 0");
+                        });
+                });
+
             modelBuilder.Entity("ClinicaRamirez.Api.Domain.Patients.PatientProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3619,6 +3950,65 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Inventory.InventoryItem", b =>
+                {
+                    b.HasOne("ClinicaRamirez.Api.Domain.Inventory.InventoryCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Inventory.InventoryMovement", b =>
+                {
+                    b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.Center", null)
+                        .WithMany()
+                        .HasForeignKey("CenterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicaRamirez.Api.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.DoctorProfile", null)
+                        .WithMany()
+                        .HasForeignKey("RecipientDoctorProfileId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Inventory.InventoryMovementLine", b =>
+                {
+                    b.HasOne("ClinicaRamirez.Api.Domain.Inventory.InventoryItem", null)
+                        .WithMany()
+                        .HasForeignKey("InventoryItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicaRamirez.Api.Domain.Inventory.InventoryMovement", null)
+                        .WithMany()
+                        .HasForeignKey("InventoryMovementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Inventory.InventoryStock", b =>
+                {
+                    b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.Center", null)
+                        .WithMany()
+                        .HasForeignKey("CenterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicaRamirez.Api.Domain.Inventory.InventoryItem", null)
+                        .WithMany()
+                        .HasForeignKey("InventoryItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ClinicaRamirez.Api.Domain.Patients.PatientProfile", b =>

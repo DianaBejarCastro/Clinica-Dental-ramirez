@@ -50,6 +50,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         b.ConfigureAppointments();
         b.ConfigureClinicalCare();
         b.ConfigureDentalCharting();
+        b.ConfigureInventory();
         b.Entity<User>(e => {
             e.HasKey(x => x.Id);
             e.Property(x => x.FirstName).HasMaxLength(100).IsRequired();

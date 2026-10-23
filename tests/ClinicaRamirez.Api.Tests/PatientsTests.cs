@@ -266,6 +266,6 @@ public sealed class PatientsTests(IdentityFixture f) : IClassFixture<IdentityFix
         Assert.Contains(await db.Database.GetAppliedMigrationsAsync(), x => x.EndsWith("_AddPatients"));
         await scope.ServiceProvider.GetRequiredService<IdentitySeed>().Run();
         await scope.ServiceProvider.GetRequiredService<ClinicSeed>().Run();
-        Assert.Equal(56, await db.Permissions.CountAsync()); Assert.Equal(1, await db.Clinics.CountAsync()); Assert.Equal(12, await db.Specialties.CountAsync());
+        Assert.Equal(IdentitySeed.PermissionCodes.Length, await db.Permissions.CountAsync()); Assert.Equal(1, await db.Clinics.CountAsync()); Assert.Equal(12, await db.Specialties.CountAsync());
     }
 }

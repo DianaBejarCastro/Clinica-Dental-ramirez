@@ -1,3 +1,4 @@
+import InventoryPage from './modules/inventory/InventoryPage';
 import { AuthProvider, useAuth } from './modules/auth/AuthProvider';
 import { lazy, Suspense, useEffect } from 'react';
 const CashierPayments = lazy(() => import('./modules/cashier/CashierPayments'));
@@ -33,6 +34,7 @@ function Workspace() {
   useEffect(() => { if (!loading && isPatient && !isDoctor && path !== '/patient' && path !== '/patient/appointments') window.location.hash = '/patient'; }, [isPatient, isDoctor, loading, path]);
   if (path === '/cashier/payments' || path === '/cashier' || !loading && isCashier && !isDoctor && (path === '/' || path === '/login'))
     return <Protected permission="payments.view"><Suspense fallback={<p role="status">Cargando cobros…</p>}><CashierPayments /></Suspense></Protected>;
+  if (path === '/doctor/inventory') return <Protected permission="inventory.view">{isDoctor ? <AdminLayout path={path} doctorPortal><InventoryPage doctor /></AdminLayout> : <p>Acceso restringido</p>}</Protected>;
   if (path === '/doctor/consultation')
     return <Protected permission="clinical_history.view">{isDoctor ? <ClinicalConsultation key={query} appointmentId={new URLSearchParams(query).get('appointment') ?? ''} /> : <section className="card"><h1>Acceso restringido</h1></section>}</Protected>;
   if (path === '/doctor' || path === '/doctor/appointments' || !loading && isDoctor && (path === '/' || path === '/login'))
@@ -40,6 +42,7 @@ function Workspace() {
   if (!loading && (isPatient || session?.user.roles.includes('PATIENT') && (path === '/patient' || path === '/patient/appointments')))
     return <Protected><PatientDashboard appointments={path === '/patient/appointments'} /></Protected>;
   const pages = {
+    '/admin/inventory': <Protected permission="inventory.movement.view"><InventoryPage /></Protected>,
     '/administrators': <Protected permission="users.view"><StaffPage key="administrators" kind="administrators" /></Protected>,
     '/cashiers': <Protected permission="users.view"><StaffPage key="cashiers" kind="cashiers" /></Protected>,
     '/secretaries': <Protected permission="users.view"><StaffPage key="secretaries" kind="secretaries" /></Protected>,
