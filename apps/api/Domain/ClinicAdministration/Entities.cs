@@ -59,7 +59,6 @@ public sealed class DoctorProfile : IAdministrativeRecord
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
     public string ProfessionalLicense { get; set; } = "";
-    public string? PhotoUrl { get; set; }
     public string? Bio { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

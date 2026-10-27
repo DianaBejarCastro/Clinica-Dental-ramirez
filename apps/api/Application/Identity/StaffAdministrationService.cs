@@ -65,7 +65,7 @@ public sealed class StaffAdministrationService(AppDbContext db, IdentitySupport 
                 if (await db.DoctorProfiles.AnyAsync(x=>x.UserId==userId)) throw new ApiException(409,"El usuario ya tiene un perfil de doctor.");
                 var license=doctor.ProfessionalLicense.Trim().ToUpperInvariant();
                 if (await db.DoctorProfiles.AnyAsync(x=>x.ProfessionalLicense==license)) throw new ApiException(409,"La matrícula profesional ya existe.");
-                var d=new DoctorProfile { UserId=userId, ProfessionalLicense=license, PhotoUrl=Optional(doctor.PhotoUrl), Bio=Optional(doctor.Bio), IsActive=user.IsActive };
+                var d=new DoctorProfile { UserId=userId, ProfessionalLicense=license, Bio=Optional(doctor.Bio), IsActive=user.IsActive };
                 db.DoctorProfiles.Add(d); profileId=d.Id; entity="DoctorProfile"; audit="doctor_created"; break;
             case AddPatientProfileRequest patient when code=="PATIENT":
                 if (await db.PatientProfiles.AnyAsync(x=>x.UserId==userId)) throw new ApiException(409,"El usuario ya tiene un perfil de paciente.");

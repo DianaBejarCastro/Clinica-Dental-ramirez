@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import PublicSocialLinks from './PublicSocialLinks';
 import ClinicLogo from '../admin/clinic/ClinicLogo';
 
 export const publicLinks = [['inicio', 'Inicio'], ['nosotros', 'Nosotros'], ['servicios', 'Servicios'], ['equipo', 'Equipo'], ['contacto', 'Contacto']] as const;
@@ -23,6 +24,7 @@ export function PublicFooter() {
   return <footer className="public-footer"><div className="public-container public-footer-inner">
     <div><div className="public-brand"><ClinicLogo /><span>CLÍNICA DENTAL<strong>RAMÍREZ</strong></span></div><p>Un espacio para cuidar tu sonrisa.</p></div>
     <nav aria-label="Navegación del pie">{publicLinks.map(([id, label]) => <a key={id} href={sectionHref(id)}>{label}</a>)}<a href="#/login">Acceso al sistema</a></nav>
+    <PublicSocialLinks />
   </div></footer>;
 }
 export default function PublicLayout({ children, section }: { children: ReactNode; section: string | null }) {

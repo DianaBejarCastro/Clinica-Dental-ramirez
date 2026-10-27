@@ -9,7 +9,7 @@ type Entity = 'centers' | 'specialties' | 'doctors' | 'schedules' | 'patients' |
 interface Check { canDelete: boolean; message: string; dependencies: { type: string; count: number }[]; protected?: boolean }
 interface Props { entity: Entity; id: string; label: string; protected?: boolean; onDeleted: () => void | Promise<void> }
 const dependencyLabels: Record<string, string> = {
-  DoctorCenters: 'Asignaciones a sucursales', DoctorSchedules: 'Horarios', Appointments: 'Citas',
+  UserProfilePhotos: 'Foto de perfil', DoctorCenters: 'Asignaciones a sucursales', DoctorSchedules: 'Horarios', Appointments: 'Citas',
   DoctorSpecialties: 'Asignaciones de especialidades', DoctorProfiles: 'Perfiles de doctor', PatientProfiles: 'Pacientes',
   UserRoles: 'Asignaciones de roles', RolePermissions: 'Permisos asignados', AuditLogs: 'Registros de auditoría', RefreshTokens: 'Historial de sesiones',
 };

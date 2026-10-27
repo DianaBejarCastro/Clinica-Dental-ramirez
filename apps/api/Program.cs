@@ -53,6 +53,7 @@ builder.Services.AddScoped<ClinicAdministrationService>();
 builder.Services.AddScoped<ClinicaRamirez.Api.Application.DentalAssistants.DentalAssistantsService>();
 builder.Services.AddScoped<ClinicLogoService>();
 builder.Services.AddScoped<ClinicSiteImageService>();
+builder.Services.AddScoped<UserProfilePhotoService>();
 builder.Services.AddScoped<ChartingAccess>();
 builder.Services.AddScoped(typeof(ChartExamStore<>));
 builder.Services.AddScoped<OdontogramService>();

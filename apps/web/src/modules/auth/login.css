@@ -1,0 +1,38 @@
+
+.login.premium-login { background: radial-gradient(ellipse at 95% 8%, #d8efec, transparent 50%), #f1f7f7; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.premium-login .login-brand { position: relative; isolation: isolate; overflow: hidden; padding: 72px clamp(36px, 7vw, 112px); background: radial-gradient(ellipse at 90% 80%, #258a8a80, transparent 58%), linear-gradient(135deg, #022b32, #084f59); }
+.premium-login .login-brand::before { content: ''; position: absolute; z-index: -1; inset: -20% -18% -10% -60%; border: 1px solid #6cfff260; border-radius: 0 48% 38% 0; transform: rotate(-12deg); box-shadow: 14px 0 60px #12dccb18, inset -1px 0 24px #6ffff01a; pointer-events: none; }
+.premium-login .login-brand::after { content: ''; position: absolute; z-index: -2; inset: 0; background: linear-gradient(110deg, transparent 58%, #7ffff516 59%, transparent 60%, transparent 78%, #7ffff512 79%, transparent 80%), repeating-linear-gradient(0deg, transparent 0 130px, #7fded909 132px 134px); mask-image: linear-gradient(90deg, transparent, #000); pointer-events: none; }
+.premium-login .clinic-brand-logo, .premium-login .clinic-brand-logo img { background: transparent; border: 0; border-radius: 0; box-shadow: none; padding: 0; }
+.premium-login .login-brand .clinic-brand-logo img { max-width: 210px; max-height: 105px; }
+.premium-login .login-brand > p:first-of-type { color: #9eeae5; font-size: 11px; letter-spacing: .16em; margin-top: 24px; }
+.premium-login .login-brand h1 { color: #f0fffc; font-size: clamp(36px, 3.9vw, 60px); line-height: 1.12; letter-spacing: -.035em; margin: 40px 0 26px; }
+.premium-login .login-brand > p:last-child { color: #c0dedf; line-height: 1.8; font-size: 15px; padding-top: 24px; border-top: 1px solid #8cf8e92b; }
+.premium-login .login-form { width: min(480px, calc(100% - 64px)); padding: 38px; margin-block: 48px; border: 1px solid #d6e8e6; border-radius: 24px; background: #ffffffeb; box-shadow: 0 16px 50px #054b5610; min-width: 0; }
+.premium-login .login-form .eyebrow { color: #387773; letter-spacing: .13em; font-size: 10px; margin-top: 28px; }
+.premium-login .login-form h2 { font-size: clamp(24px, 2.3vw, 30px); letter-spacing: -.025em; margin-block: 12px; }
+.premium-login .login-form .muted, .premium-login .login-form small { color: #536c79; line-height: 1.65; }
+.premium-login .login-form form { margin-block: 28px; }
+.premium-login .login-form :is(input, select) { min-height: 48px; border: 1px solid #bdd7d4; border-radius: 10px; background: #fafffe; }
+.premium-login .login-form :is(input, select):focus { outline: 2px solid #16877e; outline-offset: 2px; border-color: #16877e; box-shadow: 0 0 0 4px #31dfcb16; }
+.premium-login .login-form form > button { min-height: 48px; border-radius: 999px; border: 1px solid transparent; background: #29d5c5; color: #003b40; box-shadow: 0 5px 18px #12b8a81c; transition: background-color 160ms, box-shadow 160ms; }
+.premium-login .login-form form > button:hover:not(:disabled) { background: #60e9da; box-shadow: 0 6px 22px #12b8a82b; }
+.premium-login .login-form form > button:disabled { opacity: .65; cursor: wait; }
+.premium-login .login-form a:focus-visible, .premium-login .login-form button:focus-visible { outline: 2px solid #08786f; outline-offset: 4px; }
+.premium-login .login-form small { display: block; margin-top: 16px; font-size: 11px; }
+@media (min-width: 641px) and (max-width: 1000px) {
+  .login.premium-login { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); }
+  .premium-login .login-brand { padding: 40px 28px; }
+  .premium-login .login-brand h1 { font-size: 36px; }
+  .premium-login .login-form { width: calc(100% - 36px); padding: 26px; }
+}
+@media (max-width: 640px) {
+  .login.premium-login { grid-template-columns: minmax(0, 1fr); min-height: 100svh; }
+  .premium-login .login-brand { padding: 24px; }
+  .premium-login .login-brand .clinic-brand-logo img { max-width: 140px; max-height: 70px; }
+  .premium-login .login-brand > p:first-of-type { margin: 12px 0 0; font-size: 9px; }
+  .premium-login .login-brand h1 { font-size: 24px; margin: 18px 0 0; }
+  .premium-login .login-brand > p:last-child { display: none; }
+  .premium-login .login-form { width: calc(100% - 32px); margin-block: 20px 32px; padding: 24px; border-radius: 18px; }
+}
+@media (prefers-reduced-motion: reduce) { .premium-login .login-form form > button { transition: none; } }

@@ -1,0 +1,6 @@
+.profile-avatar { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; overflow: hidden; background: var(--color-primary-soft); color: var(--color-primary-text); margin-right: 10px; vertical-align: middle; flex-shrink: 0; }
+.profile-avatar img { width: 100%; height: 100%; object-fit: cover; padding: 0; border: 0; }
+.profile-photo-field { min-width: 0; display: grid; justify-items: start; gap: 12px; }
+.profile-photo-field input { max-width: 100%; }
+.profile-photo-preview { width: 120px; aspect-ratio: 4 / 5; background: var(--color-primary-soft); border-radius: 10px; overflow: hidden; display: grid; place-items: center; }
+.profile-photo-preview img { width: 100%; height: 100%; object-fit: contain; padding: 0; border: 0; }

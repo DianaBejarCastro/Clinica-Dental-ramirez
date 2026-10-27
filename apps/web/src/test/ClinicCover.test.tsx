@@ -125,12 +125,16 @@ it('Canvas usa recorte y resolución exacta', async () => {
   await renderCover(image, 2, .4, .3, 'image/webp'); expect(encode).toHaveBeenCalledWith(1916, 821);
   expect(drawImage.mock.calls[0].slice(-4)).toEqual([0, 0, 1916, 821]);
 });
-it('banner debajo del menú y antes del hero, con diente conservado', async () => {
+it('portada configurable después del equipo y antes de la llamada a reservar', async () => {
   exists = true; const { container } = render(<PublicHomePage section={null} />);
   const image = await screen.findByAltText('Instalaciones'); fireEvent.load(image);
   const banner = container.querySelector('.clinic-hero-banner')!;
   expect(banner.hasAttribute('hidden')).toBe(false); expect(image.style.objectPosition).toBe('30% 60%');
-  expect(container.querySelector('main')!.firstElementChild).toBe(banner);
+  expect(container.querySelector('main')!.firstElementChild).not.toBe(banner);
+  expect(banner.previousElementSibling).toBe(container.querySelector('#equipo'));
+  expect(banner.nextElementSibling).toBe(container.querySelector('.public-cta'));
+  expect(image.getAttribute('src')).toContain('/api/clinic/site-images/hero?v=');
+  expect(container.querySelectorAll('.clinic-hero-banner')).toHaveLength(1);
   expect(container.querySelector('header')!.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Cuidamos tu sonrisa');
   expect(container.querySelector('.hero-tooth')).toBeTruthy();

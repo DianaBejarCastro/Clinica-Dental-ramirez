@@ -3,6 +3,7 @@ import { PatientFields, PatientAccountFields, patientData, patientError } from '
 import { useState, type FormEvent } from 'react';
 import { apiUrl } from '../../services/api';
 import ClinicLogo from '../admin/clinic/ClinicLogo';
+import './login.css';
 import './patient-register.css';
 export let registrationCompleted = false;
 export function clearRegistrationNotice() { registrationCompleted = false; }
@@ -33,8 +34,8 @@ export default function PatientRegisterPage() {
     } catch { setError('No se pudo conectar. Inténtalo nuevamente.'); }
     finally { setBusy(false); }
   }
-  return <main className="login patient-register"><section className="login-brand"><ClinicLogo /><p>CLÍNICA DENTAL RAMÍREZ</p><h1>Tu sonrisa,<br />más cerca.</h1><p>Crea tu cuenta de paciente.</p></section>
-    <section className="login-form"><BackLink href="#/inicio">Volver al inicio</BackLink><h2>Crear cuenta de paciente</h2>
+  return <main className="login premium-login patient-register"><section className="login-brand"><ClinicLogo /><p>CLÍNICA DENTAL RAMÍREZ</p><h1>Tu sonrisa,<br />más cerca.</h1><p>Crea tu cuenta de paciente.</p></section>
+    <section className="login-form"><BackLink href="#/inicio">Volver al inicio</BackLink><p className="eyebrow">REGISTRO DE PACIENTE</p><h2>Crear cuenta de paciente</h2>
       <form onSubmit={submit}><fieldset disabled={busy} className="registration-fields">
         <PatientFields />
         <PatientAccountFields publicRegistration />

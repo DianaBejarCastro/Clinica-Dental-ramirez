@@ -20,7 +20,7 @@ const initialDoctor: Doctor = {
   id: doctorId, userId: '40000000-0000-0000-0000-000000000001',
   user: { id: '40000000-0000-0000-0000-000000000001', firstName: 'Lucía', lastName: 'Ramírez', email: 'lucia@example.test', isActive: true },
   professionalLicense: 'LP-123', documentNumber: '1234567', birthDate: '1985-04-10', gender: null,
-  phone: '70000000', address: null, photoUrl: null, bio: 'Atención odontológica integral.',
+  phone: '70000000', address: null, bio: 'Atención odontológica integral.',
   isActive: true, createdAt: '2026-09-30T00:00:00Z', updatedAt: null,
   specialties: [specialties[0]], centers: [centers[0]],
 };

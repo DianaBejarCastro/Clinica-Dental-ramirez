@@ -1,0 +1,21 @@
+import { expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import LoginPage from '../modules/auth/LoginPage';
+vi.mock('../services/api', () => ({ apiUrl: (path: string) => path, login: vi.fn().mockRejectedValue(new Error('Credenciales incorrectas.')), getSession: () => null }));
+it('preserves login inputs, transparent logo source, links, password control and errors', async () => {
+  const user = userEvent.setup();
+  const { container } = render(<LoginPage />);
+  expect(container.querySelector('.premium-login')).toBeTruthy();
+  expect(screen.getByAltText('Logo de la clínica').getAttribute('src')).toContain('/api/clinic/logo');
+  expect(screen.getByRole('link', { name: 'Volver al inicio' }).getAttribute('href')).toBe('#/inicio');
+  expect(screen.getByRole('link', { name: 'Regístrate' }).getAttribute('href')).toBe('#/register');
+  await user.type(screen.getByLabelText('Email'), 'user@example.com');
+  await user.type(screen.getByLabelText('Contraseña'), 'test-password');
+  await user.click(screen.getByRole('button', { name: /Mostrar contraseña/i }));
+  expect(screen.getByLabelText('Contraseña').getAttribute('type')).toBe('text');
+  await user.click(screen.getByRole('button', { name: /Ocultar contraseña/i }));
+  expect(screen.getByLabelText('Contraseña').getAttribute('type')).toBe('password');
+  await user.click(screen.getByRole('button', { name: 'Ingresar' }));
+  expect((await screen.findByRole('alert')).textContent).toBe('Credenciales incorrectas.');
+});

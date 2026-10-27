@@ -1,3 +1,4 @@
+import ProfilePhotoField, { ProfileAvatar, persistProfilePhoto, useCanManagePhotos } from '../../../components/ProfilePhoto';
 import { documentLabel } from '../../../components/IdentityDocumentFields';
 import PasswordField from '../../../components/PasswordField';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -15,6 +16,7 @@ interface AssistantList { items: Assistant[]; total: number; page: number; pageS
 const endpoint = '/api/admin/dental-assistants';
 
 export default function DentalAssistantsPanel({ creating, closeCreate }: { creating: boolean; closeCreate: () => void }) {
+  const canManagePhotos = useCanManagePhotos(); const [photo, setPhoto] = useState<Blob | null | undefined>(); const [photoWarning, setPhotoWarning] = useState('');
   const can = usePermissions(); const action = useAction();
   const [list, setList] = useState<AssistantList | null>(null);
   const [page, setPage] = useState(1); const [revision, setRevision] = useState(0);
@@ -45,13 +47,13 @@ export default function DentalAssistantsPanel({ creating, closeCreate }: { creat
       ...readFields(event, accountFields), password: String(form.get('password')), confirmPassword: String(form.get('confirmPassword')),
     } : {}) };
     void action.run(async () => {
-      await api(edit ? `${endpoint}/${edit.id}` : endpoint, edit ? 'PUT' : 'POST', body);
+      const saved = await api<Assistant>(edit ? `${endpoint}/${edit.id}` : endpoint, edit ? 'PUT' : 'POST', body); if (canManagePhotos && photo !== undefined) setPhotoWarning(await persistProfilePhoto(saved.userId, photo));
       cancel(); setRevision(value => value + 1);
     }, edit ? 'Asistente dental actualizado.' : 'Asistente dental creado.');
   }
   return <section aria-labelledby="assistants-title">
     <h2 id="assistants-title">Asistentes dentales</h2>
-    <Feedback {...action} />
+    <Feedback {...action} /><Feedback error={photoWarning} />
     {(creating && can('doctors.create') || edit && can('doctors.update')) && <section className="card">
       <h3>{edit ? 'Editar asistente dental' : 'Nuevo asistente dental'}</h3>
       <form ref={formRef} className="editor" key={edit?.id ?? 'new-assistant'} onSubmit={save}>
@@ -62,7 +64,7 @@ export default function DentalAssistantsPanel({ creating, closeCreate }: { creat
           <PasswordField label="Contraseña" name="password"  autoComplete="new-password" required minLength={12} maxLength={128} disabled={action.busy} />
           <PasswordField label="Confirmar contraseña" name="confirmPassword"  autoComplete="new-password" required maxLength={128} disabled={action.busy} />
         </>}
-        <FormActions busy={action.busy} label="Guardar asistente dental" cancel={cancel} />
+        {canManagePhotos && <ProfilePhotoField key={edit?.userId ?? 'new'} userId={edit?.userId} onChange={setPhoto} disabled={action.busy} />}<FormActions busy={action.busy} label="Guardar asistente dental" cancel={cancel} />
       </form>
     </section>}
     <section className="card table-card">
@@ -70,7 +72,7 @@ export default function DentalAssistantsPanel({ creating, closeCreate }: { creat
         {list.items.length === 0 ? <p>No hay asistentes dentales en esta página.</p> : <table aria-label="Asistentes dentales">
           <thead><tr><th>Nombre</th><th>Documento</th><th>Email</th><th>Teléfono</th><th>Estado del perfil</th><th>Estado de cuenta</th><th>Acciones</th></tr></thead>
           <tbody>{list.items.map(assistant => <tr key={assistant.id}>
-            <td>{assistant.firstName} {assistant.lastName}</td><td>{documentLabel(assistant)}</td><td>{assistant.email ?? '—'}</td><td>{assistant.phone ?? '—'}</td>
+            <td><ProfileAvatar userId={assistant.userId} firstName={assistant.firstName} lastName={assistant.lastName} />{assistant.firstName} {assistant.lastName}</td><td>{documentLabel(assistant)}</td><td>{assistant.email ?? '—'}</td><td>{assistant.phone ?? '—'}</td>
             <td><StateBadge active={assistant.isActive} /></td><td><StateBadge active={assistant.userIsActive && assistant.canLogin} /></td>
             <td>{can('doctors.update') && <button className="secondary" disabled={action.busy} onClick={() => void action.run(async () => {
               const current = await api<Assistant>(`${endpoint}/${assistant.id}`); closeCreate(); setEditing(current);

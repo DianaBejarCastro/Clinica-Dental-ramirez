@@ -13,7 +13,7 @@ it('muestra la landing pública y sus secciones sin consultar APIs privadas', ()
   render(<App />);
   expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Cuidamos tu sonrisa');
   for (const name of ['Nuestros servicios', 'Nuestro equipo', 'Contacto', 'Agenda tu próxima consulta']) expect(screen.getByRole('heading', { name })).toBeTruthy();
-  expect(fetchMock.mock.calls.every(call => String(call[0]).endsWith('/api/clinic/site-images/hero/meta'))).toBe(true);
+  expect(fetchMock.mock.calls.every(call => ['/api/clinic/site-images/hero/meta', '/api/clinic/social-networks'].some(path => String(call[0]).endsWith(path)))).toBe(true);
 });
 it('reutiliza el logo público y muestra la imagen al cargar', () => {
   render(<App />);
@@ -48,7 +48,7 @@ it('navegar a una sección cierra el menú y enfoca el destino', async () => {
 it('reservar dirige a contacto sin abrir agenda interna', () => {
   render(<App />);
   screen.getAllByRole('link', { name: 'Reservar cita' }).forEach(link => expect(link.getAttribute('href')).toBe('#/inicio?section=contacto'));
-  expect(fetchMock.mock.calls.every(call => String(call[0]).endsWith('/api/clinic/site-images/hero/meta'))).toBe(true);
+  expect(fetchMock.mock.calls.every(call => ['/api/clinic/site-images/hero/meta', '/api/clinic/social-networks'].some(path => String(call[0]).endsWith(path)))).toBe(true);
 });
 it('Acceso al sistema abre el login funcional', async () => {
   render(<App />); const u = userEvent.setup();
@@ -60,4 +60,14 @@ it('login permite volver al inicio público', async () => {
   window.history.replaceState(null, '', '#/login'); render(<App />); const u = userEvent.setup();
   await u.click(await screen.findByRole('link', { name: 'Volver al inicio' }));
   await waitFor(() => expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Cuidamos tu sonrisa'));
+});
+
+it('conserva el diente interactivo y añade beneficios sin enlaces ajenos', () => {
+  const { container } = render(<App />);
+  expect(container.querySelector('.hero-tooth-stage')).toBeTruthy();
+  expect(container.querySelector('.hero-family-badge')?.textContent).toContain('Odontología para toda la familia');
+  expect(container.querySelectorAll('.hero-care-benefits li')).toHaveLength(3);
+  expect(container.querySelector('.hero-clinic-scene')?.getAttribute('aria-hidden')).toBe('true');
+  expect(screen.queryByRole('link', { name: 'Galería' })).toBeNull();
+  expect(screen.queryByRole('link', { name: 'Blog' })).toBeNull();
 });

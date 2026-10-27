@@ -18,7 +18,7 @@ export default function DomainRoleForm({ user, role, done, cancel }: { user: Use
   }
   return <section className="card"><h2>{label}</h2><p>{user.firstName} {user.lastName}. Se conservarán su identidad, cuenta y roles actuales.</p>
     <Feedback error={error} /><form className="editor" onSubmit={save}>
-      {role.code === 'DOCTOR' && <Fields fields={[{ name: 'professionalLicense', label: 'Matrícula profesional', required: true, maxLength: 100 }, { name: 'photoUrl', label: 'Foto URL', type: 'url', maxLength: 1000 }, { name: 'bio', label: 'Biografía', type: 'textarea', maxLength: 4000 }]} />}
+      {role.code === 'DOCTOR' && <Fields fields={[{ name: 'professionalLicense', label: 'Matrícula profesional', required: true, maxLength: 100 }, { name: 'bio', label: 'Biografía', type: 'textarea', maxLength: 4000 }]} />}
       {role.code === 'PATIENT' && <><Fields fields={[{ name: 'emergencyContactName', label: 'Contacto de emergencia', required: true, maxLength: 200 }, { name: 'emergencyContactPhone', label: 'Teléfono de emergencia', required: true, maxLength: 30 }]} />
         <label>Grupo sanguíneo<select name="bloodType" required defaultValue=""><option value="">Seleccionar</option>{['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'UNKNOWN'].map(value => <option key={value} value={value}>{value === 'UNKNOWN' ? 'Desconocido' : value}</option>)}</select></label>
         <Fields fields={[{ name: 'notes', label: 'Notas', type: 'textarea', maxLength: 4000 }]} /></>}

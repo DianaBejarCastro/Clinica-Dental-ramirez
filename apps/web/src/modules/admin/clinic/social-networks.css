@@ -1,6 +1,6 @@
 .social-network-list { list-style: none; padding: 0; margin: 16px 0; }
-.social-network-list li { display: flex; align-items: center; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--color-border); }
-.social-network-logo { width: 48px; height: 48px; flex-shrink: 0; display: grid; place-items: center; color: var(--color-muted); }
+.social-network-list li { display: flex; align-items: center; gap: 16px; padding: 16px; margin-bottom: 12px; border: 1px solid #d9ebe9; border-radius: 12px; background: #eaf7f6; }
+.social-network-logo { width: 60px; height: 60px; padding: 6px; border-radius: 10px; background: #528782; flex-shrink: 0; display: grid; place-items: center; color: #fff; }
 .social-network-logo img { width: auto; height: auto; max-width: 48px; max-height: 48px; object-fit: contain; background: transparent; padding: 0; border: 0; }
 .social-network-info { flex: 1; min-width: 0; display: grid; justify-items: start; gap: 4px; }
 .social-network-info a { overflow-wrap: anywhere; font-size: 13px; }
@@ -11,3 +11,6 @@
 .social-logo-editor { margin-top: 24px; display: grid; justify-items: start; gap: 12px; }
 .social-logo-editor input { max-width: 100%; }
 @media (max-width: 600px) { .social-network-list li { flex-wrap: wrap; } .social-network-list .actions { width: 100%; } .social-network-editor .fields { grid-template-columns: 1fr; } }
+
+.social-network-list .actions { flex-wrap: wrap; }
+@media (min-width: 601px) and (max-width: 1000px) { .social-network-list li { flex-wrap: wrap; } .social-network-list .actions { margin-left: 76px; } }

@@ -12,6 +12,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ClinicaRamirez.Api.Domain.Appointments.Appointment> Appointments => Set<ClinicaRamirez.Api.Domain.Appointments.Appointment>();
     public DbSet<PatientProfile> PatientProfiles => Set<PatientProfile>();
     public DbSet<ClinicaRamirez.Api.Domain.DentalAssistants.DentalAssistantProfile> DentalAssistantProfiles => Set<ClinicaRamirez.Api.Domain.DentalAssistants.DentalAssistantProfile>();
+    public DbSet<UserProfilePhoto> UserProfilePhotos => Set<UserProfilePhoto>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
@@ -43,6 +44,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.ConfigureClinicAdministration();
+        b.ConfigureUserProfilePhotos();
         b.ConfigureClinicSiteImages();
         b.ConfigureClinicSocialNetworks();
         b.ConfigurePatients();

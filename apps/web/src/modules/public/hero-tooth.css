@@ -1,4 +1,4 @@
-.hero-tooth { position: relative; min-width: 0; height: clamp(340px, 35vw, 460px); border: 1px solid var(--color-primary-border); border-radius: 32px 32px 80px 32px; overflow: hidden; background: radial-gradient(ellipse at 35% 30%, var(--color-surface), var(--color-primary-soft) 65%, var(--color-primary-border)); isolation: isolate; }
+.hero-tooth { position: relative; min-width: 0; height: clamp(430px, 43vw, 600px); border: 0; border-radius: 0; overflow: hidden; background: transparent; isolation: isolate; }
 .hero-tooth::before { content: ''; position: absolute; width: 48%; height: 8%; left: 26%; bottom: 17%; border-radius: 50%; background: var(--color-primary); opacity: .12; filter: blur(14px); pointer-events: none; }
 .hero-tooth-stage { position: absolute; inset: 0 0 48px; cursor: grab; touch-action: pan-y; }
 .hero-tooth-stage:active { cursor: grabbing; }
@@ -10,5 +10,11 @@
 .hero-tooth-fallback { position: absolute; inset: 0 20px 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--color-primary-text); pointer-events: none; }
 .hero-tooth-fallback p { font-size: 13px; }
 .hero-tooth-monogram { font: 80px Georgia, serif; color: var(--color-primary); margin-bottom: 12px; }
-@media(max-width:768px) { .hero-tooth { width: 100%; max-width: 460px; height: 350px; margin-inline: auto; border-radius: 24px 24px 56px 24px; } }
+@media(max-width:768px) { .hero-tooth { width: 100%; max-width: 460px; height: 350px; margin-inline: auto; border-radius: 0; } }
 @media(max-width:400px) { .hero-tooth { height: 320px; } .hero-tooth-controls { inset-inline: 12px; } }
+
+.hero-tooth-stage canvas { background: transparent; }
+.public-hero .hero-tooth::before { background: #28fff0; opacity: .25; bottom: 12%; }
+.public-hero .hero-tooth-controls span, .public-hero .hero-tooth-fallback { color: #d3eeef; }
+.public-hero .hero-tooth-controls button { border: 1px solid #6ed8d1; border-radius: 999px; background: #053c46b3; color: #e1fffc; }
+.public-hero .hero-tooth-stage:focus-visible { outline-color: #70fff0; }

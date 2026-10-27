@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { clamp, coverCrop, renderCover } from './coverCrop';
 
-export default function CoverCropEditor({ file, onApply, onCancel }: {
-  file: File; onApply: (blob: Blob) => void; onCancel: () => void;
+export default function CoverCropEditor({ file, onApply, onCancel, width = 1916, height = 821, title = 'Editar foto de portada' }: {
+  width?: number; height?: number; title?: string; file: File; onApply: (blob: Blob) => void; onCancel: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null), image = useRef<HTMLImageElement>(null);
   const drag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
@@ -15,13 +15,13 @@ export default function CoverCropEditor({ file, onApply, onCancel }: {
     const src = URL.createObjectURL(file); setUrl(src); dialog.current?.showModal();
     return () => { URL.revokeObjectURL(src); previous?.focus(); };
   }, [file]);
-  const crop = size.w ? coverCrop(size.w, size.h, zoom, position.x, position.y) : null;
+  const crop = size.w ? coverCrop(size.w, size.h, zoom, position.x, position.y, width, height) : null;
   function reset() { setZoom(1); setPosition({ x: 0.5, y: 0.5 }); }
   return <dialog ref={dialog} className="cover-dialog" aria-labelledby={`${id}-title`} onCancel={event => { event.preventDefault(); if (!busy) onCancel(); }}>
-    <h2 id={`${id}-title`}>Editar foto de portada</h2>
-    <p>Encuadre fijo 1916 × 821 px. Arrastra la imagen o usa las flechas del teclado para moverla.</p>
+    <h2 id={`${id}-title`}>{title}</h2>
+    <p>Encuadre fijo {width} × {height} px. Arrastra la imagen o usa las flechas del teclado para moverla.</p>
     {error && <p role="alert">{error}</p>}
-    <div className="cover-crop-frame" role="group" aria-label="Encuadre de portada" tabIndex={0} aria-describedby={`${id}-help`}
+    <div className="cover-crop-frame" style={{ aspectRatio: `${width} / ${height}`, maxWidth: width < height ? 320 : undefined, marginInline: 'auto' }} role="group" aria-label={width === 1916 && height === 821 ? 'Encuadre de portada' : title} tabIndex={0} aria-describedby={`${id}-help`}
       onKeyDown={event => {
         if (busy || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
         event.preventDefault(); setPosition(p => ({ x: clamp(p.x + (event.key === 'ArrowRight' ? .02 : event.key === 'ArrowLeft' ? -.02 : 0)), y: clamp(p.y + (event.key === 'ArrowDown' ? .02 : event.key === 'ArrowUp' ? -.02 : 0)) }));
@@ -47,7 +47,7 @@ export default function CoverCropEditor({ file, onApply, onCancel }: {
       <button type="button" className="secondary" disabled={busy} onClick={onCancel}>Cancelar</button>
       <button type="button" disabled={busy || !crop} onClick={async () => {
         if (!image.current) return; setBusy(true); setError('');
-        try { onApply(await renderCover(image.current, zoom, position.x, position.y, file.type)); }
+        try { onApply(await renderCover(image.current, zoom, position.x, position.y, file.type, width, height)); }
         catch (e) { setError((e as Error).message); setBusy(false); }
       }}>{busy ? 'Procesando…' : 'Aplicar recorte'}</button></div>
   </dialog>;

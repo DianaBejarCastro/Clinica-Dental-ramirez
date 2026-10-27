@@ -199,7 +199,7 @@ public sealed class ClinicAdministrationService(AppDbContext db, IdentitySupport
         doctor.User.FirstName = Text(request.FirstName); doctor.User.LastName = Text(request.LastName);
          doctor.User.BirthDate = request.BirthDate;
         doctor.User.Gender = Optional(request.Gender); doctor.User.Phone = Text(request.Phone); doctor.User.Address = Optional(request.Address);
-        doctor.PhotoUrl = Optional(request.PhotoUrl); doctor.Bio = Optional(request.Bio); doctor.IsActive = request.IsActive;
+        doctor.Bio = Optional(request.Bio); doctor.IsActive = request.IsActive;
     }
     private static void ValidateDoctorRequest(DoctorUpdateRequest request)
     {
@@ -342,7 +342,7 @@ public sealed class ClinicAdministrationService(AppDbContext db, IdentitySupport
         x.DoctorSpecialties.Count, x.CreatedAt, x.UpdatedAt);
     private static DoctorResponse DoctorDto(DoctorProfile x) => new(x.Id, x.UserId,
         new(x.User.Id, x.User.FirstName, x.User.LastName, x.User.Email, x.User.IsActive), x.ProfessionalLicense, x.User.DocumentType, x.User.DocumentNumber, x.User.DocumentCountryCode,
-        x.User.BirthDate, x.User.Gender, x.User.Phone, x.User.Address, x.PhotoUrl, x.Bio, x.IsActive, x.CreatedAt, x.UpdatedAt,
+        x.User.BirthDate, x.User.Gender, x.User.Phone, x.User.Address, x.Bio, x.IsActive, x.CreatedAt, x.UpdatedAt,
         x.DoctorSpecialties.OrderBy(a => a.Specialty.Name).Select(a => new AssignmentResponse(a.SpecialtyId, a.Specialty.Code, a.Specialty.Name, a.Specialty.IsActive)).ToArray(),
         x.DoctorCenters.Where(a => a.IsActive).OrderBy(a => a.Center.Name).Select(a => new AssignmentResponse(a.CenterId, a.Center.Code, a.Center.Name, a.Center.IsActive)).ToArray());
     private static DoctorScheduleResponse ScheduleDto(DoctorSchedule x) => new(x.Id, x.DoctorId, x.CenterId, x.Center.Name,

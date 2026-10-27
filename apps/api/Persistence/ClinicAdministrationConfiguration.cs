@@ -57,7 +57,6 @@ public static class ClinicAdministrationConfiguration
             e.HasIndex(x => x.UserId).IsUnique();
             e.Property(x => x.ProfessionalLicense).HasMaxLength(100).IsRequired();
             e.HasIndex(x => x.ProfessionalLicense).IsUnique().HasFilter("\"ProfessionalLicense\" IS NOT NULL");
-            e.Property(x => x.PhotoUrl).HasMaxLength(2048);
             e.Property(x => x.Bio).HasMaxLength(4000);
             e.HasIndex(x => x.IsActive);
             e.ToTable("DoctorProfiles", t => t.HasCheckConstraint("CK_DoctorProfiles_License", "\"ProfessionalLicense\" IS NULL OR (length(btrim(\"ProfessionalLicense\")) > 0 AND \"ProfessionalLicense\" = upper(btrim(\"ProfessionalLicense\")))"));

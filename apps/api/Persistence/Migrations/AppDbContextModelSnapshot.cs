@@ -442,10 +442,6 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("PhotoUrl")
-                        .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)");
-
                     b.Property<string>("ProfessionalLicense")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -3001,6 +2997,54 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Identity.UserProfilePhoto", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Height")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("ImageData")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("MimeType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Width")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("UserProfilePhotos", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_UserProfilePhotos_Dimensions", "\"Width\" = 1080 AND \"Height\" = 1350");
+
+                            t.HasCheckConstraint("CK_UserProfilePhotos_Size", "\"FileSizeBytes\" > 0 AND \"FileSizeBytes\" <= 5242880 AND octet_length(\"ImageData\") = \"FileSizeBytes\"");
+
+                            t.HasCheckConstraint("CK_UserProfilePhotos_Type", "\"MimeType\" IN ('image/png','image/jpeg','image/webp')");
+                        });
+                });
+
             modelBuilder.Entity("ClinicaRamirez.Api.Domain.Identity.UserRole", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -3926,6 +3970,15 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                     b.Navigation("Permission");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Identity.UserProfilePhoto", b =>
+                {
+                    b.HasOne("ClinicaRamirez.Api.Domain.Identity.User", null)
+                        .WithOne()
+                        .HasForeignKey("ClinicaRamirez.Api.Domain.Identity.UserProfilePhoto", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ClinicaRamirez.Api.Domain.Identity.UserRole", b =>

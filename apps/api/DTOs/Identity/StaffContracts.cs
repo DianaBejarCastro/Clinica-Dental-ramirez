@@ -23,7 +23,6 @@ public sealed class StaffCreateRequest
 public sealed class AddDoctorProfileRequest
 {
     [Required, MaxLength(100)] public string ProfessionalLicense { get; init; } = "";
-    [Url, MaxLength(1000)] public string? PhotoUrl { get; init; }
     [MaxLength(4000)] public string? Bio { get; init; }
 }
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]

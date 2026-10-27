@@ -1,3 +1,4 @@
+import ProfilePhotoField, { ProfileAvatar, persistProfilePhoto, useCanManagePhotos, isStaff } from '../../../components/ProfilePhoto';
 import { documentLabel } from '../../../components/IdentityDocumentFields';
 import ProtectedDeleteButton from '../deletion/ProtectedDeleteButton';
 import { useEffect, useState, type FormEvent } from 'react';
@@ -8,6 +9,7 @@ import StaffIdentityFields from './StaffIdentityFields';
 import DomainRoleForm, { domainRoles, type DomainRole } from './DomainRoleForm';
 
 export default function UsersPage({ initialUser = '' }: { initialUser?: string }) {
+  const canManagePhotos = useCanManagePhotos(); const [photo, setPhoto] = useState<Blob | null | undefined>(); const [photoWarning, setPhotoWarning] = useState('');
   const can = usePermissions();
   const [items, setItems] = useState<User[]>([]); const [total, setTotal] = useState(0); const [page, setPage] = useState(1);
   const [query, setQuery] = useState(''); const [search, setSearch] = useState('');
@@ -27,7 +29,7 @@ export default function UsersPage({ initialUser = '' }: { initialUser?: string }
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); const data = Object.fromEntries(new FormData(e.currentTarget));
     if (String(data.birthDate) > localToday()) { setError('La fecha de nacimiento no puede ser futura.'); return; }
-    await action(async () => { await api(`/api/admin/users/${editing!.id}`, 'PUT', { ...data, email: data.email || null }); setEditing(null); });
+    await action(async () => { await api(`/api/admin/users/${editing!.id}`, 'PUT', { ...data, email: data.email || null }); if (canManagePhotos && isStaff(editing!.roles) && photo !== undefined) setPhotoWarning(await persistProfilePhoto(editing!.id, photo)); setEditing(null); });
   }
   const simple = (role: { code?: string }) => !domainRoles.some(d => d.code === role.code);
   async function assign(user: User) {
@@ -35,10 +37,10 @@ export default function UsersPage({ initialUser = '' }: { initialUser?: string }
     setRoles(all.filter(simple)); setSelected(user.roles.filter(r => all.some(a => a.id === r.id && a.isActive && simple(a))).map(r => r.id));
     setAssigning(user); setEditing(null); setDomain(null);
   }
-  return <><div className="title-row"><div><h1>Usuarios</h1><p className="muted">Identidad, acceso y múltiples roles. Crea personas desde su módulo correspondiente.</p></div></div><Feedback error={error} />
+  return <><div className="title-row"><div><h1>Usuarios</h1><p className="muted">Identidad, acceso y múltiples roles. Crea personas desde su módulo correspondiente.</p></div></div><Feedback error={error} /><Feedback error={photoWarning} />
     <form className="actions" onSubmit={e => { e.preventDefault(); setPage(1); setSearch(query); }}><label>Buscar por nombre, documento o email<input value={query} onChange={e => setQuery(e.target.value)} maxLength={200} /></label><button className="secondary">Buscar</button></form>
     {editing && <section className="card"><h2>Editar usuario</h2><form key={editing.id} onSubmit={save} className="editor">
-      <StaffIdentityFields value={editing} canLogin={editing.canLogin !== false} /><FormActions busy={busy} label="Guardar usuario" cancel={() => setEditing(null)} />
+      <StaffIdentityFields value={editing} canLogin={editing.canLogin !== false} />{canManagePhotos && isStaff(editing.roles) && <ProfilePhotoField key={editing.id} userId={editing.id} onChange={setPhoto} disabled={busy} />}<FormActions busy={busy} label="Guardar usuario" cancel={() => setEditing(null)} />
     </form></section>}
     {assigning && <section className="card"><h2>Roles de {assigning.firstName}</h2><p>Roles actuales: {assigning.roles.map(r => r.name).join(', ') || 'Sin roles'}</p><p>Los roles de paciente, doctor y asistente dental se conservan y se gestionan desde sus módulos.</p>
       <form onSubmit={e => { e.preventDefault(); void action(async () => { await api(`/api/admin/users/${assigning.id}/roles`, 'PUT', { roleIds: selected }); setAssigning(null); }); }}>
@@ -47,7 +49,7 @@ export default function UsersPage({ initialUser = '' }: { initialUser?: string }
       </form></section>}
     {domain && <DomainRoleForm key={`${domain.user.id}-${domain.role.code}`} {...domain} cancel={() => setDomain(null)} done={async () => { setDomain(null); await load(); }} />}
     <section className="card table-card">{loading ? <p role="status">Cargando usuarios…</p> : <><table><thead><tr><th>Usuario</th><th>Documento</th><th>Roles</th><th>Acceso</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{items.map(user => <tr key={user.id}>
-      <td><strong>{user.firstName} {user.lastName}</strong><small>{user.email}</small></td><td>{documentLabel(user)}</td><td>{user.roles.map(r => r.name).join(', ') || 'Sin roles'}</td><td>{user.canLogin === false ? 'Sin cuenta de acceso' : 'Cuenta habilitada'}</td><td><span className={`badge ${user.isActive ? '' : 'inactive'}`}>{user.isActive ? 'Activo' : 'Inactivo'}</span></td>
+      <td>{isStaff(user.roles) && <ProfileAvatar userId={user.id} firstName={user.firstName} lastName={user.lastName} />}<strong>{user.firstName} {user.lastName}</strong><small>{user.email}</small></td><td>{documentLabel(user)}</td><td>{user.roles.map(r => r.name).join(', ') || 'Sin roles'}</td><td>{user.canLogin === false ? 'Sin cuenta de acceso' : 'Cuenta habilitada'}</td><td><span className={`badge ${user.isActive ? '' : 'inactive'}`}>{user.isActive ? 'Activo' : 'Inactivo'}</span></td>
       <td><div className="actions">
         {can('users.update') && <button className="secondary" disabled={busy} onClick={() => { setEditing(user); setAssigning(null); setDomain(null); }}>Editar</button>}
         {can('users.disable') && <button className="secondary" disabled={busy} onClick={() => void action(() => api(`/api/admin/users/${user.id}/status`, 'PATCH', { isActive: !user.isActive }))}>{user.isActive ? 'Desactivar' : 'Activar'}</button>}

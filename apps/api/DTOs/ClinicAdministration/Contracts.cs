@@ -54,7 +54,6 @@ public class DoctorUpdateRequest
     [MaxLength(50)] public string? Gender { get; init; }
     [Required, MaxLength(30)] public string Phone { get; init; } = "";
     [MaxLength(500)] public string? Address { get; init; }
-    [MaxLength(2048), HttpUrl] public string? PhotoUrl { get; init; }
     [MaxLength(4000)] public string? Bio { get; init; }
     public bool IsActive { get; init; } = true;
 }
@@ -95,7 +94,7 @@ public sealed record SpecialtyResponse(Guid Id, string Code, string Name, string
 public sealed record AssignmentResponse(Guid Id, string Code, string Name, bool IsActive);
 public sealed record DoctorUserResponse(Guid Id, string FirstName, string LastName, string? Email, bool IsActive);
 public sealed record DoctorResponse(Guid Id, Guid UserId, DoctorUserResponse User, string? ProfessionalLicense, string? DocumentType, string? DocumentNumber, string? DocumentCountryCode,
-    DateOnly? BirthDate, string? Gender, string? Phone, string? Address, string? PhotoUrl, string? Bio, bool IsActive,
+    DateOnly? BirthDate, string? Gender, string? Phone, string? Address, string? Bio, bool IsActive,
     DateTime CreatedAt, DateTime UpdatedAt, AssignmentResponse[] Specialties, AssignmentResponse[] Centers);
 public sealed record DoctorListResponse(DoctorResponse[] Items, int Total, int Page, int PageSize);
 public sealed record DoctorScheduleResponse(Guid Id, Guid DoctorId, Guid CenterId, string CenterName, int DayOfWeek,

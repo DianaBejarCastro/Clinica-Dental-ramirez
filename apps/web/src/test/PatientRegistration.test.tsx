@@ -36,6 +36,9 @@ it('formulario sin rol ni estado ni cuenta administrativa', () => {
   render(<App />); expect(screen.getByLabelText('Número de documento')).toBeTruthy(); expect(screen.getByLabelText('Fecha de nacimiento')).toBeTruthy();
   expect(screen.getByRole('combobox', { name: 'Grupo sanguíneo' })).toBeTruthy(); expect(screen.queryByLabelText(/Rol|UserId|Estado|Permisos/)).toBeNull();
   expect(fetchMock).not.toHaveBeenCalled(); expect(screen.getByAltText('Logo de la clínica')).toBeTruthy();
+  expect(screen.getByRole('main').classList.contains('premium-login')).toBe(true);
+  expect(screen.getByText('REGISTRO DE PACIENTE')).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'Volver al inicio' }).getAttribute('href')).toBe('#/inicio');
 });
 it('validación de confirmación evita envío', async () => {
   render(<App />); await fill('DifferentPassword123!'); await userEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }));
