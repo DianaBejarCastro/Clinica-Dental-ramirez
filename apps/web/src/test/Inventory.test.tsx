@@ -13,6 +13,7 @@ const stocks=[{inventoryItemId:'i1',centerId:'c1',center:'Central',code:'G1',nam
 let reject=false;
 beforeEach(()=>{reject=false;mock.mockReset();mock.mockImplementation(async(path:string,method='GET')=>{
  if(method!=='GET'){if(reject)throw new ApiError(409,'Stock insuficiente para completar el retiro.');return 'saved';}
+ if(path.includes('/expiration-alerts'))return {expired:0,within30:0,within60:0,within90:0,lowStock:1,outOfStock:1};
  if(path.endsWith('/options'))return options;
  if(path.includes('/movements?')||path.includes('/my-withdrawals?'))return {items:[{id:'m',center:'Central',movementType:'WITHDRAWAL',occurredAt:'2026-10-23T10:00:00Z',registeredBy:'Administrador',doctor:'Ana Doctor',professionalLicense:'LP-123',notes:'Entrega',lines:[{inventoryItemId:'i1',name:'Guantes',unit:'BOX',quantity:3}]}],total:1,page:1,pageSize:50};
  if(path.endsWith('/items'))return stocks.map(s=>({...s,id:s.inventoryItemId}));

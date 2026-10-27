@@ -20,6 +20,8 @@ public sealed class InventoryItem
     public string? Description { get; set; }
     public string Unit { get; set; } = "UNIT";
     public decimal MinimumStock { get; set; }
+    public bool TracksLots { get; set; }
+    public bool TracksExpiration { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -41,6 +43,7 @@ public sealed class InventoryMovement
     // ADJUSTMENT uses INCREASE / DECREASE; line quantities remain positive.
     public string? AdjustmentDirection { get; set; }
     public Guid IdempotencyKey { get; set; }
+    public string? RequestFingerprint { get; set; }
     public DateTime OccurredAt { get; set; } = DateTime.UtcNow;
     public string? Notes { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -51,4 +54,28 @@ public sealed class InventoryMovementLine
     public Guid InventoryMovementId { get; set; }
     public Guid InventoryItemId { get; set; }
     public decimal Quantity { get; set; }
+    public Guid? InventoryLotId { get; set; }
+}
+
+public sealed class InventoryLot
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid InventoryItemId { get; set; }
+    public string BatchNumber { get; set; } = "";
+    public DateOnly? ExpirationDate { get; set; }
+    public DateOnly? ManufacturedAt { get; set; }
+    public string? SupplierName { get; set; }
+    public DateTime ReceivedAt { get; set; } = DateTime.UtcNow;
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+public sealed class InventoryLotStock
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid InventoryLotId { get; set; }
+    public Guid CenterId { get; set; }
+    public decimal QuantityOnHand { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

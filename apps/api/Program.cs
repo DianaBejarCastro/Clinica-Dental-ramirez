@@ -45,6 +45,7 @@ builder.Services.AddScoped<ClinicaRamirez.Api.Application.ClinicalCare.Financial
 builder.Services.AddScoped<ClinicaRamirez.Api.Application.Cashier.CashierService>();
 builder.Services.AddScoped<ClinicaRamirez.Api.Application.Inventory.InventoryService>();
 builder.Services.AddScoped<ClinicaRamirez.Api.Application.Inventory.InventoryMovementService>();
+builder.Services.AddScoped<ClinicaRamirez.Api.Application.Inventory.InventoryLotService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AdminService>();
 builder.Services.AddScoped<StaffAdministrationService>();

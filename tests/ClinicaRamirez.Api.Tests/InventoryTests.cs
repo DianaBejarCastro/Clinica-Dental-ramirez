@@ -106,9 +106,9 @@ public sealed class InventoryTests(IdentityFixture f):IClassFixture<IdentityFixt
         Assert.Equal(HttpStatusCode.MethodNotAllowed,(await x.Admin.DeleteAsync(Base+"/movements/entry")).StatusCode);
         using var scope=f.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var types=db.Model.GetEntityTypes().Where(t=>t.ClrType.Namespace=="ClinicaRamirez.Api.Domain.Inventory").ToArray();
-        Assert.Equal(5,types.Length);Assert.Equal(8,types.SelectMany(t=>t.GetForeignKeys()).Count());
+        Assert.Equal(7,types.Length);Assert.Equal(12,types.SelectMany(t=>t.GetForeignKeys()).Count());
         Assert.All(types.SelectMany(t=>t.GetForeignKeys()),fk=>Assert.Equal(DeleteBehavior.Restrict,fk.DeleteBehavior));
-        Assert.Equal(8,await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM pg_constraint WHERE contype='f' AND conrelid IN (SELECT oid FROM pg_class WHERE relname LIKE 'Inventory%') AND confdeltype='r'").SingleAsync());
+        Assert.Equal(12,await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM pg_constraint WHERE contype='f' AND conrelid IN (SELECT oid FROM pg_class WHERE relname LIKE 'Inventory%') AND confdeltype='r'").SingleAsync());
         await Assert.ThrowsAsync<Npgsql.PostgresException>(()=>db.Database.ExecuteSqlInterpolatedAsync($"UPDATE \"InventoryStocks\" SET \"QuantityOnHand\"=-1 WHERE \"InventoryItemId\"={x.Item}"));
         await Assert.ThrowsAsync<Npgsql.PostgresException>(()=>db.Database.ExecuteSqlInterpolatedAsync($"UPDATE \"InventoryMovements\" SET \"Notes\"='Changed' WHERE \"Id\"={id}"));
         await Assert.ThrowsAsync<Npgsql.PostgresException>(()=>db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM \"InventoryMovementLines\" WHERE \"InventoryMovementId\"={id}"));

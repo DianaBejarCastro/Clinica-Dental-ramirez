@@ -3261,6 +3261,16 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
+                    b.Property<bool>("TracksExpiration")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("TracksLots")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("Unit")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -3280,7 +3290,93 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                         {
                             t.HasCheckConstraint("CK_InventoryItems_Minimum", "\"MinimumStock\" >= 0");
 
+                            t.HasCheckConstraint("CK_InventoryItems_Tracking", "NOT \"TracksExpiration\" OR \"TracksLots\"");
+
                             t.HasCheckConstraint("CK_InventoryItems_Unit", "\"Unit\" IN ('UNIT','BOX','PACKAGE','BOTTLE','SYRINGE','ROLL','PAIR','KIT','BAG','TUBE')");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Inventory.InventoryLot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BatchNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly?>("ExpirationDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("InventoryItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateOnly?>("ManufacturedAt")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SupplierName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpirationDate");
+
+                    b.HasIndex("InventoryItemId", "BatchNumber")
+                        .IsUnique();
+
+                    b.ToTable("InventoryLots", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_InventoryLots_Dates", "\"ManufacturedAt\" IS NULL OR \"ExpirationDate\" IS NULL OR \"ManufacturedAt\" <= \"ExpirationDate\"");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Inventory.InventoryLotStock", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CenterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("InventoryLotId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("QuantityOnHand")
+                        .HasPrecision(14, 3)
+                        .HasColumnType("numeric(14,3)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CenterId");
+
+                    b.HasIndex("InventoryLotId", "CenterId")
+                        .IsUnique();
+
+                    b.ToTable("InventoryLotStocks", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_InventoryLotStocks_NonNegative", "\"QuantityOnHand\" >= 0");
                         });
                 });
 
@@ -3320,6 +3416,10 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                     b.Property<Guid?>("RecipientDoctorProfileId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("RequestFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CenterId");
@@ -3352,6 +3452,9 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                     b.Property<Guid>("InventoryItemId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("InventoryLotId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("InventoryMovementId")
                         .HasColumnType("uuid");
 
@@ -3363,8 +3466,9 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
 
                     b.HasIndex("InventoryItemId");
 
-                    b.HasIndex("InventoryMovementId", "InventoryItemId")
-                        .IsUnique();
+                    b.HasIndex("InventoryLotId");
+
+                    b.HasIndex("InventoryMovementId", "InventoryItemId");
 
                     b.ToTable("InventoryMovementLines", null, t =>
                         {
@@ -4014,6 +4118,30 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Inventory.InventoryLot", b =>
+                {
+                    b.HasOne("ClinicaRamirez.Api.Domain.Inventory.InventoryItem", null)
+                        .WithMany()
+                        .HasForeignKey("InventoryItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Inventory.InventoryLotStock", b =>
+                {
+                    b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.Center", null)
+                        .WithMany()
+                        .HasForeignKey("CenterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicaRamirez.Api.Domain.Inventory.InventoryLot", null)
+                        .WithMany()
+                        .HasForeignKey("InventoryLotId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ClinicaRamirez.Api.Domain.Inventory.InventoryMovement", b =>
                 {
                     b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.Center", null)
@@ -4041,6 +4169,11 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                         .HasForeignKey("InventoryItemId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("ClinicaRamirez.Api.Domain.Inventory.InventoryLot", null)
+                        .WithMany()
+                        .HasForeignKey("InventoryLotId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("ClinicaRamirez.Api.Domain.Inventory.InventoryMovement", null)
                         .WithMany()

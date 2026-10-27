@@ -4,7 +4,7 @@ using ClinicaRamirez.Api.DTOs.Inventory;
 using ClinicaRamirez.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
 namespace ClinicaRamirez.Api.Application.Inventory;
-public sealed class InventoryMovementService(AppDbContext db,IdentitySupport identity,InventoryService inventory)
+public sealed class InventoryMovementService(AppDbContext db,IdentitySupport identity,InventoryService inventory,InventoryLotService lots)
 {
     public async Task<Guid> Create(string type,MovementInput input,bool doctor=false) {
         if(type is not ("ENTRY" or "WITHDRAWAL" or "RETURN" or "ADJUSTMENT"))throw new ApiException(400,"Tipo de movimiento inválido.");
@@ -20,12 +20,15 @@ public sealed class InventoryMovementService(AppDbContext db,IdentitySupport ide
             if(input.AdjustmentDirection is not ("INCREASE" or "DECREASE") || string.IsNullOrWhiteSpace(input.Notes))
                 throw new ApiException(400,"El ajuste requiere dirección y motivo.");
         } else if(input.AdjustmentDirection!=null)throw new ApiException(400,"Dirección exclusiva para ajustes.");
+        var fingerprint=Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(new{type,input.CenterId,recipient,Notes=input.Notes?.Trim(),input.AdjustmentDirection,Lines=input.Lines.OrderBy(x=>x.InventoryItemId).ToArray()}))));
         var actor=inventory.Actor;
         await using var tx=await db.Database.BeginTransactionAsync();
         // Serializes retries of one request, without serializing unrelated stock operations.
         await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({actor.ToString()+input.IdempotencyKey.ToString()}, 820030))");
         var prior=await db.Set<InventoryMovement>().SingleOrDefaultAsync(x=>x.CreatedByUserId==actor && x.IdempotencyKey==input.IdempotencyKey);
         if(prior!=null) {
+            if(prior.RequestFingerprint!=null){if(prior.RequestFingerprint!=fingerprint)throw new ApiException(409,"La solicitud ya fue utilizada con otros datos.");await tx.CommitAsync();return prior.Id;}
+            if(input.Lines.Any(x=>x.InventoryLotId!=null||x.BatchNumber!=null||x.ExpirationDate!=null))throw new ApiException(409,"Solicitud histórica incompatible.");
             var old=await db.Set<InventoryMovementLine>().Where(x=>x.InventoryMovementId==prior.Id).ToArrayAsync();
             if(prior.CenterId!=input.CenterId || prior.MovementType!=type || prior.RecipientDoctorProfileId!=recipient ||
                 prior.Notes!=input.Notes?.Trim() || prior.AdjustmentDirection!=input.AdjustmentDirection ||
@@ -36,12 +39,13 @@ public sealed class InventoryMovementService(AppDbContext db,IdentitySupport ide
         if(!await db.Centers.AnyAsync(x=>x.Id==input.CenterId && x.IsActive))throw new ApiException(400,"Sucursal no disponible.");
         if(recipient!=null && !await db.DoctorCenters.AnyAsync(x=>x.DoctorId==recipient && x.CenterId==input.CenterId && x.IsActive && x.Doctor.IsActive && x.Doctor.User.IsActive))
             throw new ApiException(403,"El doctor no está autorizado en esta sucursal.");
+        foreach(var id in input.Lines.Select(x=>x.InventoryItemId).Order())await InventoryLotService.LockItem(db,id);
         var ids=input.Lines.Select(x=>x.InventoryItemId).ToArray();
         if(await (from i in db.Set<InventoryItem>() join c in db.Set<InventoryCategory>() on i.CategoryId equals c.Id
             where ids.Contains(i.Id) && i.IsActive && c.IsActive select i.Id).CountAsync()!=ids.Length)
             throw new ApiException(400,"Uno o más artículos no están disponibles.");
         var movement=new InventoryMovement{CenterId=input.CenterId,MovementType=type,CreatedByUserId=actor,
-            RecipientDoctorProfileId=recipient,IdempotencyKey=input.IdempotencyKey,Notes=input.Notes?.Trim(),AdjustmentDirection=input.AdjustmentDirection};
+            RecipientDoctorProfileId=recipient,RequestFingerprint=fingerprint,IdempotencyKey=input.IdempotencyKey,Notes=input.Notes?.Trim(),AdjustmentDirection=input.AdjustmentDirection};
         db.Add(movement);
         // Stable lock ordering prevents deadlocks between overlapping multi-item requests.
         foreach(var line in input.Lines.OrderBy(x=>x.InventoryItemId)) {
@@ -56,7 +60,8 @@ public sealed class InventoryMovementService(AppDbContext db,IdentitySupport ide
             if(stock.QuantityOnHand+delta<0)throw new ApiException(409,"Stock insuficiente para completar el retiro.");
             InventoryService.Quantity(stock.QuantityOnHand+delta,true);
             stock.QuantityOnHand+=delta;stock.UpdatedAt=DateTime.UtcNow;
-            db.Add(new InventoryMovementLine{InventoryMovementId=movement.Id,InventoryItemId=line.InventoryItemId,Quantity=line.Quantity});
+            var item=await db.Set<InventoryItem>().SingleAsync(x=>x.Id==line.InventoryItemId);
+            await lots.Allocate(item,line,movement,delta);
         }
         identity.Audit("inventory_"+type.ToLowerInvariant()+"_created","InventoryMovement",movement.Id,
             metadata:new{movement.CenterId,movement.RecipientDoctorProfileId});
@@ -82,7 +87,7 @@ public sealed class InventoryMovementService(AppDbContext db,IdentitySupport ide
                 .Select(x=>new{x.ProfessionalLicense,Name=x.User.FirstName+" "+x.User.LastName}).SingleOrDefaultAsync();
             var lines=await (from l in db.Set<InventoryMovementLine>() join i in db.Set<InventoryItem>() on l.InventoryItemId equals i.Id
                 where l.InventoryMovementId==row.M.Id orderby i.Name
-                select new MovementLineDto(i.Id,i.Code,i.Name,i.Unit,l.Quantity)).ToArrayAsync();
+                select new MovementLineDto(i.Id,i.Code,i.Name,i.Unit,l.Quantity,l.InventoryLotId,db.Set<InventoryLot>().Where(b=>b.Id==l.InventoryLotId).Select(b=>b.BatchNumber).FirstOrDefault(),db.Set<InventoryLot>().Where(b=>b.Id==l.InventoryLotId).Select(b=>b.ExpirationDate).FirstOrDefault())).ToArrayAsync();
             var m=row.M;
             result.Add(new(m.Id,m.CenterId,row.Center,m.MovementType,m.OccurredAt,m.CreatedByUserId,row.Creator,
                 m.RecipientDoctorProfileId,d?.Name,d?.ProfessionalLicense,m.Notes,m.AdjustmentDirection,lines));

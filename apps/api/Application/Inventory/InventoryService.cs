@@ -29,7 +29,7 @@ public sealed class InventoryService(AppDbContext db,IdentitySupport identity)
     }
     public Task<ItemDto[]> Items() => (from i in db.Set<InventoryItem>().AsNoTracking()
         join c in db.Set<InventoryCategory>() on i.CategoryId equals c.Id orderby i.Name
-        select new ItemDto(i.Id,i.CategoryId,i.Code,i.Name,c.Name,i.Description,i.Unit,i.MinimumStock,i.IsActive)).ToArrayAsync();
+        select new ItemDto(i.Id,i.CategoryId,i.Code,i.Name,c.Name,i.Description,i.Unit,i.MinimumStock,i.IsActive,i.TracksLots,i.TracksExpiration)).ToArrayAsync();
     public async Task<StockDto[]> Stocks(bool doctor,Guid? centerId,Guid? categoryId,string? status,string? search) {
         await Authorize("inventory.view");
         var id=doctor?await Doctor():(Guid?)null;
@@ -41,11 +41,11 @@ public sealed class InventoryService(AppDbContext db,IdentitySupport identity)
               from stock in stocks.DefaultIfEmpty()
               where (!doctor || i.IsActive && category.IsActive) && (categoryId==null || category.Id==categoryId)
               select new {InventoryItemId=i.Id,CenterId=center.Id,Center=center.Name,i.Code,i.Name,CategoryId=category.Id,Category=category.Name,i.Unit,
-                  QuantityOnHand=stock==null?0:stock.QuantityOnHand,i.MinimumStock,
+                  QuantityOnHand=stock==null?0:stock.QuantityOnHand,i.MinimumStock,i.TracksLots,i.TracksExpiration,
                   Status=stock==null || stock.QuantityOnHand==0?"OUT_OF_STOCK":stock.QuantityOnHand<=i.MinimumStock?"LOW_STOCK":"AVAILABLE",i.IsActive};
         if(!string.IsNullOrWhiteSpace(search)) { var term=search.Trim().ToLowerInvariant();q=q.Where(x=>x.Code.ToLower().Contains(term)||x.Name.ToLower().Contains(term)||x.Category.ToLower().Contains(term)); }
         if(!string.IsNullOrEmpty(status)) q=q.Where(x=>x.Status==status);
-        return await q.OrderBy(x=>x.Name).ThenBy(x=>x.Center).Select(x=>new StockDto(x.InventoryItemId,x.CenterId,x.Center,x.Code,x.Name,x.CategoryId,x.Category,x.Unit,x.QuantityOnHand,x.MinimumStock,x.Status,x.IsActive)).ToArrayAsync();
+        return await q.OrderBy(x=>x.Name).ThenBy(x=>x.Center).Select(x=>new StockDto(x.InventoryItemId,x.CenterId,x.Center,x.Code,x.Name,x.CategoryId,x.Category,x.Unit,x.QuantityOnHand,x.MinimumStock,x.Status,x.IsActive,x.TracksLots,x.TracksExpiration)).ToArrayAsync();
     }
     public static string Text(string? value,int max) {
         var text=value?.Trim();if(string.IsNullOrEmpty(text)||text.Length>max)throw new ApiException(400,"Completa los datos obligatorios.");
@@ -67,6 +67,9 @@ public sealed class InventoryService(AppDbContext db,IdentitySupport identity)
     }
     public async Task<Guid> SaveItem(Guid? id,ItemInput input) {
         await Authorize("inventory.item.manage");Quantity(input.MinimumStock,true);
+        await using var tx=await db.Database.BeginTransactionAsync();
+        if(id!=null)await InventoryLotService.LockItem(db,id.Value);
+        if(input.TracksExpiration&&!input.TracksLots)throw new ApiException(400,"El vencimiento requiere seguimiento de lotes.");
         if(!Units.Contains(input.Unit))throw new ApiException(400,"Unidad inválida.");
         if(!await db.Set<InventoryCategory>().AnyAsync(x=>x.Id==input.CategoryId))throw new ApiException(400,"Categoría inválida.");
         var code=Text(input.Code,50).ToUpperInvariant();
@@ -74,10 +77,17 @@ public sealed class InventoryService(AppDbContext db,IdentitySupport identity)
         var row=id==null?new InventoryItem():await db.Set<InventoryItem>().FindAsync(id)??throw new ApiException(404,"Artículo no disponible.");
         if(id!=null && row.Unit!=input.Unit && await db.Set<InventoryMovementLine>().AnyAsync(x=>x.InventoryItemId==id))
             throw new ApiException(409,"No se puede cambiar la unidad de un artículo con movimientos.");
+        if(!row.TracksLots&&input.TracksLots&&await db.Set<InventoryStock>().AnyAsync(x=>x.InventoryItemId==row.Id&&x.QuantityOnHand>0))
+            throw new ApiException(409,"Este producto tiene stock existente. Debes asignarlo a uno o más lotes antes de habilitar el seguimiento.");
+        if(row.TracksLots&&!input.TracksLots&&(await db.Set<InventoryLot>().AnyAsync(x=>x.InventoryItemId==row.Id)))
+            throw new ApiException(409,"No se puede deshabilitar el seguimiento de un artículo con lotes.");
+        if(row.TracksExpiration!=input.TracksExpiration&&await db.Set<InventoryLot>().AnyAsync(x=>x.InventoryItemId==row.Id))
+            throw new ApiException(409,"No se puede cambiar el control de vencimiento con lotes existentes.");
+        row.TracksLots=input.TracksLots;row.TracksExpiration=input.TracksExpiration;
         row.CategoryId=input.CategoryId;row.Code=code;row.Name=Text(input.Name,150);row.Description=input.Description?.Trim();
         row.Unit=input.Unit;row.MinimumStock=input.MinimumStock;row.IsActive=input.IsActive;row.UpdatedAt=DateTime.UtcNow;
         if(id==null)db.Add(row);
         identity.Audit(id==null?"inventory_item_created":"inventory_item_updated","InventoryItem",row.Id);
-        await db.SaveChangesAsync();return row.Id;
+        await db.SaveChangesAsync();await tx.CommitAsync();return row.Id;
     }
 }
