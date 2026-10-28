@@ -25,3 +25,25 @@
 .odo-surface.marked.treatment { background:#e2ecff; border-color:#325da1; color:#325da1; }
 .odo-surface.marked.healthy { background:#e3f5e6; border-color:#23733e; color:#23733e; }
 .odo-surface.marked[aria-pressed=true] { background:var(--color-primary); color:white; }
+
+.odo-history { min-width:0; margin:1.5rem 0; }
+.odo-history-filters { display:flex; flex-wrap:wrap; gap:1rem; }
+.odo-history-filters label { min-width:0; flex:1 1 220px; }
+.odo-history-scroll { max-width:100%; overflow-x:auto; border:1px solid #d9e5e8; border-radius:12px; }
+.odo-history table { width:100%; border-collapse:collapse; }
+.odo-history th,.odo-history td { padding:.8rem; text-align:left; border-bottom:1px solid #e0e9eb; overflow-wrap:anywhere; }
+.odo-history th { background:#f0f8f7; }
+.odo-history-selected { background:#edf8f7; }
+.odo-history-badge { display:inline-block; padding:.2rem .5rem; border-radius:6px; background:#e0efed; color:#205653; }
+.odo-history .actions { flex-wrap:wrap; }
+@media(max-width:600px){
+ .odo-history table,.odo-history tbody,.odo-history tr,.odo-history td { display:block; }
+ .odo-history thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+ .odo-history tr { padding:.5rem; border-bottom:1px solid #bfd8d5; }
+ .odo-history td { border:0; padding:.4rem; }
+ .odo-history td::before { content:attr(data-label); display:block; font-size:.8rem; color:#536a74; margin-bottom:.2rem; }
+}
+
+/* Keep table intrinsic width inside the history scroller. */
+.odo-history { contain:inline-size; }
+@media(min-width:601px){.odo-history table{min-width:960px}.odo-history td:nth-child(4){min-width:180px}}

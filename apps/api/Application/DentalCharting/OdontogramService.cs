@@ -13,7 +13,7 @@ public sealed class OdontogramService(AppDbContext db, ChartingAccess access, Ch
         var findings=await db.Set<OdontogramFinding>().AsNoTracking().Where(x=>x.OdontogramExamId==id).OrderBy(x=>x.DentalToothId).ThenBy(x=>x.Id).ToArrayAsync();
         var ids=findings.Select(x=>x.Id).ToArray();
         var surfaces=await db.Set<OdontogramFindingSurface>().AsNoTracking().Where(x=>ids.Contains(x.OdontogramFindingId)).ToArrayAsync();
-        return new(await exams.Summary(e),findings.Select(x=>new FindingDto(x.Id,x.DentalToothId,x.FindingTypeId,surfaces.Where(s=>s.OdontogramFindingId==x.Id).Select(s=>s.DentalSurfaceId).Order().ToArray(),x.Observation)).ToArray());
+        return new(await exams.Summary(e),findings.Select(x=>new FindingDto(x.Id,x.DentalToothId,x.FindingTypeId,surfaces.Where(s=>s.OdontogramFindingId==x.Id).Select(s=>s.DentalSurfaceId).Order().ToArray(),x.Observation,x.CreatedAt)).ToArray());
     }
     public Task<Guid> Create(Guid patient, ExamCreateRequest input) => access.Write(async()=> {
         var e=await exams.Create(patient,input); access.Audit("odontogram_created",e); return e.Id;

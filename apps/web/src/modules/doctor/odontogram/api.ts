@@ -3,7 +3,7 @@ export type Dentition = 'PERMANENT' | 'PRIMARY' | 'MIXED';
 export interface Tooth { id:number; fdiCode:number; dentitionClass:Exclude<Dentition,'MIXED'>; quadrant:number; toothType:string; displayOrder:number; isActive:boolean }
 export interface Surface { id:number; code:string; name:string; displayOrder:number; isActive:boolean }
 export interface FindingType { id:number; code:string; name:string; category:string; appliesToSurface:boolean; appliesToWholeTooth:boolean; displayOrder:number; isActive:boolean }
-export interface Finding { id?:string; dentalToothId:number; findingTypeId:number; surfaceIds:number[]; observation:string|null }
+export interface Finding { id?:string; createdAt?:string; dentalToothId:number; findingTypeId:number; surfaceIds:number[]; observation:string|null }
 export interface Exam { id:string; patientProfileId:string; clinicalEncounterId:string|null; clinicalDate:string; dentitionMode:Dentition; status:'DRAFT'|'FINALIZED'; createdByDoctorName:string; previousExamId:string|null; isLatest:boolean; revision:number; generalNotes:string|null; finalizedAt:string|null; finalizedByDoctorProfileId:string|null }
 export interface Detail { exam:Exam; findings:Finding[] }
 export interface Catalogs { teeth:Tooth[]; surfaces:Surface[]; findings:FindingType[] }

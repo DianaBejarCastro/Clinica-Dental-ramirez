@@ -32,11 +32,11 @@ it('mixed uses exactly 52 unique teeth and four arches',async()=>{await ready();
 it('selects a tooth accessibly',async()=>{await ready();choose();expect(screen.getByRole('button',{name:'Diente 46'}).getAttribute('aria-pressed')).toBe('true');expect(editor().getByRole('heading',{name:'Diente 46'})).toBeTruthy();});
 it('diagram surface selects the correct tooth and backend surface',async()=>{await ready();click('46: Mesial');expect((screen.getByLabelText('Mesial') as HTMLInputElement).checked).toBe(true);});
 it('adds one finding with multiple surfaces and observation',async()=>{await ready();choose();fireEvent.change(screen.getByLabelText('Observación del hallazgo'),{target:{value:'Observación puntual'}});fireEvent.click(screen.getByLabelText('Mesial'));add();click('Guardar borrador');await waitFor(()=>expect(saved).toHaveBeenCalledWith('feb',expect.objectContaining({findings:[expect.objectContaining({surfaceIds:[4,2],observation:'Observación puntual',dentalToothId:46,findingTypeId:3})]})));});
-it('surface finding requires at least one surface',async()=>{await ready();choose();add('3',false);expect(screen.getByRole('alert').textContent).toContain('al menos una superficie');expect(document.querySelectorAll('.odo-findings li')).toHaveLength(0);});
-it('whole tooth allows zero surfaces',async()=>{await ready();choose();add('8',false);expect(editor().getByText('Pieza completa')).toBeTruthy();click('Guardar borrador');await waitFor(()=>expect(saved).toHaveBeenCalledWith('feb',expect.objectContaining({findings:[expect.objectContaining({surfaceIds:[],findingTypeId:8})]})));});
-it('multiple findings coexist without overwriting',async()=>{await ready();choose();add();add('8',false);expect(document.querySelectorAll('.odo-findings li')).toHaveLength(2);});
-it('edits a finding without replacing other findings',async()=>{await ready();choose();add();click('Editar');fireEvent.change(screen.getByLabelText('Observación del hallazgo'),{target:{value:'Nota editada'}});click('Aplicar cambio');expect(editor().getByText('Nota editada')).toBeTruthy();expect(document.querySelectorAll('.odo-findings li')).toHaveLength(1);});
-it('removes only the selected draft finding',async()=>{await ready();choose();add();click('Quitar');expect(document.querySelectorAll('.odo-findings li')).toHaveLength(0);});
+it('surface finding requires at least one surface',async()=>{await ready();choose();add('3',false);expect(screen.getByRole('alert').textContent).toContain('al menos una superficie');expect(document.querySelectorAll('.odo-history tbody tr')).toHaveLength(0);});
+it('whole tooth allows zero surfaces',async()=>{await ready();choose();add('8',false);expect(screen.getByText('Pieza completa')).toBeTruthy();click('Guardar borrador');await waitFor(()=>expect(saved).toHaveBeenCalledWith('feb',expect.objectContaining({findings:[expect.objectContaining({surfaceIds:[],findingTypeId:8})]})));});
+it('multiple findings coexist without overwriting',async()=>{await ready();choose();add();add('8',false);expect(document.querySelectorAll('.odo-history tbody tr')).toHaveLength(2);});
+it('edits a finding without replacing other findings',async()=>{await ready();choose();add();click('Editar');fireEvent.change(screen.getByLabelText('Observación del hallazgo'),{target:{value:'Nota editada'}});click('Aplicar cambio');expect(screen.getByText('Nota editada')).toBeTruthy();expect(document.querySelectorAll('.odo-history tbody tr')).toHaveLength(1);});
+it('removes only the selected draft finding',async()=>{await ready();choose();add();click('Quitar');expect(document.querySelectorAll('.odo-history tbody tr')).toHaveLength(0);});
 it('search filters catalog findings',async()=>{await ready();choose();fireEvent.change(screen.getByLabelText('Buscar hallazgo'),{target:{value:'endo'}});expect(screen.getByRole('option',{name:'Endodoncia adecuada'})).toBeTruthy();expect(screen.queryByRole('option',{name:'Caries'})).toBeNull();});
 it('keeps exam notes separate from finding observations',async()=>{await ready();choose();add();fireEvent.change(screen.getByLabelText('Notas generales del examen'),{target:{value:'Nota global'}});click('Guardar borrador');await waitFor(()=>expect(saved).toHaveBeenCalledWith('feb',expect.objectContaining({generalNotes:'Nota global',findings:[expect.objectContaining({observation:null})]})));});
 it('save refreshes revision before subsequent writes',async()=>{await ready();click('Guardar borrador');await screen.findByText('Borrador guardado.');click('Guardar borrador');await waitFor(()=>expect(saved).toHaveBeenLastCalledWith('feb',expect.objectContaining({revision:1})));});
@@ -44,11 +44,62 @@ it('409 blocks retries and offers explicit reload',async()=>{await ready();saved
 it.each([400,403,404,500])('shows controlled error for %i',async status=>{await ready();saved.mockRejectedValueOnce(new ApiError(status,'private trace uuid'));click('Guardar borrador');expect((await screen.findByRole('alert')).textContent).not.toContain('private');});
 it('requires confirmation to finalize and cancel does not call API',async()=>{await ready();click('Finalizar odontograma');expect(service.finalize).not.toHaveBeenCalled();expect(screen.getByRole('dialog').textContent).toContain('no podrá editarse');click('Cancelar');expect(service.finalize).not.toHaveBeenCalled();});
 it('finalizing immediately transitions to read only',async()=>{await ready();choose();click('Finalizar odontograma');click('Confirmar finalización');await screen.findByText('FINALIZED · Finalizado');expect(screen.queryByRole('button',{name:'Guardar borrador'})).toBeNull();expect(screen.queryByLabelText('Hallazgo')).toBeNull();expect(service.finalize).toHaveBeenCalledWith('feb',0);});
-it('finalized history has no edit/remove controls',async()=>{records[0].exam.status='FINALIZED';records[0].findings=[{dentalToothId:46,findingTypeId:3,surfaceIds:[2],observation:'Febrero'}];render(<OdontogramPanel patientId="patient" encounterId="encounter"/>);await screen.findByText('FINALIZED · Finalizado');choose();expect(editor().getByText('Febrero')).toBeTruthy();expect(screen.queryByRole('button',{name:'Editar'})).toBeNull();expect(screen.queryByRole('button',{name:'Quitar'})).toBeNull();});
-it('new version calls only backend version endpoint then loads returned snapshot',async()=>{records[0].exam.status='FINALIZED';records[0].findings=[{dentalToothId:46,findingTypeId:3,surfaceIds:[2],observation:'Copiado por backend'}];render(<OdontogramPanel patientId="patient" encounterId="encounter"/>);await screen.findByText('FINALIZED · Finalizado');click('Crear nueva actualización');await screen.findByText('DRAFT · Borrador');choose();expect(editor().getByText('Copiado por backend')).toBeTruthy();expect(service.version).toHaveBeenCalledWith('feb','encounter');expect(service.save).not.toHaveBeenCalled();expect(service.create).not.toHaveBeenCalled();});
-it('February remains visually unchanged after September editing',async()=>{const old=records[0];old.exam.status='FINALIZED';old.exam.isLatest=false;old.findings=[{dentalToothId:46,findingTypeId:3,surfaceIds:[2],observation:'Solo febrero'}];const next=exam('sep');next.exam.clinicalDate='2026-09-20T12:00:00Z';next.exam.previousExamId='feb';records.push(next);await ready();choose();add('8',false);click('Guardar borrador');await screen.findByText('Borrador guardado.');fireEvent.change(screen.getByLabelText('Historial de odontogramas'),{target:{value:'feb'}});await screen.findByText('FINALIZED · Finalizado');choose();expect(editor().getByText('Solo febrero')).toBeTruthy();expect(editor().queryByText('Corona adaptada')).toBeNull();fireEvent.change(screen.getByLabelText('Historial de odontogramas'),{target:{value:'sep'}});await screen.findByText('DRAFT · Borrador');choose();expect(editor().getAllByText('Corona adaptada').length).toBeGreaterThan(0);expect(editor().queryByText('Solo febrero')).toBeNull();});
+it('finalized history has no edit/remove controls',async()=>{records[0].exam.status='FINALIZED';records[0].findings=[{dentalToothId:46,findingTypeId:3,surfaceIds:[2],observation:'Febrero'}];render(<OdontogramPanel patientId="patient" encounterId="encounter"/>);await screen.findByText('FINALIZED · Finalizado');choose();expect(screen.getByText('Febrero')).toBeTruthy();expect(screen.queryByRole('button',{name:'Editar'})).toBeNull();expect(screen.queryByRole('button',{name:'Quitar'})).toBeNull();});
+it('new version calls only backend version endpoint then loads returned snapshot',async()=>{records[0].exam.status='FINALIZED';records[0].findings=[{dentalToothId:46,findingTypeId:3,surfaceIds:[2],observation:'Copiado por backend'}];render(<OdontogramPanel patientId="patient" encounterId="encounter"/>);await screen.findByText('FINALIZED · Finalizado');click('Crear nueva actualización');await screen.findByText('DRAFT · Borrador');choose();expect(screen.getByText('Copiado por backend')).toBeTruthy();expect(service.version).toHaveBeenCalledWith('feb','encounter');expect(service.save).not.toHaveBeenCalled();expect(service.create).not.toHaveBeenCalled();});
+it('February remains visually unchanged after September editing',async()=>{const old=records[0];old.exam.status='FINALIZED';old.exam.isLatest=false;old.findings=[{dentalToothId:46,findingTypeId:3,surfaceIds:[2],observation:'Solo febrero'}];const next=exam('sep');next.exam.clinicalDate='2026-09-20T12:00:00Z';next.exam.previousExamId='feb';records.push(next);await ready();choose();add('8',false);click('Guardar borrador');await screen.findByText('Borrador guardado.');fireEvent.change(screen.getByLabelText('Historial de odontogramas'),{target:{value:'feb'}});await screen.findByText('FINALIZED · Finalizado');choose();expect(screen.getByText('Solo febrero')).toBeTruthy();expect(within(screen.getByRole('region',{name:'Hallazgos registrados'})).queryByText('Corona adaptada')).toBeNull();fireEvent.change(screen.getByLabelText('Historial de odontogramas'),{target:{value:'sep'}});await screen.findByText('DRAFT · Borrador');choose();expect(within(screen.getByRole('region',{name:'Hallazgos registrados'})).getAllByText('Corona adaptada').length).toBeGreaterThan(0);expect(screen.queryByText('Solo febrero')).toBeNull();});
 it('empty state creates selected dentition and encounter through backend',async()=>{records=[];render(<OdontogramPanel patientId="patient" encounterId="encounter"/>);await screen.findByText('No se ha registrado un odontograma para este paciente.');click('Mixta');click('Crear odontograma');await screen.findByText('DRAFT · Borrador');expect(service.create).toHaveBeenCalledWith('patient','MIXED','encounter');});
 it('loading blocks editing and repeated operations',()=>{vi.mocked(service.catalogs).mockReturnValue(new Promise(()=>{}));render(<OdontogramPanel patientId="patient" encounterId="encounter"/>);expect(screen.getByRole('status').textContent).toContain('Cargando');expect(screen.queryByRole('button',{name:'Guardar borrador'})).toBeNull();});
 it('failed catalogs allow reload',async()=>{vi.mocked(service.catalogs).mockRejectedValueOnce(new Error('internal'));render(<OdontogramPanel patientId="patient" encounterId="encounter"/>);await screen.findByRole('alert');click('Recargar odontograma');await screen.findByText('DRAFT · Borrador');});
 it('uses internal scroll and readable tooth sizing on mobile',async()=>{await ready();expect(screen.getByRole('region',{name:/Arcadas dentales/}).className).toBe('odo-chart-scroll');expect(css).toContain('overflow-x:auto');expect(css).toContain('grid-template-columns:minmax(0,1fr)');expect(css).toContain('flex-basis:70px');});
 it('different tooth types have distinct SVG crowns',async()=>{await ready();const paths=['11','13','14','16'].map(id=>document.querySelector(`[data-fdi="${id}"] svg path:nth-child(2)`)?.getAttribute('d'));expect(new Set(paths).size).toBe(4);});
+
+it('places the only history below the workspace with real date and exam professional',async()=>{
+ records[0].findings=[{id:'saved',createdAt:'2026-02-20T12:34:00Z',dentalToothId:46,findingTypeId:3,surfaceIds:[4,2],observation:null}];
+ await ready();choose();
+ const history=screen.getByRole('region',{name:'Hallazgos registrados'});
+ expect(document.querySelector('.odo-workspace')!.compareDocumentPosition(history)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+ expect(document.querySelector('.odo-editor .odo-findings')).toBeNull();
+ expect(history.querySelector('time')?.getAttribute('datetime')).toBe('2026-02-20T12:34:00Z');
+ expect(within(history).getByText('Dra. Prueba')).toBeTruthy();
+ expect(within(history).getByText('Mesial, Oclusal / incisal')).toBeTruthy();
+});
+it('sorts saved findings newest first and filters without losing other teeth',async()=>{
+ records[0].findings=[{createdAt:'2026-02-01T12:00:00Z',dentalToothId:46,findingTypeId:3,surfaceIds:[2],observation:null},{createdAt:'2026-02-02T12:00:00Z',dentalToothId:16,findingTypeId:8,surfaceIds:[],observation:null}];
+ await ready();
+ expect(document.querySelector('.odo-history tbody tr')?.textContent).toContain('Corona adaptada');
+ choose();fireEvent.change(screen.getByLabelText('Mostrar hallazgos'),{target:{value:'selected'}});
+ expect(document.querySelectorAll('.odo-history tbody tr')).toHaveLength(1);
+ click('Diente 16');expect(document.querySelector('.odo-history tbody')?.textContent).toContain('Corona adaptada');
+ fireEvent.change(screen.getByLabelText('Mostrar hallazgos'),{target:{value:'all'}});
+ expect(document.querySelectorAll('.odo-history tbody tr')).toHaveLength(2);
+ fireEvent.change(screen.getByLabelText('Buscar por diente o hallazgo'),{target:{value:'caries'}});
+ expect(document.querySelectorAll('.odo-history tbody tr')).toHaveLength(1);
+});
+it('table edit selects the correct tooth and reuses the editor',async()=>{
+ records[0].findings=[{createdAt:'2026-02-01T12:00:00Z',dentalToothId:16,findingTypeId:3,surfaceIds:[4,2],observation:'Original'}];
+ await ready();choose();click('Editar');
+ expect(screen.getByRole('complementary').textContent).toContain('Diente 16');
+ expect((screen.getByLabelText('Observación del hallazgo') as HTMLTextAreaElement).value).toBe('Original');
+ expect((screen.getByLabelText('Mesial') as HTMLInputElement).checked).toBe(true);
+ click('Cancelar edición');expect(screen.getByRole('button',{name:'Agregar hallazgo'})).toBeTruthy();
+});
+it('paginates findings without rendering all records',async()=>{
+ records[0].findings=Array.from({length:25},(_,i)=>({id:String(i),dentalToothId:46,findingTypeId:3,surfaceIds:[2],observation:String(i)}));
+ await ready();expect(document.querySelectorAll('.odo-history tbody tr')).toHaveLength(20);
+ click('Siguiente');expect(document.querySelectorAll('.odo-history tbody tr')).toHaveLength(5);
+});
+it('unsaved findings have no fabricated timestamp and mobile cards keep table scrolling local',async()=>{
+ await ready();choose();add();
+ expect(screen.getByText('Pendiente de guardar')).toBeTruthy();
+ expect(document.querySelector('.odo-history time')).toBeNull();
+ expect(css).toContain('.odo-history-scroll { max-width:100%; overflow-x:auto');
+ expect(css).toContain('content:attr(data-label)');
+});
+
+it('selecting another tooth surface cancels the previous finding edit',async()=>{
+ records[0].findings=[{dentalToothId:16,findingTypeId:3,surfaceIds:[2],observation:'Original'}];
+ await ready();click('Editar');click('46: Mesial');
+ expect(screen.queryByRole('button',{name:'Aplicar cambio'})).toBeNull();
+ expect(screen.getByRole('button',{name:'Agregar hallazgo'})).toBeTruthy();
+ expect(screen.getByText('Original')).toBeTruthy();
+});

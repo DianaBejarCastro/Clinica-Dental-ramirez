@@ -17,7 +17,7 @@ public sealed record PeriodontalUpdateRequest(int Revision, [Required] string De
     [Required, MaxLength(312)] MeasurementInput[] Measurements, [Required, MaxLength(52)] ToothAssessmentInput[] ToothAssessments, [Required, MaxLength(208)] FurcationInput[] Furcations);
 public sealed record ExamSummary(Guid Id, Guid PatientProfileId, Guid? ClinicalEncounterId, DateTime ClinicalDate, string DentitionMode,
     string Status, string CreatedByDoctorName, Guid? PreviousExamId, bool IsLatest, int Revision, string? GeneralNotes, DateTime? FinalizedAt, Guid? FinalizedByDoctorProfileId);
-public sealed record FindingDto(Guid Id, int DentalToothId, int FindingTypeId, int[] SurfaceIds, string? Observation);
+public sealed record FindingDto(Guid Id, int DentalToothId, int FindingTypeId, int[] SurfaceIds, string? Observation, DateTime CreatedAt);
 public sealed record OdontogramDetail(ExamSummary Exam, FindingDto[] Findings);
 public sealed record MeasurementDto(Guid Id, int DentalToothId, int PeriodontalSiteId, decimal? ProbingDepthMm, decimal? GingivalMarginMm,
     decimal? ClinicalAttachmentLevelMm, bool BleedingOnProbing, bool Plaque, bool Suppuration, string? Observation);
