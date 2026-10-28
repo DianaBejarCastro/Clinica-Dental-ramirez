@@ -287,4 +287,52 @@ public sealed class AppointmentsTests(IdentityFixture f) : IClassFixture<Identit
         Assert.Equal(HttpStatusCode.Conflict, (await c.PostAsJsonAsync(Path, Body(secondCenter))).StatusCode);
         Assert.Equal(6, (await Availability(c, secondCenter)).Slots.Length);
     }
+
+    [Fact] public async Task AgendaIncludesEmptyDoctorsSchedulesBreaksAndCorrectAppointments()
+    {
+        using var c=await Client();var d=await Setup(true,true);var a=await Create(c,d);
+        using var viewer=await Client("appointments.view");
+        var result=(await viewer.GetFromJsonAsync<AgendaResponse>($"{Path}/agenda?date=2030-01-07&doctorId={d.Doctor}"))!;
+        Assert.Single(result.Doctors);Assert.Equal(d.Doctor,result.Doctors[0].Id);
+        Assert.Equal(2,result.WorkingIntervals.Length);Assert.Equal(new TimeOnly(10,0),result.WorkingIntervals[0].BreakStart);
+        Assert.Equal(30,result.SlotMinutes);Assert.Equal(a,result.Appointments.Single());
+        var empty=(await viewer.GetFromJsonAsync<AgendaResponse>($"{Path}/agenda?date=2030-01-14&doctorId={d.Doctor}"))!;
+        Assert.Single(empty.Doctors);Assert.Empty(empty.Appointments);Assert.Equal(2,empty.WorkingIntervals.Length);
+        var off=(await viewer.GetFromJsonAsync<AgendaResponse>($"{Path}/agenda?date=2030-01-08&doctorId={d.Doctor}"))!;
+        Assert.Empty(off.WorkingIntervals);Assert.Empty(off.Appointments);
+    }
+    [Theory]
+    [InlineData("centerId")][InlineData("doctorId")][InlineData("specialtyId")]
+    public async Task AgendaFiltersDoNotMixDoctorsOrCenters(string filter)
+    {
+        using var c=await Client();var d=await Setup();var other=await Setup();await Create(c,d);await Create(c,other);
+        var id=filter=="centerId"?d.Center:filter=="doctorId"?d.Doctor:d.Specialty;
+        var result=(await c.GetFromJsonAsync<AgendaResponse>($"{Path}/agenda?date=2030-01-07&{filter}={id}"))!;
+        Assert.Single(result.Doctors);Assert.Equal(d.Doctor,result.Doctors[0].Id);
+        Assert.Single(result.Appointments);Assert.All(result.WorkingIntervals,w=>Assert.Equal(d.Doctor,w.DoctorId));
+    }
+    [Fact] public async Task AgendaStatusFilterRetainsWorkingIntervals()
+    {
+        using var c=await Client();var d=await Setup();await Create(c,d);
+        var result=(await c.GetFromJsonAsync<AgendaResponse>($"{Path}/agenda?date=2030-01-07&doctorId={d.Doctor}&status=CONFIRMED"))!;
+        Assert.Empty(result.Appointments);Assert.Single(result.WorkingIntervals);Assert.Single(result.Doctors);
+    }
+    [Fact] public async Task AgendaRejectsMissingDateAndInvalidStatus()
+    {
+        using var c=await Client();
+        Assert.Equal(HttpStatusCode.BadRequest,(await c.GetAsync($"{Path}/agenda")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest,(await c.GetAsync($"{Path}/agenda?date=2030-01-07&status=INVALID")).StatusCode);
+    }
+    [Fact] public async Task AgendaRequiresGlobalPermission()
+    {
+        using var c=await Client("doctors.view");
+        Assert.Equal(HttpStatusCode.Forbidden,(await c.GetAsync($"{Path}/agenda?date=2030-01-07")).StatusCode);
+    }
+    [Fact] public async Task AgendaExcludesInactiveSchedules()
+    {
+        using var c=await Client();var d=await Setup();
+        await Db(async db=>{foreach(var schedule in await db.DoctorSchedules.Where(s=>s.DoctorId==d.Doctor).ToArrayAsync())schedule.IsActive=false;});
+        var result=(await c.GetFromJsonAsync<AgendaResponse>($"{Path}/agenda?date=2030-01-07&doctorId={d.Doctor}"))!;
+        Assert.Empty(result.WorkingIntervals);
+    }
 }

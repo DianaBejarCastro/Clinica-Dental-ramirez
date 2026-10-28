@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ClinicaRamirez.Api.Application.Appointments;
 
-public sealed class AppointmentsService(AppDbContext db, IdentitySupport support)
+public sealed partial class AppointmentsService(AppDbContext db, IdentitySupport support)
 {
     private async Task Mutate(Func<Task> action)
     {

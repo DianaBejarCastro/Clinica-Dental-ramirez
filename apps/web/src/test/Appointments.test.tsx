@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vitest';
 import App from '../App';
@@ -9,6 +9,7 @@ const original: Appointment = { id: 'a1', patientId: 'p1', patientName: 'Ana Pac
   appointmentDate: '2030-01-07', startTime: '08:00:00', endTime: '08:30:00', status: 'SCHEDULED',
   reason: 'Control', notes: 'Nota', createdByUserId: 'admin', createdAt: '2026-10-06T12:00:00Z', updatedAt: '2026-10-06T12:00:00Z' };
 const available: Slot = { startTime: '09:00:00', endTime: '09:30:00' };
+vi.mock('../modules/admin/appointments/DailyAgenda',async()=>({...await vi.importActual('../modules/admin/appointments/DailyAgenda'),clinicToday:()=> '2030-01-07'}));
 let permissions: string[], appointments: Appointment[], slots: Slot[];
 let failure: { method: string; status: number; title: string } | null;
 let availabilityWait: Promise<void> | null, listWait: Promise<void> | null;
@@ -36,6 +37,13 @@ const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit
     if (availabilityWait) await availabilityWait;
     return Response.json({ slots: captured });
   }
+  if(path.endsWith('/agenda')){
+    if(listWait)await listWait;
+    const date=url.searchParams.get('date')!;
+    const entries=appointments.filter(a=>a.appointmentDate===date&&['doctorId','centerId','specialtyId','status'].every(k=>!url.searchParams.get(k)||a[k as keyof Appointment]===url.searchParams.get(k)));
+    const ids=[...new Set(appointments.map(a=>a.doctorId))].filter(id=>!url.searchParams.get('doctorId')||id===url.searchParams.get('doctorId'));
+    return Response.json({date,slotMinutes:30,doctors:ids.map(id=>({id,userId:'user-'+id,firstName:appointments.find(a=>a.doctorId===id)?.doctorName||'Doctor no disponible',lastName:'',specialties:['General']})),workingIntervals:ids.map(doctorId=>({doctorId,centerId:'c1',centerName:'Central',startTime:'08:00:00',endTime:'12:00:00',breakStart:null,breakEnd:null})),appointments:entries});
+  }
   const body = init?.body ? JSON.parse(String(init.body)) : {};
   if (path === '/api/admin/appointments') {
     if (method === 'GET') {
@@ -55,6 +63,7 @@ const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit
   throw new Error(`Unexpected ${method} ${path}`);
 });
 beforeEach(() => {
+  HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
   setSession(null); window.history.replaceState(null, '', '#/appointments');
   permissions = ['appointments.view', 'appointments.create', 'appointments.update', 'appointments.cancel',
     'patients.view', 'doctors.view', 'centers.view', 'specialties.view'];
@@ -64,20 +73,20 @@ beforeEach(() => {
 });
 const writes = (method: string) => fetchMock.mock.calls.filter(([url, init]) => String(url).includes('/appointments') && init?.method === method);
 const availabilityCalls = () => fetchMock.mock.calls.filter(([url]) => String(url).includes('/availability?'));
-const table = () => within(screen.getByRole('table'));
-it('presentation never uses UUIDs and retains the seven requested columns without catalog permissions', async () => {
+const table = () => within(screen.getByRole('region',{name:'Agenda diaria'}));
+it('daily grid shows names without UUIDs or catalog permissions', async () => {
   permissions = ['appointments.view'];
   appointments = [{ ...original, patientId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', doctorId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', centerId: 'cccccccc-cccc-cccc-cccc-cccccccccccc' }];
   render(<App />); await screen.findByText('Ana Paciente');
-  expect(table().getAllByRole('columnheader').map(x => x.textContent)).toEqual(['Fecha / Hora','Paciente','Doctor','Sucursal','Estado','Motivo','Acciones']);
-  expect(table().getByText('Marta Doctor')).toBeTruthy(); expect(table().getByText('Central')).toBeTruthy();
+  expect(screen.getByRole('region',{name:'Horarios por doctor'})).toBeTruthy();
+  expect(table().getByText('Marta Doctor',{selector:'strong'})).toBeTruthy(); expect(table().getByText('Central')).toBeTruthy();
   for (const id of [appointments[0].patientId, appointments[0].doctorId, appointments[0].centerId]) expect(document.body.textContent).not.toContain(id);
   expect(fetchMock.mock.calls.some(([url]) => /\/api\/admin\/(doctors|centers|patients)(\?|$)/.test(String(url)))).toBe(false);
 });
 it('missing presentation names have controlled fallbacks', async () => {
   permissions = ['appointments.view']; appointments = [{ ...original, patientName: '', doctorName: '', centerName: '' }];
   render(<App />); await screen.findByText('Paciente no disponible');
-  expect(table().getByText('Doctor no disponible')).toBeTruthy(); expect(table().getByText('Sucursal no disponible')).toBeTruthy(); expect(screen.queryByText(/ID:/)).toBeNull();
+  expect(table().getByText('Doctor no disponible',{selector:'strong'})).toBeTruthy(); expect(table().getByText('Sucursal no disponible')).toBeTruthy(); expect(screen.queryByText(/ID:/)).toBeNull();
 });
 async function openNew() {
   const user = userEvent.setup();
@@ -108,7 +117,7 @@ it('restringe ruta y navegación sin appointments.view', async () => {
 });
 it('lista citas con nombres, horas, motivo y navegación', async () => {
   render(<App />); await screen.findByText('Ana Paciente');
-  expect(table().getByText('Marta Doctor')).toBeTruthy(); expect(table().getByText('Control')).toBeTruthy();
+  expect(table().getByText('Marta Doctor',{selector:'strong'})).toBeTruthy(); expect(table().getByText('Control')).toBeTruthy();
   expect(table().getByText('Central')).toBeTruthy(); expect(table().queryByRole('columnheader', { name: 'Especialidad' })).toBeNull();
   expect(table().getByText('Programada', { selector: 'span' })).toBeTruthy();
   expect(screen.getByRole('link', { name: 'Agenda / Citas' }).getAttribute('aria-current')).toBe('page');
@@ -178,19 +187,21 @@ it('cambiar duración consulta otro intervalo completo', async () => {
 });
 it.each([['appointments.create', 'Nueva cita'], ['appointments.update', 'Editar cita'], ['appointments.cancel', 'Cancelar cita']])(
   'oculta acción sin %s', async (permission, button) => {
-    permissions = permissions.filter(p => p !== permission); render(<App />); await screen.findByText('Ana Paciente');
+    permissions = permissions.filter(p => p !== permission); render(<App />); await userEvent.click(await screen.findByRole('button',{name:/Ana Paciente,/}));
     expect(screen.queryByRole('button', { name: button })).toBeNull();
     if (permission === 'appointments.update') expect(screen.queryByLabelText('Estado de cita de Ana Paciente')).toBeNull();
     if (permission === 'appointments.cancel') expect(within(screen.getByLabelText('Estado de cita de Ana Paciente')).queryByRole('option', { name: 'Cancelada' })).toBeNull();
   });
 it('cancela con permiso independiente de update', async () => {
   permissions = permissions.filter(p => p !== 'appointments.update'); render(<App />);
+  await userEvent.click(await screen.findByRole('button',{name:/Ana Paciente,/}));
   await userEvent.click(await screen.findByRole('button', { name: 'Cancelar cita' }));
   await waitFor(() => expect(table().getByText('Cancelada')).toBeTruthy());
   expect(JSON.parse(String(writes('PATCH')[0][1]?.body))).toEqual({ status: 'CANCELLED' });
 });
 it('cambia otro estado con update sin cancel', async () => {
   permissions = permissions.filter(p => p !== 'appointments.cancel'); render(<App />);
+  await userEvent.click(await screen.findByRole('button',{name:/Ana Paciente,/}));
   await userEvent.selectOptions(await screen.findByLabelText('Estado de cita de Ana Paciente'), 'CONFIRMED');
   await waitFor(() => expect(table().getByText('Confirmada', { selector: 'span' })).toBeTruthy());
   expect(JSON.parse(String(writes('PATCH')[0][1]?.body))).toEqual({ status: 'CONFIRMED' });
@@ -212,16 +223,17 @@ it('traduce todos los estados', async () => {
   render(<App />); await screen.findAllByText('Ana Paciente');
   for (const label of Object.values(appointmentStates)) expect(table().getByText(label, { selector: 'span' })).toBeTruthy();
 });
-it('filtra todas las páginas por fecha, doctor, sucursal, especialidad y estado', async () => {
+it('consulta la agenda por fecha, doctor, sucursal, especialidad y estado', async () => {
   extraPage = true;
   appointments.push({ ...original, id: 'a2', doctorId: 'd2', centerId: 'c2', specialtyId: 's2', appointmentDate: '2030-01-08', status: 'CONFIRMED', reason: 'Segunda' });
-  render(<App />); await screen.findByText('Segunda'); const user = userEvent.setup();
-  await user.type(screen.getByLabelText('Filtrar fecha'), '2030-01-08');
+  render(<App />); await screen.findByText('Control'); const user = userEvent.setup();
+  await user.click(screen.getByText(/Filtros ·/));
+  fireEvent.change(screen.getByLabelText('Filtrar fecha'),{target:{value:'2030-01-08'}});
   for (const [label, value] of [['doctor', 'd2'], ['sucursal', 'c2'], ['especialidad', 's2'], ['estado', 'CONFIRMED']])
     await user.selectOptions(screen.getByLabelText(`Filtrar ${label}`), value);
-  expect(table().queryByText('Control')).toBeNull(); expect(table().getByText('Segunda')).toBeTruthy();
+  await waitFor(()=>expect(table().queryByText('Control')).toBeNull()); expect(await screen.findByText('Segunda')).toBeTruthy();
   await user.selectOptions(screen.getByLabelText('Filtrar estado'), 'CANCELLED');
-  expect(screen.getByText('No hay citas para los filtros seleccionados.')).toBeTruthy();
+  await waitFor(()=>expect(table().queryByText('Segunda')).toBeNull());expect(screen.getByRole('region',{name:'Horarios por doctor'})).toBeTruthy();
 });
 it('muestra loading de citas', async () => {
   let release!: () => void; listWait = new Promise<void>(resolve => { release = resolve; }); render(<App />);
@@ -229,6 +241,7 @@ it('muestra loading de citas', async () => {
 });
 it('edita datos conservando explícitamente su reserva actual', async () => {
   render(<App />); await screen.findByText('Ana Paciente'); const user = userEvent.setup();
+  await user.click(screen.getByRole('button',{name:/Ana Paciente,/}));
   await user.click(screen.getByRole('button', { name: 'Editar cita' }));
   await screen.findByRole('option', { name: '08:00 – 08:30 (reserva actual)' });
   await user.selectOptions(screen.getByLabelText('Horario disponible'), 'current');
@@ -240,6 +253,7 @@ it('edita datos conservando explícitamente su reserva actual', async () => {
 });
 it('edita horario con un slot disponible', async () => {
   render(<App />); await screen.findByText('Ana Paciente'); const user = userEvent.setup();
+  await user.click(screen.getByRole('button',{name:/Ana Paciente,/}));
   await user.click(screen.getByRole('button', { name: 'Editar cita' })); await screen.findByRole('option', { name: '09:00 – 09:30' });
   await user.selectOptions(screen.getByLabelText('Horario disponible'), '09:00:00|09:30:00');
   await user.click(screen.getByRole('button', { name: 'Guardar cita' }));
@@ -248,6 +262,7 @@ it('edita horario con un slot disponible', async () => {
 });
 it('no sobrescribe una cita editada por otro usuario', async () => {
   render(<App />); await screen.findByText('Ana Paciente'); const user = userEvent.setup();
+  await user.click(screen.getByRole('button',{name:/Ana Paciente,/}));
   await user.click(screen.getByRole('button', { name: 'Editar cita' })); await screen.findByRole('option', { name: '08:00 – 08:30 (reserva actual)' });
   await user.selectOptions(screen.getByLabelText('Horario disponible'), 'current'); appointments[0].status = 'CANCELLED';
   await user.click(screen.getByRole('button', { name: 'Guardar cita' }));
@@ -255,6 +270,24 @@ it('no sobrescribe una cita editada por otro usuario', async () => {
 });
 it('sin acceso a catálogos muestra identificadores sin hacer consultas prohibidas', async () => {
   permissions = ['appointments.view', 'appointments.create']; render(<App />);
-  expect(await screen.findByText('Ana Paciente')).toBeTruthy(); expect(table().getByText('Marta Doctor')).toBeTruthy(); expect(table().getByText('Central')).toBeTruthy(); expect(screen.queryByText(/ID:/)).toBeNull(); expect((screen.getByRole('button', { name: 'Nueva cita' }) as HTMLButtonElement).disabled).toBe(true);
+  expect(await screen.findByText('Ana Paciente')).toBeTruthy(); expect(table().getByText('Marta Doctor',{selector:'strong'})).toBeTruthy(); expect(table().getByText('Central')).toBeTruthy(); expect(screen.queryByText(/ID:/)).toBeNull(); expect((screen.getByRole('button', { name: 'Nueva cita' }) as HTMLButtonElement).disabled).toBe(true);
   expect(fetchMock.mock.calls.some(([url]) => /\/(patients|doctors|centers|specialties)(\?|$)/.test(String(url)))).toBe(false);
+});
+
+it('navega por día anterior, siguiente y Hoy sin convertir las horas',async()=>{
+ render(<App/>);await screen.findByText('Ana Paciente');const user=userEvent.setup();
+ await user.click(screen.getByRole('button',{name:'Día siguiente'}));
+ await waitFor(()=>expect((screen.getByLabelText('Filtrar fecha') as HTMLInputElement).value).toBe('2030-01-08'));
+ await user.click(screen.getByRole('button',{name:'Día anterior'}));
+ expect((screen.getByLabelText('Filtrar fecha') as HTMLInputElement).value).toBe('2030-01-07');
+ await user.click(screen.getByRole('button',{name:'Día anterior'}));await user.click(screen.getByRole('button',{name:'Hoy'}));
+ expect((screen.getByLabelText('Filtrar fecha') as HTMLInputElement).value).toBe('2030-01-07');
+ expect(await screen.findByRole('button',{name:/Ana Paciente, 08:00–08:30/})).toBeTruthy();
+});
+it('abre y cierra detalle con notas y conserva la agenda',async()=>{
+ render(<App/>);await userEvent.click(await screen.findByRole('button',{name:/Ana Paciente,/}));
+ const detail=within(screen.getByRole('dialog',{name:'Detalle de cita'}));
+ expect(detail.getByText('Nota')).toBeTruthy();expect(detail.getByText('Central')).toBeTruthy();
+ await userEvent.click(detail.getByRole('button',{name:'Cerrar detalle'}));
+ expect(screen.queryByRole('dialog')).toBeNull();expect(screen.getByRole('region',{name:'Agenda diaria'})).toBeTruthy();
 });

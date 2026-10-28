@@ -28,3 +28,7 @@ public sealed record AppointmentListResponse(AppointmentResponse[] Items, int To
 public sealed record AvailabilitySlot(TimeOnly StartTime, TimeOnly EndTime);
 public sealed record AvailabilityResponse(Guid DoctorId, Guid CenterId, Guid SpecialtyId, DateOnly Date,
     int DurationMinutes, AvailabilitySlot[] Slots);
+
+public sealed record AgendaDoctor(Guid Id, Guid UserId, string FirstName, string LastName, string[] Specialties);
+public sealed record AgendaInterval(Guid DoctorId, Guid CenterId, string CenterName, TimeOnly StartTime, TimeOnly EndTime, TimeOnly? BreakStart, TimeOnly? BreakEnd);
+public sealed record AgendaResponse(DateOnly Date, int SlotMinutes, AgendaDoctor[] Doctors, AgendaInterval[] WorkingIntervals, AppointmentResponse[] Appointments);

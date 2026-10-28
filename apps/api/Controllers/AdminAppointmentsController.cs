@@ -13,6 +13,10 @@ public sealed class AdminAppointmentsController(AppointmentsService service) : C
     [HttpGet, RequirePermission("appointments.view")]
     public async Task<ActionResult<AppointmentListResponse>> List([FromQuery] int page = 1, [FromQuery] int pageSize = 50)
         => Ok(await service.List(page, pageSize));
+    [HttpGet("agenda"), RequirePermission("appointments.view")]
+    public async Task<ActionResult<AgendaResponse>> Agenda([FromQuery, BindRequired] DateOnly date,
+        [FromQuery] Guid? doctorId, [FromQuery] Guid? centerId, [FromQuery] Guid? specialtyId, [FromQuery] string? status)
+        => Ok(await service.Agenda(date, doctorId, centerId, specialtyId, status));
     [HttpGet("{id:guid}"), RequirePermission("appointments.view")]
     public async Task<ActionResult<AppointmentResponse>> Get(Guid id) => Ok(await service.Get(id));
     [HttpGet("availability"), RequirePermission("appointments.view")]
