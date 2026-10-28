@@ -12,7 +12,8 @@ const mock=vi.fn(async(input:RequestInfo|URL)=>{const url=String(input);
  if(url.includes('/api/doctor/me/appointments')){if(pending)return new Promise<Response>(()=>{});if(failure)return new Response(JSON.stringify({title:'No hay perfil activo.'}),{status:403});const q=new URL(url).searchParams;const date=q.get('date')!;return new Response(JSON.stringify({from:q.get('view')==='week'?'2026-10-12':date,to:'2026-11-01',items:empty?[]:[{...item,date}]}));}
  return new Response('',{status:404});
 });
-beforeEach(()=>{empty=false;failure=false;pending=false;user.roles=['DOCTOR'];user.permissions=['patients.view'];setSession(null);window.location.hash='/doctor/appointments';mock.mockClear();vi.stubGlobal('fetch',mock);});
+const defaultMock=mock.getMockImplementation()!;
+beforeEach(()=>{mock.mockReset();mock.mockImplementation(defaultMock);empty=false;failure=false;pending=false;user.roles=['DOCTOR'];user.permissions=['patients.view'];setSession(null);window.location.hash='/doctor/appointments';mock.mockClear();vi.stubGlobal('fetch',mock);});
 afterEach(()=>{cleanup();setSession(null);vi.unstubAllGlobals();});
 async function ready(){render(<App/>);await screen.findByText('Andrea Bejar');}
 it('offers own consultation beside appointment details with clinical permissions',async()=>{user.permissions.push('clinical_history.view','clinical_history.create');await ready();expect(screen.getByRole('link',{name:'Iniciar consulta'}).getAttribute('href')).toBe('#/doctor/consultation?appointment=appointment');expect(screen.getByRole('button',{name:'Ver cita'})).toBeTruthy();});
@@ -56,4 +57,39 @@ it('successful doctor login leaves an old administrative route for the doctor da
   await userEvent.type(screen.getByLabelText('Email'),'doctor@test.example');await userEvent.type(screen.getByLabelText('Contraseña'),'test-password-example');
   await userEvent.click(screen.getByRole('button',{name:'Ingresar'}));await waitFor(()=>expect(window.location.hash).toBe('#/doctor/appointments'));
   expect(await screen.findByRole('navigation',{name:'Navegación principal'})).toBeTruthy();
+});
+
+it('clinical card emphasizes patient and time with a primary consultation action',async()=>{
+ user.permissions.push('clinical_history.view','clinical_history.create');await ready();
+ const card=screen.getByRole('article');
+ expect(card.querySelector('.doctor-appointment-patient strong')?.textContent).toBe('Andrea Bejar');
+ expect(card.querySelector('.doctor-appointment-time strong')?.textContent).toBe('08:00–08:30');
+ expect(within(card).getByText('Confirmada').classList.contains('badge')).toBe(true);
+ expect(within(card).getByRole('link',{name:'Iniciar consulta'}).classList.contains('doctor-consultation-button')).toBe(true);
+ expect(screen.getByLabelText('Calendario compacto')).toBeTruthy();
+});
+it('empty day retains calendar and all daily summary counts',async()=>{
+ empty=true;render(<App/>);await screen.findByText('No tienes citas para esta fecha.');
+ expect(screen.getByLabelText('Calendario compacto')).toBeTruthy();
+ expect(screen.getByRole('heading',{name:'Resumen diario'})).toBeTruthy();
+ expect([...document.querySelectorAll('.doctor-summary-row dd')].map(x=>x.textContent)).toEqual(['0','0','0','0','0','0']);
+});
+it.each(['COMPLETED','CANCELLED','NO_SHOW'])('does not offer consultation for %s',async(status)=>{
+ user.permissions.push('clinical_history.view','clinical_history.create');
+ mock.mockImplementation(async(input)=>{
+  if(String(input).endsWith('/refresh'))return new Response(JSON.stringify(session));
+  if(String(input).includes('/api/doctor/me/appointments'))return new Response(JSON.stringify({from:item.date,to:item.date,items:[{...item,status}]}));
+  return new Response('',{status:404});
+ });
+ await ready();expect(screen.queryByRole('link',{name:'Iniciar consulta'})).toBeNull();
+ expect(screen.getByRole('button',{name:'Ver cita'})).toBeTruthy();
+});
+
+it('renders multiple same-day appointments as separate cards',async()=>{
+ mock.mockImplementation(async(input)=>{
+  if(String(input).endsWith('/refresh'))return new Response(JSON.stringify(session));
+  return new Response(JSON.stringify({from:item.date,to:item.date,items:[item,{...item,appointmentId:'second',startTime:'09:00:00',endTime:'10:00:00',patient:{...item.patient,firstName:'Maria'}}]}));
+ });
+ await ready();expect(screen.getAllByRole('article')).toHaveLength(2);
+ expect(screen.getByText('Maria Bejar')).toBeTruthy();expect(screen.getByText('09:00–10:00')).toBeTruthy();
 });

@@ -1,17 +1,38 @@
+.doctor-agenda-heading h1 { margin-bottom: .25rem; }
+.doctor-agenda-heading p { color: var(--color-muted); margin: 0 0 1.25rem; }
 .doctor-toolbar,.doctor-toolbar [role=group],.doctor-month-controls { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 .doctor-toolbar { margin-bottom: 1rem; }
 .doctor-toolbar label { margin-right: auto; }
 .doctor-agenda-layout { display: grid; grid-template-columns: minmax(0,1fr) 270px; gap: 1rem; align-items: start; }
-.doctor-agenda-side { display: grid; gap: 1rem; }
+.doctor-agenda-main { min-width: 0; }
+.doctor-agenda-main h2 { font-size: 1rem; margin-bottom: 1.25rem; }
+.doctor-agenda-side { display: grid; gap: 1rem; min-width: 0; }
 .doctor-calendar { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: .3rem; text-align: center; }
 .doctor-calendar button { min-width: 0; padding: .5rem .2rem; min-height: 4rem; }
 .doctor-calendar small { display: block; }
 .doctor-calendar.compact button { min-height: 2rem; }
 .doctor-month-controls { justify-content: space-between; margin-bottom: .75rem; }
 .doctor-month-controls strong { font-size: .85rem; }
-.doctor-appointment { display: grid; grid-template-columns: 100px minmax(0,1.4fr) minmax(0,1fr) minmax(100px,1fr); gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--color-border); overflow-wrap: anywhere; }
-.doctor-appointment small { display: block; color: var(--color-muted); margin-bottom: .25rem; }
-.doctor-appointment button { display: block; margin-top: .5rem; }
+.doctor-appointment-list { display: grid; gap: 1rem; margin-bottom: 1rem; }
+.doctor-appointment { display: grid; grid-template-columns: minmax(110px,.65fr) minmax(0,1.4fr) minmax(0,1fr) auto; gap: 1rem; align-items: center; padding: 1.25rem; border: 1px solid #d3e8eb; border-left: 4px solid #079b9e; border-radius: 12px; background: linear-gradient(110deg,#f0fafa,#fff 65%); overflow-wrap: anywhere; }
+.doctor-appointment small { display: block; color: var(--color-muted); margin-bottom: .25rem; font-size: .75rem; }
+.doctor-appointment-time strong { color: #116573; font-size: 1.05rem; white-space: nowrap; }
+.doctor-appointment-patient strong { display: block; font-size: 1.1rem; line-height: 1.4; }
+.doctor-appointment-patient p { margin: .4rem 0 0; color: var(--color-muted); font-size: .85rem; }
+.doctor-appointment-meta { font-size: .8rem; }
+.doctor-appointment-meta small:not(:first-child) { margin-top: .65rem; }
+.doctor-appointment-actions { display: flex; flex-direction: column; align-items: stretch; gap: .5rem; }
+.doctor-appointment-actions .badge { align-self: flex-end; margin-bottom: .25rem; border-radius: 20px; background: #e4f3f3; color: #17616a; font-size: .75rem; }
+.doctor-appointment-actions .appointment-status-cancelled,
+.doctor-appointment-actions .appointment-status-no_show { background: #f7eeee; color: #874b4b; }
+.doctor-appointment-actions .appointment-status-completed { background: #edf0f4; color: #526579; }
+.workspace-content .doctor-appointment a.doctor-consultation-button { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: .55rem .85rem; border-radius: 6px; background: #007b80; color: #fff; font-size: .85rem; font-weight: 600; text-decoration: none; }
+.workspace-content .doctor-appointment a.doctor-consultation-button:hover { background: #00666b; color: #fff; }
+.workspace-content .doctor-appointment a.doctor-consultation-button:focus-visible { outline: 3px solid #25bfc4; outline-offset: 3px; }
+.doctor-agenda-empty { padding: 2rem 1rem; text-align: center; background: #f4f9fa; border: 1px dashed #c9dfe3; border-radius: 12px; color: var(--color-muted); }
+.doctor-agenda-empty > span { font-size: 1.8rem; color: #168b94; }
+.doctor-agenda-empty p { margin: .5rem 0 0; }
 .doctor-summary-row { display: flex; justify-content: space-between; gap: .5rem; padding: .3rem 0; }
+@media(max-width:1400px) { .doctor-appointment { grid-template-columns: minmax(0,1fr) auto; } .doctor-appointment-time { grid-column: 1; } .doctor-appointment-patient { grid-column: 1; } .doctor-appointment-meta { grid-column: 1; } .doctor-appointment-actions { grid-column: 2; grid-row: 1 / 4; } }
 @media(max-width:1100px) { .doctor-agenda-layout { grid-template-columns: minmax(0,1fr); } .doctor-agenda-side { grid-template-columns: repeat(2,minmax(0,1fr)); } }
-@media(max-width:650px) { .doctor-appointment { grid-template-columns: minmax(0,1fr) minmax(0,1fr); } .doctor-agenda-side { grid-template-columns: minmax(0,1fr); } .doctor-calendar:not(.compact) button { font-size: .75rem; } }
+@media(max-width:650px) { .doctor-appointment { grid-template-columns: minmax(0,1fr); padding: 1rem; } .doctor-appointment-actions { grid-column: 1; grid-row: auto; } .doctor-appointment-actions .badge { align-self: flex-start; } .doctor-agenda-side { grid-template-columns: minmax(0,1fr); } .doctor-calendar:not(.compact) button { font-size: .75rem; } .doctor-toolbar [role=group] { width: 100%; } .doctor-toolbar [role=group] button { flex: 1; } }

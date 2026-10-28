@@ -32,20 +32,20 @@ export default function DoctorDashboard() {
     {days.map(day => { const count = agenda?.items.filter(a => a.date === day).length ?? 0; return <button key={day} aria-label={label(day)} aria-pressed={date === day} className={date === day ? 'selected' : 'secondary'} onClick={() => choose(day)}>{parse(day).getDate()}{!compact && <small>{count} citas</small>}</button>; })}
   </div>; }
   function list(items: Appointment[]) { return items.length ? <div className="doctor-appointment-list">{items.map(a => <article className="doctor-appointment" key={a.appointmentId}>
-    <div><small>Hora</small><strong>{a.startTime.slice(0, 5)}–{a.endTime.slice(0, 5)}</strong></div>
-    <div><small>Paciente</small><strong>{a.patient.firstName} {a.patient.lastName}</strong><p>{a.reason || 'Sin motivo registrado'}</p></div>
-    <div><small>Especialidad</small><span>{a.specialty.name}</span><small>Sucursal</small><span>{a.center.name}</span></div>
-    <div><span className={`badge appointment-status-${a.status.toLowerCase()}`}>{appointmentStates[a.status]}</span><button className="secondary" onClick={() => setDetail(a)}>Ver cita</button>{can('clinical_history.view') && can('clinical_history.create') && ['SCHEDULED','CONFIRMED','IN_PROGRESS'].includes(a.status) && <a href={`#/doctor/consultation?appointment=${a.appointmentId}`}>Iniciar consulta</a>}</div>
-  </article>)}</div> : <p>No tienes citas para esta fecha.</p>; }
+    <div className="doctor-appointment-time"><small>Hora</small><strong>{a.startTime.slice(0, 5)}–{a.endTime.slice(0, 5)}</strong></div>
+    <div className="doctor-appointment-patient"><small>Paciente</small><strong>{a.patient.firstName} {a.patient.lastName}</strong><p>{a.reason || 'Sin motivo registrado'}</p></div>
+    <div className="doctor-appointment-meta"><small>Especialidad</small><span>{a.specialty.name}</span><small>Sucursal</small><span>{a.center.name}</span></div>
+    <div className="doctor-appointment-actions"><span className={`badge appointment-status-${a.status.toLowerCase()}`}>{appointmentStates[a.status]}</span><button className="secondary" onClick={() => setDetail(a)}>Ver cita</button>{can('clinical_history.view') && can('clinical_history.create') && ['SCHEDULED','CONFIRMED','IN_PROGRESS'].includes(a.status) && <a className="doctor-consultation-button" href={`#/doctor/consultation?appointment=${a.appointmentId}`}>Iniciar consulta</a>}</div>
+  </article>)}</div> : <div className="doctor-agenda-empty"><span aria-hidden="true">▦</span><p>No tienes citas para esta fecha.</p></div>; }
   const weekDays = agenda ? Array.from({ length: 7 }, (_, i) => addDays(agenda.from, i)) : [];
   return <AdminLayout path="/doctor/appointments" doctorPortal>
-      <h1>Mis citas</h1>
+      <header className="doctor-agenda-heading"><h1>Mis citas</h1><p>Consulta tu agenda y acompaña a tus pacientes.</p></header>
       <section className="card doctor-toolbar" aria-label="Controles de agenda"><button className="secondary" aria-label="Anterior" onClick={() => move(-1)}>‹</button><button className="secondary" onClick={() => choose(localDate(new Date()))}>Hoy</button><button className="secondary" aria-label="Siguiente" onClick={() => move(1)}>›</button>
         <label>Fecha<input type="date" value={date} min="1900-01-01" max="9998-12-31" onChange={e => { if (e.target.value) { setDate(e.target.value); setMonth(e.target.value); } }} /></label>
         <div role="group" aria-label="Vista">{(['day','week','month'] as View[]).map((v,i) => <button key={v} className={view === v ? '' : 'secondary'} aria-pressed={view === v} onClick={() => setView(v)}>{['Día','Semana','Mes'][i]}</button>)}</div>
       </section>
       {loading && <p role="status">Cargando citas…</p>}{error && <p role="alert">{error}</p>}
-      {!loading && !error && agenda && <div className="doctor-agenda-layout"><section className="card">
+      {!loading && !error && agenda && <div className="doctor-agenda-layout"><section className="card doctor-agenda-main">
         {view === 'day' && <><h2>{label(date)}</h2>{list(agenda.items)}</>}
         {view === 'week' && weekDays.map(day => <section key={day}><h2>{label(day)}</h2>{list(agenda.items.filter(a => a.date === day))}</section>)}
         {view === 'month' && <><h2>{parse(date).toLocaleDateString('es-BO', { month: 'long', year: 'numeric' })}</h2>{calendar(date, false)}</>}
