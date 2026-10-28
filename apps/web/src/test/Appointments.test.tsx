@@ -73,12 +73,12 @@ beforeEach(() => {
 });
 const writes = (method: string) => fetchMock.mock.calls.filter(([url, init]) => String(url).includes('/appointments') && init?.method === method);
 const availabilityCalls = () => fetchMock.mock.calls.filter(([url]) => String(url).includes('/availability?'));
-const table = () => within(screen.getByRole('region',{name:'Agenda diaria'}));
+const table = () => within(screen.getByRole('region',{name:'Citas por hora'}));
 it('daily grid shows names without UUIDs or catalog permissions', async () => {
   permissions = ['appointments.view'];
   appointments = [{ ...original, patientId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', doctorId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', centerId: 'cccccccc-cccc-cccc-cccc-cccccccccccc' }];
   render(<App />); await screen.findByText('Ana Paciente');
-  expect(screen.getByRole('region',{name:'Horarios por doctor'})).toBeTruthy();
+  expect(screen.getByRole('region',{name:'Citas por hora'})).toBeTruthy();
   expect(table().getByText('Marta Doctor',{selector:'strong'})).toBeTruthy(); expect(table().getByText('Central')).toBeTruthy();
   for (const id of [appointments[0].patientId, appointments[0].doctorId, appointments[0].centerId]) expect(document.body.textContent).not.toContain(id);
   expect(fetchMock.mock.calls.some(([url]) => /\/api\/admin\/(doctors|centers|patients)(\?|$)/.test(String(url)))).toBe(false);
@@ -233,7 +233,7 @@ it('consulta la agenda por fecha, doctor, sucursal, especialidad y estado', asyn
     await user.selectOptions(screen.getByLabelText(`Filtrar ${label}`), value);
   await waitFor(()=>expect(table().queryByText('Control')).toBeNull()); expect(await screen.findByText('Segunda')).toBeTruthy();
   await user.selectOptions(screen.getByLabelText('Filtrar estado'), 'CANCELLED');
-  await waitFor(()=>expect(table().queryByText('Segunda')).toBeNull());expect(screen.getByRole('region',{name:'Horarios por doctor'})).toBeTruthy();
+  await waitFor(()=>expect(table().queryByText('Segunda')).toBeNull());expect(screen.getByRole('region',{name:'Citas por hora'})).toBeTruthy();
 });
 it('muestra loading de citas', async () => {
   let release!: () => void; listWait = new Promise<void>(resolve => { release = resolve; }); render(<App />);

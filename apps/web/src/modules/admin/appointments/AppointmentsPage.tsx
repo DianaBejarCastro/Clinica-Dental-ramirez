@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../../../services/api';
 import { Feedback, PageTitle, useAction, usePermissions } from '../shared';
 import type { Doctor } from '../types';
-import DailyAgenda, { clinicToday, shiftDate, type Agenda } from './DailyAgenda';
+import DailyAgenda, { AgendaCalendarIcon, clinicToday, shiftDate, type Agenda } from './DailyAgenda';
 import AppointmentForm from './AppointmentForm';
 import { allPages, appointmentStates, timeLabel, type Appointment, type AppointmentStatus, type Option } from './types';
 
@@ -20,7 +20,10 @@ export default function AppointmentsPage() {
   const patientsView = can('patients.view'), doctorsView = can('doctors.view'), centersView = can('centers.view'), specialtiesView = can('specialties.view');
   useEffect(() => {
     let active = true; setLoading(true); action.setError('');
-    api<Agenda>('/api/admin/appointments/agenda?'+new URLSearchParams(Object.entries(filters).filter(([,v])=>!!v))).then(data => { if (active) {setAgenda(data);setAppointments(data.appointments);} })
+    Promise.all([
+      api<Agenda>('/api/admin/appointments/agenda?'+new URLSearchParams(Object.entries(filters).filter(([,v])=>!!v))),
+      filters.centerId||filters.specialtyId||filters.status ? api<Agenda>('/api/admin/appointments/agenda?'+new URLSearchParams({date:filters.date})) : Promise.resolve(null),
+    ]).then(([data,unfiltered]) => { if (active) {setAgenda({...data,occupiedAppointments:unfiltered?.appointments??data.appointments});setAppointments(data.appointments);} })
       .catch(error => { if (active) { setAgenda(null);setAppointments([]); action.setError(error.message); } })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -51,20 +54,19 @@ export default function AppointmentsPage() {
     void action.run(async () => { await api(`/api/admin/appointments/${a.id}/status`, 'PATCH', { status }); setSelected(null);setEditing(null); setRevision(v => v + 1); }, 'Estado de la cita actualizado.');
   }
   return <>
-    <PageTitle title="Agenda / Citas" description="Consulta las citas y reserva horarios disponibles por doctor y sucursal.">
+    <div className="agenda-page-heading"><span className="agenda-heading-icon" aria-hidden="true">▦</span><PageTitle title="Agenda de Citas" description="Visualiza y gestiona todas las citas por fecha.">
       {can('appointments.create') && <button disabled={action.busy || !catalogsReady} onClick={() => setEditing('new')}>Nueva cita</button>}
-    </PageTitle>
+    </PageTitle></div>
     <Feedback {...action} /><Feedback error={catalogError} />
     {catalogLoading && <p role="status">Cargando catálogos…</p>}
     {(!patientsView || !doctorsView || !centersView || !specialtiesView) && <p className="muted">Para crear o editar citas necesitas permisos de consulta de pacientes, doctores, sucursales y especialidades.</p>}
     <div className="agenda-toolbar" aria-label="Navegación de fecha">
       <button className="secondary" aria-label="Día anterior" onClick={()=>setFilters({...filters,date:shiftDate(filters.date,-1)})}>←</button>
-      <label>Filtrar fecha<input type="date" required value={filters.date} onChange={e=>{if(e.target.value)setFilters({...filters,date:e.target.value});}}/></label>
+      <label className="agenda-date-picker"><span className="agenda-visually-hidden">Filtrar fecha</span><input type="date" required value={filters.date} onChange={e=>{if(e.target.value)setFilters({...filters,date:e.target.value});}}/></label>
       <strong>{new Date(filters.date+'T12:00:00Z').toLocaleDateString('es-BO',{timeZone:'America/La_Paz',weekday:'long',year:'numeric',month:'long',day:'numeric'})}</strong>
       <button className="secondary" onClick={()=>setFilters({...filters,date:clinicToday()})}>Hoy</button>
       <button className="secondary" aria-label="Día siguiente" onClick={()=>setFilters({...filters,date:shiftDate(filters.date,1)})}>→</button>
-    </div>
-    <details className="card agenda-filters"><summary>Filtros · {filters.centerId?filterName(centers,filters.centerId,'centerId'):'Todas las sucursales'}</summary><div className="editor">
+    <details className="agenda-filters"><summary>Filtros · {filters.centerId?filterName(centers,filters.centerId,'centerId'):'Todas las sucursales'}</summary><div className="editor">
       {([['doctorId', 'doctor', doctorNames], ['centerId', 'sucursal', centers], ['specialtyId', 'especialidad', specialties]] as const).map(([field, label, options]) =>
         <label key={field}>Filtrar {label}<select value={filters[field]} onChange={e => setFilters({ ...filters, [field]: e.target.value })}>
           <option value="">Todos</option>{optionsFor(options, field).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
@@ -72,7 +74,7 @@ export default function AppointmentsPage() {
       <label>Filtrar estado<select value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}><option value="">Todos</option>
         {Object.entries(appointmentStates).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
       </select></label>
-    </div></details>
+    </div></details></div>
     {editing && catalogsReady && can(editing === 'new' ? 'appointments.create' : 'appointments.update') &&
       <AppointmentForm key={editing === 'new' ? 'new' : editing.id} edit={editing === 'new' ? null : editing}
         doctors={doctors} centers={centers} specialties={specialties}
