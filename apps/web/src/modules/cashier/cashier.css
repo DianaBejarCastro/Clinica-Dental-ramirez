@@ -13,3 +13,50 @@
 .cashier-payments form button { margin-top: 1rem; }
 .cashier-table { max-width: 100%; overflow-x: auto; }
 @media(max-width:1000px) { .cashier-columns { grid-template-columns: minmax(0,1fr); } }
+.cashier-header { display:grid; grid-template-columns:minmax(260px,1fr) minmax(0,1.5fr); gap:1rem; }
+.cashier-patient { display:flex; align-items:center; gap:1rem; }
+.cashier-patient h2 { margin:0 0 .6rem; }
+.cashier-patient p { margin:.25rem 0; font-size:.8rem; color:var(--color-muted); }
+.cashier-initials { display:grid; place-items:center; flex-shrink:0; width:56px; height:56px; border-radius:50%; background:#dff3f2; color:#007d81; font-size:1.3rem; font-weight:700; }
+.cashier-totals { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.6rem; margin:0; }
+.cashier-totals>div { background:#eaf7f5; border:1px solid #d9ebeb; padding:1rem .8rem; border-radius:10px; }
+.cashier-totals>div:nth-child(2) { background:#edf6fc; }
+.cashier-totals>div:nth-child(3) { background:#fff6ea; }
+.cashier-totals>div:nth-child(4) { background:#f0f4f8; }
+.cashier-totals dt { font-size:.75rem; color:#526c7a; }
+.cashier-totals dd { font-size:1.05rem; color:#126773; }
+.cashier-finance-layout { display:grid; grid-template-columns:minmax(0,1fr) 320px; grid-template-rows:min-content 1fr; gap:1rem; align-items:start; }
+.cashier-payment-side { grid-column:2; grid-row:1 / 3; display:grid; gap:1rem; min-width:0; }
+.cashier-history { grid-column:1; }
+.cashier-payments h2 { font-size:1rem; }
+.cashier-filters { display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:1rem; }
+.cashier-filters button { font-size:.75rem; padding:.4rem .65rem; }
+.cashier-filters [aria-pressed=true] { background:#def3f2; border-color:#008c90; }
+.cashier-payments table { width:100%; font-size:.78rem; }
+.cashier-payments th,.cashier-payments td { padding:.7rem .5rem; }
+.cashier-payments .cashier-date,.cashier-money { white-space:nowrap; }
+.cashier-date small { display:block; margin-top:.3rem; color:var(--color-muted); }
+.cashier-selected { background:#eaf7f6; }
+.cashier-balance { color:#a46a23; font-weight:600; }
+.cashier-treatments td button { padding:.3rem; border-color:transparent; text-align:left; font-size:inherit; }
+.cashier-procedures { margin-top:1rem; }
+.cashier-procedures summary { cursor:pointer; color:var(--color-primary); }
+.cashier-payment-side form button[type=submit],.cashier-payment-side form button:not([type]) { width:100%; }
+.cashier-payment-side .cashier-full-payment { margin:0 0 1rem; font-size:.8rem; }
+.cashier-summary dl>div { display:flex; justify-content:space-between; gap:.8rem; padding:.5rem 0; }
+.cashier-summary dd { margin:0; font-weight:600; }
+.cashier-summary dl>div:last-child { border-top:1px solid var(--color-border); }
+@media(max-width:1200px) { .cashier-header { grid-template-columns:1fr; } .cashier-finance-layout { grid-template-columns:minmax(0,1fr); } .cashier-payment-side,.cashier-history { grid-column:1; grid-row:auto; } .cashier-payment-side { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) {
+ .cashier-totals { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .cashier-payment-side { grid-template-columns:minmax(0,1fr); }
+ .cashier-patient { align-items:flex-start; }
+ .cashier-payments table,.cashier-payments tbody,.cashier-payments tr,.cashier-payments td { display:block; }
+ .cashier-payments thead { display:none; }
+ .cashier-payments tr { padding:.5rem; border:1px solid #dce9ed; border-radius:8px; margin-bottom:.7rem; }
+ .cashier-payments td { border:0; padding:.3rem 0; white-space:normal; }
+ .cashier-payments td::before { content:attr(data-label); display:block; color:var(--color-muted); font-size:.7rem; }
+}
+
+.cashier-collection { padding-top:.5rem; }
+@media(max-width:1200px) { .cashier-finance-layout { grid-template-rows:auto; } .cashier-payment-side { align-items:start; } }

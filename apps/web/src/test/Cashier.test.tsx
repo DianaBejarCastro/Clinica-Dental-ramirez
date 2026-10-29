@@ -9,6 +9,7 @@ const patient={patientId:'patient',firstName:'Ana',lastName:'Paciente',documentN
 const base={treatmentPlanId:'plan',treatmentEpisodeId:'episode',patientProfileId:'patient',patientName:'Ana Paciente',patientDocumentNumber:'CI-123',patientPhone:'70000000',patientAge:36,treatmentTitle:'Tratamiento dental',doctorName:'Laura Prueba',startedAt:'2026-10-14T12:00:00Z',agreedTotal:1000,paidTotal:300,pendingBalance:700,paymentStatus:'PENDING'};
 const first={id:'payment',treatmentPlanId:'plan',treatmentTitle:'Tratamiento dental',doctorName:'Laura Prueba',amount:300,paidAt:'2026-10-14T12:00:00Z',paymentMethod:'CASH',reference:'REF-1',notes:null,recordedByName:'Caja Prueba',status:'PAID'};
 let treatment=structuredClone(base),payments=[{...first}],searchPending=false,postPending=false,conflict=false,empty=false,loadError=false;
+let multiple=false;
 let release:()=>void=()=>{};
 const mock=vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{
  const url=String(input);
@@ -20,12 +21,13 @@ const mock=vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{
   if(conflict)return new Response(JSON.stringify({title:'El pago supera el saldo pendiente.'}),{status:409});
   const b=JSON.parse(String(init.body));treatment={...treatment,paidTotal:treatment.paidTotal+b.amount,pendingBalance:treatment.pendingBalance-b.amount,paymentStatus:treatment.pendingBalance===b.amount?'PAID':'PENDING'};payments=[{...first,id:'new-payment',amount:b.amount,paymentMethod:b.paymentMethod,reference:b.reference,notes:b.notes},...payments];return new Response(null,{status:204});
  }
- if(url.endsWith('/patients/patient/treatments'))return new Response(JSON.stringify(empty?[]:[treatment]));
+ if(url.endsWith('/patients/patient/treatments'))return new Response(JSON.stringify(empty?[]:multiple?[treatment,{...treatment,treatmentPlanId:'plan2',treatmentTitle:'Control',agreedTotal:200,paidTotal:200,pendingBalance:0,paymentStatus:'PAID'}]:[treatment]));
  if(url.endsWith('/patients/patient/payments'))return new Response(JSON.stringify(payments));
+ if(url.endsWith('/treatments/plan2'))return new Response(JSON.stringify({treatment:{...treatment,treatmentPlanId:'plan2',treatmentTitle:'Control',agreedTotal:200,paidTotal:200,pendingBalance:0,paymentStatus:'PAID'},procedures:[],payments:[]}));
  if(url.endsWith('/treatments/plan'))return new Response(JSON.stringify({treatment,procedures:[{procedureName:'Limpieza',unitPrice:250,quantity:4,subtotal:1000,status:'ACCEPTED'}],payments}));
  return new Response('',{status:404});
 });
-beforeEach(()=>{setSession(null);treatment=structuredClone(base);payments=[{...first}];searchPending=false;postPending=false;conflict=false;empty=false;loadError=false;user.roles=['CASHIER'];user.permissions=['payments.view','payments.create'];window.location.hash='/cashier/payments';mock.mockClear();vi.stubGlobal('fetch',mock);});
+beforeEach(()=>{multiple=false;setSession(null);treatment=structuredClone(base);payments=[{...first}];searchPending=false;postPending=false;conflict=false;empty=false;loadError=false;user.roles=['CASHIER'];user.permissions=['payments.view','payments.create'];window.location.hash='/cashier/payments';mock.mockClear();vi.stubGlobal('fetch',mock);});
 afterEach(()=>{cleanup();setSession(null);vi.unstubAllGlobals();});
 async function ready(){render(<App/>);await screen.findByRole('heading',{name:'Cobros de tratamientos'});}
 async function choose(){await ready();await userEvent.type(screen.getByRole('combobox',{name:'Paciente'}),'Ana');await userEvent.click(await screen.findByRole('option'));await userEvent.click(await screen.findByRole('button',{name:/Tratamiento dental/}));await screen.findByRole('heading',{name:'Registrar pago'});}
@@ -35,17 +37,47 @@ it('cashier restoration redirects to Cobros with shared shell and single menu',a
 it('fresh cashier login redirects from an old administrative route',async()=>{window.location.hash='/users';mock.mockImplementationOnce(async()=>new Response('',{status:401}));render(<App/>);await screen.findByRole('button',{name:'Ingresar'});await userEvent.type(screen.getByLabelText('Email'),'caja@example.test');await userEvent.type(screen.getByLabelText('Contraseña'),'password-test-123');await userEvent.click(screen.getByRole('button',{name:'Ingresar'}));await screen.findByRole('heading',{name:'Cobros de tratamientos'});expect(window.location.hash).toBe('#/cashier/payments');});
 it('uses limited remote patient search and never loads all patients/admin endpoints',async()=>{await ready();expect(mock.mock.calls.some(([url])=>String(url).includes('/patients'))).toBe(false);await userEvent.type(screen.getByRole('combobox',{name:'Paciente'}),'CI-12');await screen.findByRole('option');const call=mock.mock.calls.find(([url])=>String(url).includes('/patients/search'))!;expect(String(call[0])).toContain('q=CI-12&limit=10');expect(mock.mock.calls.some(([url])=>String(url).includes('/api/admin/'))).toBe(false);});
 it('selects patient and financial treatment with header and amounts',async()=>{await choose();for(const text of ['Ana Paciente','Costo total','Total pagado','Saldo pendiente'])expect(screen.getByText(text)).toBeTruthy();expect(screen.getByText(/Documento: CI · CI-123 · Edad: 36/)).toBeTruthy();expect(document.querySelector('.cashier-totals')?.textContent).toMatch(/700/);});
-it('shows only read-only procedure columns without clinical data',async()=>{await choose();expect(screen.getByRole('heading',{name:'Procedimientos · solo lectura'})).toBeTruthy();expect(screen.getByText('Limpieza')).toBeTruthy();for(const name of ['SOAP','Anamnesis','Alergias','Diagnóstico','Editar procedimiento','Eliminar'])expect(screen.queryByText(name)).toBeNull();expect(screen.queryByLabelText('Precio unitario')).toBeNull();});
+it('shows only read-only procedure columns without clinical data',async()=>{await choose();await userEvent.click(screen.getByText('Procedimientos · solo lectura',{selector:'summary'}));expect(screen.getByRole('heading',{name:'Procedimientos · solo lectura'})).toBeTruthy();expect(screen.getByText('Limpieza')).toBeTruthy();for(const name of ['SOAP','Anamnesis','Alergias','Diagnóstico','Editar procedimiento','Eliminar'])expect(screen.queryByText(name)).toBeNull();expect(screen.queryByLabelText('Precio unitario')).toBeNull();});
 it('offers five controlled payment methods',async()=>{await choose();const select=screen.getByLabelText('Método de pago');expect(within(select).getAllByRole('option')).toHaveLength(6);for(const name of ['Efectivo','Transferencia','Tarjeta','QR','Otro'])expect(within(select).getByRole('option',{name})).toBeTruthy();});
 it('records payment reference and notes then refreshes amounts/history',async()=>{await choose();await fill();await userEvent.type(screen.getByLabelText('Referencia / N.º de transacción'),'TX-22');await userEvent.type(screen.getByLabelText('Notas'),'Abono');await userEvent.click(screen.getByRole('button',{name:'Registrar pago'}));await screen.findByText('Pago registrado.');const b=JSON.parse(String(posts()[0][1]!.body));expect(b).toMatchObject({amount:100,paymentMethod:'TRANSFER',reference:'TX-22',notes:'Abono',idempotencyKey:expect.any(String)});expect(b.recordedByUserId).toBeUndefined();expect(document.querySelector('.cashier-totals')?.textContent).toContain('600');expect(screen.getByText('TX-22')).toBeTruthy();});
 it('pending save disables submit and blocks double click',async()=>{await choose();await fill();postPending=true;await userEvent.dblClick(screen.getByRole('button',{name:'Registrar pago'}));expect(posts()).toHaveLength(1);expect((screen.getByRole('button',{name:'Registrando…'}) as HTMLButtonElement).disabled).toBe(true);release();await screen.findByText('Pago registrado.');});
 it('server overpayment shows controlled conflict',async()=>{await choose();await fill();conflict=true;await userEvent.click(screen.getByRole('button',{name:'Registrar pago'}));expect((await screen.findByRole('alert')).textContent).toContain('supera el saldo');expect(document.querySelector('.cashier-totals')?.textContent).toContain('700');});
 it('amount max prevents submitting an overpayment',async()=>{await choose();await fill('701');const amount=screen.getByLabelText('Importe a cobrar ahora (Bs)') as HTMLInputElement;expect(amount.max).toBe('700');expect(amount.checkValidity()).toBe(false);await userEvent.click(screen.getByRole('button',{name:'Registrar pago'}));expect(posts()).toHaveLength(0);});
 it('full payment shows paid state and no further payment form',async()=>{await choose();await fill('700');await userEvent.click(screen.getByRole('button',{name:'Registrar pago'}));await screen.findByText('Tratamiento pagado. No hay saldo pendiente.');expect(screen.queryByLabelText('Importe a cobrar ahora (Bs)')).toBeNull();expect(document.querySelector('.cashier-totals')?.textContent).toContain('0,00');});
-it('shows treatment and global patient payment histories',async()=>{await choose();for(const name of ['Pagos del tratamiento','Historial de pagos del paciente'])expect(screen.getByRole('heading',{name})).toBeTruthy();expect(screen.getAllByText('REF-1')).toHaveLength(1);expect(screen.getByRole('columnheader',{name:'Registrado por'})).toBeTruthy();expect(screen.getByRole('columnheader',{name:'Doctor'})).toBeTruthy();});
+it('shows treatment and global patient payment histories',async()=>{await choose();for(const name of ['Historial de pagos del paciente'])expect(screen.getByRole('heading',{name})).toBeTruthy();expect(screen.getAllByText('REF-1')).toHaveLength(1);expect(screen.getByRole('columnheader',{name:'Registrado por'})).toBeTruthy();expect(screen.getByRole('columnheader',{name:'Doctor'})).toBeTruthy();});
 it('search loading and empty results',async()=>{searchPending=true;await ready();await userEvent.type(screen.getByRole('combobox',{name:'Paciente'}),'Ana');await screen.findByText('Buscando…');expect(screen.queryByRole('button',{name:/Tratamiento dental/})).toBeNull();});
 it('no search matches is explicit',async()=>{empty=true;await ready();await userEvent.type(screen.getByRole('combobox',{name:'Paciente'}),'Ana');expect(await screen.findByText('No se encontraron coincidencias.')).toBeTruthy();});
 it('treatment error is controlled',async()=>{await ready();await userEvent.type(screen.getByRole('combobox',{name:'Paciente'}),'Ana');await screen.findByRole('option');loadError=true;await userEvent.click(screen.getByRole('option'));expect((await screen.findByRole('alert')).textContent).toBe('Cuenta no disponible.');});
 it('changing patient clears the previous account and form',async()=>{await choose();await userEvent.click(screen.getByRole('button',{name:'Cambiar paciente'}));await waitFor(()=>expect(screen.queryByLabelText('Importe a cobrar ahora (Bs)')).toBeNull());expect(screen.queryByRole('heading',{name:'Ana Paciente'})).toBeNull();});
 it('view-only financial user cannot collect',async()=>{user.permissions=['payments.view'];await choose();expect(screen.getByText('No tienes permiso para registrar pagos.')).toBeTruthy();expect(screen.queryByLabelText('Importe a cobrar ahora (Bs)')).toBeNull();});
 it('doctor without financial permission cannot open cashier route',async()=>{user.roles=['DOCTOR'];user.permissions=['patients.view'];render(<App/>);expect(await screen.findByText('Acceso restringido')).toBeTruthy();expect(mock.mock.calls.some(([url])=>String(url).includes('/api/cashier'))).toBe(false);});
+
+it('full payment action fills the exact backend balance',async()=>{
+ await choose();await userEvent.click(screen.getByRole('button',{name:'Pago completo'}));
+ expect((screen.getByLabelText('Importe a cobrar ahora (Bs)') as HTMLInputElement).value).toBe('700');
+ expect(posts()).toHaveLength(0);
+});
+it('patient summary uses account totals and history keeps readable timestamp and recorder',async()=>{
+ await choose();
+ const totals=document.querySelector('.cashier-totals')!;
+ expect(totals.textContent).toContain('1.000,00 Bs');expect(totals.textContent).toContain('300,00 Bs');expect(totals.textContent).toContain('700,00 Bs');
+ expect(totals.textContent).toContain('N.º de tratamientos1');
+ expect(screen.getByText('Caja Prueba')).toBeTruthy();
+ expect(document.querySelector('.cashier-history .cashier-date small')).toBeTruthy();
+});
+
+it('aggregates multiple accounts and selects paid treatment without permitting payment',async()=>{
+ multiple=true;await choose();
+ expect(document.querySelector('.cashier-totals')?.textContent).toContain('1.200,00 Bs');
+ expect(document.querySelector('.cashier-totals')?.textContent).toContain('500,00 Bs');
+ await userEvent.click(screen.getByRole('button',{name:'Control'}));
+ await screen.findByText('Tratamiento pagado. No hay saldo pendiente.');
+ expect(screen.queryByLabelText('Importe a cobrar ahora (Bs)')).toBeNull();
+ await userEvent.click(screen.getByRole('button',{name:'Pendientes (1)'}));
+ expect(screen.queryByRole('button',{name:'Control'})).toBeNull();
+});
+it('keeps multiple payments for the same treatment in one history',async()=>{
+ payments.push({...first,id:'payment2',reference:'REF-2',amount:50});
+ await choose();expect(screen.getByText('REF-1')).toBeTruthy();expect(screen.getByText('REF-2')).toBeTruthy();
+ expect(document.querySelectorAll('.cashier-history tbody tr')).toHaveLength(2);
+});
