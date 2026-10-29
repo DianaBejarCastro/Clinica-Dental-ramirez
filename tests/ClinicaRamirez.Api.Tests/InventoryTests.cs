@@ -114,4 +114,54 @@ public sealed class InventoryTests(IdentityFixture f):IClassFixture<IdentityFixt
         await Assert.ThrowsAsync<Npgsql.PostgresException>(()=>db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM \"InventoryMovementLines\" WHERE \"InventoryMovementId\"={id}"));
         Assert.Equal(5,await Stock(x.Admin,x.Center,x.Item));
     }
+
+    async Task<CreateItemWithStockInput> InitialRequest(Guid center,bool lots=false,bool expiration=false) {
+        using var scope=f.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var category=await db.Set<InventoryCategory>().Select(x=>x.Id).FirstAsync();
+        return new(new(category,Guid.NewGuid().ToString("N"),"Initial stock",null,"UNIT",2,true,lots,expiration),
+            new(center,20,lots?"REAL-LOT":null,expiration?new DateOnly(2035,1,1):null),Guid.NewGuid());
+    }
+    [Theory][InlineData(false,false)][InlineData(true,false)][InlineData(true,true)]
+    public async Task InitialEntryIsAtomicAndIdempotent(bool lots,bool expiration) {
+        var x=await Setup();var input=await InitialRequest(x.Center,lots,expiration);
+        var responses=await Task.WhenAll(Enumerable.Range(0,2).Select(_=>x.Admin.PostAsJsonAsync(Base+"/items/with-initial-stock",input)));
+        Assert.All(responses,r=>Assert.Equal(HttpStatusCode.OK,r.StatusCode));
+        var id=await responses[0].Content.ReadFromJsonAsync<Guid>();
+        Assert.Equal(id,await responses[1].Content.ReadFromJsonAsync<Guid>());
+        Assert.Equal(20,await Stock(x.Admin,x.Center,id));
+        using var scope=f.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var movement=await db.Set<InventoryMovement>().SingleAsync(m=>m.IdempotencyKey==input.IdempotencyKey);
+        Assert.Equal("ENTRY",movement.MovementType);
+        var line=await db.Set<InventoryMovementLine>().SingleAsync(l=>l.InventoryMovementId==movement.Id);
+        Assert.Equal(id,line.InventoryItemId);Assert.Equal(20,line.Quantity);
+        Assert.Equal(lots,line.InventoryLotId!=null);
+        Assert.Equal(lots?1:0,await db.Set<InventoryLot>().CountAsync(l=>l.InventoryItemId==id));
+        if(lots)Assert.Equal(20,await db.Set<InventoryLotStock>().Where(l=>l.InventoryLotId==line.InventoryLotId).SumAsync(l=>l.QuantityOnHand));
+        Assert.Equal(HttpStatusCode.Conflict,(await x.Admin.PostAsJsonAsync(Base+"/items/with-initial-stock",input with{InitialStock=input.InitialStock with{Quantity=21}})).StatusCode);
+    }
+    [Theory][InlineData("zero")][InlineData("negative")][InlineData("precision")][InlineData("center")][InlineData("lot")][InlineData("expiration")][InlineData("inactive")][InlineData("key")]
+    public async Task InitialEntryFailureRollsBackCatalogStockAndAudit(string failure) {
+        var x=await Setup();var input=await InitialRequest(x.Center,true,true);
+        using var auditScope=f.Services.CreateScope();var auditDb=auditScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var auditCount=await auditDb.Set<AuditLog>().CountAsync();
+        input=failure switch{
+            "zero"=>input with{InitialStock=input.InitialStock with{Quantity=0}},
+            "negative"=>input with{InitialStock=input.InitialStock with{Quantity=-1}},
+            "precision"=>input with{InitialStock=input.InitialStock with{Quantity=0.0001m}},
+            "center"=>input with{InitialStock=input.InitialStock with{CenterId=Guid.Empty}},
+            "lot"=>input with{InitialStock=input.InitialStock with{BatchNumber=null}},
+            "expiration"=>input with{InitialStock=input.InitialStock with{ExpirationDate=null}},
+            "inactive"=>input with{Item=input.Item with{IsActive=false}},
+            _=>input with{IdempotencyKey=Guid.Empty}
+        };
+        Assert.Equal(HttpStatusCode.BadRequest,(await x.Admin.PostAsJsonAsync(Base+"/items/with-initial-stock",input)).StatusCode);
+        using var scope=f.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.False(await db.Set<InventoryItem>().AnyAsync(i=>i.Code==input.Item.Code.ToUpperInvariant()));
+        Assert.False(await db.Set<InventoryMovement>().AnyAsync(m=>m.IdempotencyKey==input.IdempotencyKey));
+        Assert.Equal(auditCount,await db.Set<AuditLog>().CountAsync());
+    }
+    [Fact] public async Task InitialEntryDoesNotExpandDoctorPermissions(){
+        var x=await Setup();var input=await InitialRequest(x.Center);
+        Assert.Equal(HttpStatusCode.Forbidden,(await x.Doctor.PostAsJsonAsync(Base+"/items/with-initial-stock",input)).StatusCode);
+    }
 }

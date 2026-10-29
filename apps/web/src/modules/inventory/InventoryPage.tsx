@@ -5,8 +5,11 @@ import { usePermissions } from '../admin/shared';
 import { CatalogEditor, MovementEditor } from './InventoryEditors';
 import { type Options, type Stock, type Item, type Category, type MovementPage, units, stockStatuses, movementTypes } from './types';
 import './inventory.css';
+import InventoryDashboardSide from './InventoryDashboardSide';
+import type { Lot } from './types';
 const emptyCategory:Category={id:'',code:'',name:'',description:null,isActive:true,displayOrder:0};
 export default function InventoryPage({doctor=false}:{doctor?:boolean}) {
+  const [dashboardLots,setDashboardLots]=useState<Lot[]>([]);
   const can=usePermissions();const base=doctor?'/api/doctor/inventory':'/api/admin/inventory';
   const [options,setOptions]=useState<Options|null>(null),[stocks,setStocks]=useState<Stock[]>([]),[items,setItems]=useState<Item[]>([]);
   const [history,setHistory]=useState<MovementPage|null>(null),[tab,setTab]=useState('stock'),[center,setCenter]=useState(''),[category,setCategory]=useState(''),[status,setStatus]=useState(''),[search,setSearch]=useState('');
@@ -23,8 +26,10 @@ export default function InventoryPage({doctor=false}:{doctor?:boolean}) {
     if(from)q.set('from',new Date(from+'T00:00:00').toISOString());if(to)q.set('to',new Date(to+'T23:59:59.999').toISOString());
     api<MovementPage>(base+(doctor?'/my-withdrawals':'/movements')+'?'+q).then(h=>{if(live)setHistory(h);}).catch(e=>{if(live)fail(e);});return()=>{live=false;};
   },[tab,base,doctor,center,itemFilter,type,recipient,from,to,page,revision]);
+  useEffect(()=>{if(doctor)return;let live=true;setDashboardLots([]);api<Lot[]>(base+'/lots?days=90').then(l=>{if(live)setDashboardLots(l);}).catch(()=>{if(live)setDashboardLots([]);});return()=>{live=false;};},[base,doctor,revision]);
+  function expiration(s:Stock){return dashboardLots.filter(l=>l.inventoryItemId===s.inventoryItemId&&l.centerId===s.centerId&&l.isActive&&l.quantityOnHand>0&&l.expirationDate).map(l=>l.expirationDate!).sort()[0]??'—';}
   async function save(body:object,movementType?:string) {if(busy)return;setBusy(true);setError('');setNotice('');
-    const path=editor==='movement'?(doctor?'/withdraw':'/movements/'+movementType?.toLowerCase()):editor==='category'?'/categories'+(cat?.id?'/'+cat.id:''):'/items'+(item?.id?'/'+item.id:'');
+    const path=editor==='movement'?(doctor?'/withdraw':'/movements/'+movementType?.toLowerCase()):editor==='category'?'/categories'+(cat?.id?'/'+cat.id:''):'/items'+(item?.id?'/'+item.id:('initialStock' in body?'/with-initial-stock':''));
     try {await api(base+path,editor==='movement'?'POST':(editor==='category'?cat?.id:item?.id)?'PUT':'POST',body);
       setEditor(null);setNotice('Operación registrada correctamente.');setRevision(r=>r+1);
     }catch(e){fail(e);}finally{setBusy(false);}
@@ -32,21 +37,21 @@ export default function InventoryPage({doctor=false}:{doctor?:boolean}) {
   const visible=stocks.filter(s=>(!center||s.centerId===center)&&(!category||s.categoryId===category)&&(!status||s.status===status)&&
     (s.code+' '+s.name+' '+s.category).toLocaleLowerCase().includes(search.toLocaleLowerCase()));
   const canMove=doctor?can('inventory.doctor.withdraw'):['entry','withdrawal','return','adjustment'].some(t=>can('inventory.'+t+'.create'));
-  return <div className="inventory-page"><header className="inventory-heading"><div><h1>Inventario clínico</h1><p>Insumos, existencias y trazabilidad por sucursal.</p></div>
+  return <div className={doctor?"inventory-page":"inventory-page inventory-admin"}><header className="inventory-heading"><div><h1>Inventario clínico</h1><p>Insumos, existencias y trazabilidad por sucursal.</p></div>
     <div>{!doctor&&can('inventory.item.manage')&&<><button onClick={()=>{setItem(undefined);setEditor('item');}}>Crear artículo</button><button className="secondary" onClick={()=>{setCat(emptyCategory);setEditor('category');}}>Crear categoría</button></>}
     {canMove&&<button onClick={()=>setEditor('movement')}>{doctor?'Registrar mi retiro':'Registrar movimiento'}</button>}</div></header>
     {error&&<div role="alert" className="card">{error}<button className="secondary" onClick={()=>setRevision(r=>r+1)}>Reintentar</button></div>}
     {notice&&<p role="status">{notice}</p>}
     {loading&&<p role="status">Cargando inventario…</p>}
-    {!loading&&options&&<><section className="inventory-summary" aria-label="Resumen de inventario">
+    {!loading&&options&&<><div className={doctor?undefined:"inventory-kpis"}><section className="inventory-summary" aria-label="Resumen de inventario">
       <article className="card"><strong>{new Set(stocks.filter(s=>s.isActive).map(s=>s.inventoryItemId)).size}</strong> Artículos activos</article>
       <article className="card"><strong>{stocks.filter(s=>s.isActive&&s.status==='LOW_STOCK').length}</strong> Con stock bajo</article>
       <article className="card"><strong>{stocks.filter(s=>s.isActive&&s.status==='OUT_OF_STOCK').length}</strong> Sin stock</article></section>
-      {!doctor&&<InventoryExpirationSummary centerId={center} revision={revision}/>}
+      {!doctor&&<InventoryExpirationSummary centerId={center} revision={revision}/>}</div>
       {editor==='movement'&&<MovementEditor doctor={doctor} options={options} stocks={stocks} busy={busy} save={save} cancel={()=>setEditor(null)}/>}
       {(editor==='item'||editor==='category')&&<CatalogEditor key={item?.id??cat?.id??editor} item={editor==='item'?item:undefined} category={editor==='category'?cat:undefined} options={options} busy={busy} save={save} cancel={()=>setEditor(null)}/>}
       {!doctor&&editor==='item'&&item&&<InventoryLots initialItem={item.id} items={items} stocks={stocks} options={options} centerId={center} revision={revision} onChanged={()=>setRevision(r=>r+1)}/>}
-      <nav className="inventory-tabs" aria-label="Secciones de inventario"><button className={tab==='stock'?'':'secondary'} aria-pressed={tab==='stock'} onClick={()=>setTab('stock')}>Existencias</button>
+      <div className={doctor?undefined:"inventory-dashboard-layout"}><div className={doctor?undefined:"inventory-dashboard-main"}><nav className="inventory-tabs" aria-label="Secciones de inventario"><button className={tab==='stock'?'':'secondary'} aria-pressed={tab==='stock'} onClick={()=>setTab('stock')}>Existencias</button>
         {(doctor||can('inventory.movement.view'))&&<button className={tab==='history'?'':'secondary'} aria-pressed={tab==='history'} onClick={()=>setTab('history')}>{doctor?'Mis retiros':'Historial de movimientos'}</button>}
         {!doctor&&<button className={tab==='lots'?'':'secondary'} aria-pressed={tab==='lots'} onClick={()=>setTab('lots')}>Lotes y vencimientos</button>}
         {!doctor&&can('inventory.item.manage')&&<button className={tab==='categories'?'':'secondary'} onClick={()=>setTab('categories')}>Categorías</button>}</nav>
@@ -58,12 +63,12 @@ export default function InventoryPage({doctor=false}:{doctor?:boolean}) {
       {!doctor&&<><label>Tipo<select value={type} onChange={e=>{setType(e.target.value);setPage(1);}}><option value="">Todos</option>{Object.entries(movementTypes).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>
       <label>Doctor<select value={recipient} onChange={e=>{setRecipient(e.target.value);setPage(1);}}><option value="">Todos</option>{options.doctors.map(d=><option key={d.id} value={d.id}>{d.name} · {d.professionalLicense}</option>)}</select></label></>}
       <label>Artículo<select value={itemFilter} onChange={e=>{setItemFilter(e.target.value);setPage(1);}}><option value="">Todos</option>{[...new Map(stocks.map(s=>[s.inventoryItemId,s])).values()].map(s=><option key={s.inventoryItemId} value={s.inventoryItemId}>{s.name}</option>)}</select></label></>}</div>
-      {tab==='stock'&&<div className="inventory-scroll" tabIndex={0} role="region" aria-label="Existencias por sucursal"><table><thead><tr>{['Código','Artículo','Categoría','Unidad','Sucursal','Stock','Mínimo','Estado',...(!doctor?['Acciones']:[])].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>
-        {visible.map(s=><tr key={s.inventoryItemId+s.centerId}><td>{s.code}</td><td>{s.name}</td><td>{s.category}</td><td>{units[s.unit]}</td><td>{s.center}</td><td>{s.quantityOnHand}</td><td>{s.minimumStock}</td><td><span className={'inventory-status '+s.status}>{s.isActive?stockStatuses[s.status]:'Inactivo'}</span></td>
-        {!doctor&&<td>{can('inventory.item.manage')&&<button className="secondary" onClick={()=>{setItem(items.find(i=>i.id===s.inventoryItemId));setEditor('item');}}>Editar {s.name}</button>}</td>}</tr>)}</tbody></table>{!visible.length&&<p>No hay artículos para estos filtros.</p>}</div>}
+      {tab==='stock'&&<div className="inventory-scroll" tabIndex={0} role="region" aria-label="Existencias por sucursal"><table><thead><tr>{(doctor?['Código','Artículo','Categoría','Unidad','Sucursal','Stock','Mínimo','Estado']:['Artículo','Categoría','Sucursal','Stock','Mínimo','Estado','Vencimiento','Acciones']).map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>
+        {visible.map(s=><tr key={s.inventoryItemId+s.centerId}><>{doctor?<><td>{s.code}</td><td>{s.name}</td><td>{s.category}</td><td>{units[s.unit]}</td></>:<><td><strong>{s.name}</strong><small className="inventory-item-code">{s.code}</small></td><td>{s.category}</td></>}<td>{s.center}</td><td><strong>{s.quantityOnHand}</strong>{!doctor&&<small className="inventory-item-code">{units[s.unit]}</small>}</td></><td>{s.minimumStock}</td><td><span className={'inventory-status '+s.status}>{s.isActive?stockStatuses[s.status]:'Inactivo'}</span></td>
+        {!doctor&&<td title="Vencimiento más próximo de lotes activos con stock">{expiration(s)}</td>}{!doctor&&<td>{can('inventory.item.manage')&&<button className="secondary" onClick={()=>{setItem(items.find(i=>i.id===s.inventoryItemId));setEditor('item');}}>Editar {s.name}</button>}</td>}</tr>)}</tbody></table>{!visible.length&&<p>No hay artículos para estos filtros.</p>}</div>}
       {tab==='lots'&&!doctor&&<InventoryLots items={items} stocks={stocks} options={options} centerId={center} revision={revision} onChanged={()=>setRevision(r=>r+1)}/>}
       {tab==='categories'&&<section className="card"><h2>Categorías</h2>{options.categories.map(c=><p key={c.id}>{c.name} · {c.isActive?'Activa':'Inactiva'} <button className="secondary" onClick={()=>{setCat(c);setEditor('category');}}>Editar {c.name}</button></p>)}</section>}
       {tab==='history'&&(!history?<p role="status">Cargando movimientos…</p>:<><div className="inventory-scroll" tabIndex={0} role="region" aria-label="Historial de inventario"><table><thead><tr>{['Fecha y hora','Tipo','Sucursal','Registrado por','Doctor','Artículos','Notas'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{history.items.map(m=><tr key={m.id}><td>{new Date(m.occurredAt).toLocaleString('es-BO')}</td><td>{movementTypes[m.movementType]} {m.adjustmentDirection==='DECREASE'?'−':m.adjustmentDirection==='INCREASE'?'+':''}</td><td>{m.center}</td><td>{m.registeredBy}</td><td>{m.doctor?m.doctor+' · '+m.professionalLicense:'—'}</td><td>{m.lines.map(l=><div key={l.inventoryItemId+(l.inventoryLotId??'')}>{l.name}: {l.quantity} {units[l.unit]}{l.batchNumber&&<small>Lote {l.batchNumber} ? {l.expirationDate??'Sin vencimiento'}</small>}</div>)}</td><td>{m.notes??'—'}</td></tr>)}</tbody></table>{!history.items.length&&<p>No hay movimientos registrados.</p>}</div>
       <div className="inventory-tabs"><button className="secondary" disabled={page===1} onClick={()=>setPage(page-1)}>Anterior</button><span>Página {page} · {history.total} movimientos</span><button className="secondary" disabled={page*history.pageSize>=history.total} onClick={()=>setPage(page+1)}>Siguiente</button></div></>)}
-    </>}</div>;
+    </div>{!doctor&&<InventoryDashboardSide stocks={stocks} lots={dashboardLots} center={center} revision={revision} canHistory={can('inventory.movement.view')} showHistory={()=>setTab('history')} showLots={()=>setTab('lots')} showStock={(value)=>{setStatus(value);setTab('stock');}}/>}</div></>}</div>;
 }

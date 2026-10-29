@@ -5,13 +5,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 namespace ClinicaRamirez.Api.Controllers;
 [ApiController,Authorize,Route("api/admin/inventory"),RequirePermission("inventory.view")]
-public sealed class InventoryController(InventoryService service,InventoryMovementService movements):ControllerBase
+public sealed class InventoryController(InventoryService service,InventoryMovementService movements,InventoryItemCreation creation):ControllerBase
 {
     [HttpGet("options"),RequirePermission("inventory.movement.view")] public Task<InventoryOptions> Options()=>service.Options(false);
     [HttpGet("items"),RequirePermission("inventory.movement.view")] public Task<ItemDto[]> Items()=>service.Items();
     [HttpPost("categories"),RequirePermission("inventory.item.manage")] public Task<Guid> CreateCategory(CategoryInput input)=>service.SaveCategory(null,input);
     [HttpPut("categories/{id:guid}"),RequirePermission("inventory.item.manage")] public Task<Guid> UpdateCategory(Guid id,CategoryInput input)=>service.SaveCategory(id,input);
     [HttpPost("items"),RequirePermission("inventory.item.manage")] public Task<Guid> CreateItem(ItemInput input)=>service.SaveItem(null,input);
+    [HttpPost("items/with-initial-stock"),RequirePermission("inventory.item.manage")] public Task<Guid> CreateWithStock(CreateItemWithStockInput input)=>creation.Create(input);
     [HttpPut("items/{id:guid}"),RequirePermission("inventory.item.manage")] public Task<Guid> UpdateItem(Guid id,ItemInput input)=>service.SaveItem(id,input);
     [HttpGet("stocks"),RequirePermission("inventory.movement.view")] public Task<StockDto[]> Stocks(Guid? centerId,Guid? categoryId,string? status,string? search)=>service.Stocks(false,centerId,categoryId,status,search);
     [HttpGet("movements"),RequirePermission("inventory.movement.view")]

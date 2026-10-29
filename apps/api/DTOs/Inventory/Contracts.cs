@@ -23,3 +23,6 @@ public sealed record LotAllocation(Guid CenterId,decimal Quantity,[Required]LotI
 public sealed record InitializeLotsInput(bool TracksExpiration,[Required,MinLength(1),MaxLength(100)]LotAllocation[] Allocations,[Required,MaxLength(2000)]string Reason);
 public sealed record LotDto(Guid Id,Guid InventoryItemId,string Item,Guid CategoryId,string BatchNumber,Guid? CenterId,string? Center,decimal QuantityOnHand,DateTime ReceivedAt,DateOnly? ExpirationDate,DateOnly? ManufacturedAt,string? SupplierName,bool IsActive,int? DaysRemaining,string Status);
 public sealed record ExpirationAlerts(int Expired,int Within30,int Within60,int Within90,int LowStock,int OutOfStock);
+
+public sealed record InitialStockInput(Guid CenterId,decimal Quantity,[MaxLength(100)]string? BatchNumber=null,DateOnly? ExpirationDate=null,DateOnly? ManufacturedAt=null);
+public sealed record CreateItemWithStockInput([Required]ItemInput Item,[Required]InitialStockInput InitialStock,Guid IdempotencyKey);

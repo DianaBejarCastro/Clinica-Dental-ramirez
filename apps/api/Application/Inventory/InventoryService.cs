@@ -67,7 +67,7 @@ public sealed class InventoryService(AppDbContext db,IdentitySupport identity)
     }
     public async Task<Guid> SaveItem(Guid? id,ItemInput input) {
         await Authorize("inventory.item.manage");Quantity(input.MinimumStock,true);
-        await using var tx=await db.Database.BeginTransactionAsync();
+        await using var tx=db.Database.CurrentTransaction==null?await db.Database.BeginTransactionAsync():null;
         if(id!=null)await InventoryLotService.LockItem(db,id.Value);
         if(input.TracksExpiration&&!input.TracksLots)throw new ApiException(400,"El vencimiento requiere seguimiento de lotes.");
         if(!Units.Contains(input.Unit))throw new ApiException(400,"Unidad inválida.");
@@ -88,6 +88,6 @@ public sealed class InventoryService(AppDbContext db,IdentitySupport identity)
         row.Unit=input.Unit;row.MinimumStock=input.MinimumStock;row.IsActive=input.IsActive;row.UpdatedAt=DateTime.UtcNow;
         if(id==null)db.Add(row);
         identity.Audit(id==null?"inventory_item_created":"inventory_item_updated","InventoryItem",row.Id);
-        await db.SaveChangesAsync();await tx.CommitAsync();return row.Id;
+        await db.SaveChangesAsync();if(tx!=null)await tx.CommitAsync();return row.Id;
     }
 }
