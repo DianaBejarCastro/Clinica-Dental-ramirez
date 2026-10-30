@@ -29,7 +29,7 @@ public sealed class InventoryService(AppDbContext db,IdentitySupport identity)
     }
     public Task<ItemDto[]> Items() => (from i in db.Set<InventoryItem>().AsNoTracking()
         join c in db.Set<InventoryCategory>() on i.CategoryId equals c.Id orderby i.Name
-        select new ItemDto(i.Id,i.CategoryId,i.Code,i.Name,c.Name,i.Description,i.Unit,i.MinimumStock,i.IsActive,i.TracksLots,i.TracksExpiration)).ToArrayAsync();
+        select new ItemDto(i.Id,i.CategoryId,i.Code,i.Name,c.Name,i.Description,i.Unit,i.MinimumStock,i.IsActive,i.TracksLots,i.TracksExpiration,i.PackageUnit,i.UnitsPerPackage,db.Set<InventoryMovementLine>().Any(l=>l.InventoryItemId==i.Id))).ToArrayAsync();
     public async Task<StockDto[]> Stocks(bool doctor,Guid? centerId,Guid? categoryId,string? status,string? search) {
         await Authorize("inventory.view");
         var id=doctor?await Doctor():(Guid?)null;
@@ -70,13 +70,18 @@ public sealed class InventoryService(AppDbContext db,IdentitySupport identity)
         await using var tx=db.Database.CurrentTransaction==null?await db.Database.BeginTransactionAsync():null;
         if(id!=null)await InventoryLotService.LockItem(db,id.Value);
         if(input.TracksExpiration&&!input.TracksLots)throw new ApiException(400,"El vencimiento requiere seguimiento de lotes.");
+        if(input.PackageUnit is null != (input.UnitsPerPackage is null))throw new ApiException(400,"Completa la presentación y su contenido.");
+        if(input.PackageUnit!=null) {
+            if(!Units.Contains(input.PackageUnit))throw new ApiException(400,"Presentación inválida.");
+            Quantity(input.UnitsPerPackage!.Value);
+        }
         if(!Units.Contains(input.Unit))throw new ApiException(400,"Unidad inválida.");
         if(!await db.Set<InventoryCategory>().AnyAsync(x=>x.Id==input.CategoryId))throw new ApiException(400,"Categoría inválida.");
         var code=Text(input.Code,50).ToUpperInvariant();
         if(await db.Set<InventoryItem>().AnyAsync(x=>x.Code==code && x.Id!=id))throw new ApiException(409,"El código ya está registrado.");
         var row=id==null?new InventoryItem():await db.Set<InventoryItem>().FindAsync(id)??throw new ApiException(404,"Artículo no disponible.");
-        if(id!=null && row.Unit!=input.Unit && await db.Set<InventoryMovementLine>().AnyAsync(x=>x.InventoryItemId==id))
-            throw new ApiException(409,"No se puede cambiar la unidad de un artículo con movimientos.");
+        if(id!=null && (row.Unit!=input.Unit || row.PackageUnit!=input.PackageUnit || row.UnitsPerPackage!=input.UnitsPerPackage) && await db.Set<InventoryMovementLine>().AnyAsync(x=>x.InventoryItemId==id))
+            throw new ApiException(409,"Esta configuración no se puede modificar porque el artículo ya tiene movimientos de inventario.");
         if(!row.TracksLots&&input.TracksLots&&await db.Set<InventoryStock>().AnyAsync(x=>x.InventoryItemId==row.Id&&x.QuantityOnHand>0))
             throw new ApiException(409,"Este producto tiene stock existente. Debes asignarlo a uno o más lotes antes de habilitar el seguimiento.");
         if(row.TracksLots&&!input.TracksLots&&(await db.Set<InventoryLot>().AnyAsync(x=>x.InventoryItemId==row.Id)))
@@ -85,7 +90,7 @@ public sealed class InventoryService(AppDbContext db,IdentitySupport identity)
             throw new ApiException(409,"No se puede cambiar el control de vencimiento con lotes existentes.");
         row.TracksLots=input.TracksLots;row.TracksExpiration=input.TracksExpiration;
         row.CategoryId=input.CategoryId;row.Code=code;row.Name=Text(input.Name,150);row.Description=input.Description?.Trim();
-        row.Unit=input.Unit;row.MinimumStock=input.MinimumStock;row.IsActive=input.IsActive;row.UpdatedAt=DateTime.UtcNow;
+        row.Unit=input.Unit;row.PackageUnit=input.PackageUnit;row.UnitsPerPackage=input.UnitsPerPackage;row.MinimumStock=input.MinimumStock;row.IsActive=input.IsActive;row.UpdatedAt=DateTime.UtcNow;
         if(id==null)db.Add(row);
         identity.Audit(id==null?"inventory_item_created":"inventory_item_updated","InventoryItem",row.Id);
         await db.SaveChangesAsync();if(tx!=null)await tx.CommitAsync();return row.Id;

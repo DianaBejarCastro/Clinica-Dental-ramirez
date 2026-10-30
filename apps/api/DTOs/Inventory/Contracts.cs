@@ -3,8 +3,8 @@ using System.Text.Json.Serialization;
 namespace ClinicaRamirez.Api.DTOs.Inventory;
 public sealed record CategoryInput([Required,MaxLength(50)]string Code,[Required,MaxLength(150)]string Name,[MaxLength(1000)]string? Description,bool IsActive=true,int DisplayOrder=0);
 public sealed record CategoryDto(Guid Id,string Code,string Name,string? Description,bool IsActive,int DisplayOrder);
-public sealed record ItemInput(Guid CategoryId,[Required,MaxLength(50)]string Code,[Required,MaxLength(150)]string Name,[MaxLength(1000)]string? Description,[Required]string Unit,decimal MinimumStock,bool IsActive=true,bool TracksLots=false,bool TracksExpiration=false);
-public sealed record ItemDto(Guid Id,Guid CategoryId,string Code,string Name,string Category,string? Description,string Unit,decimal MinimumStock,bool IsActive,bool TracksLots=false,bool TracksExpiration=false);
+public sealed record ItemInput(Guid CategoryId,[Required,MaxLength(50)]string Code,[Required,MaxLength(150)]string Name,[MaxLength(1000)]string? Description,[Required]string Unit,decimal MinimumStock,bool IsActive=true,bool TracksLots=false,bool TracksExpiration=false,string? PackageUnit=null,decimal? UnitsPerPackage=null);
+public sealed record ItemDto(Guid Id,Guid CategoryId,string Code,string Name,string Category,string? Description,string Unit,decimal MinimumStock,bool IsActive,bool TracksLots=false,bool TracksExpiration=false,string? PackageUnit=null,decimal? UnitsPerPackage=null,bool HasMovements=false);
 public sealed record StockDto(Guid InventoryItemId,Guid CenterId,string Center,string Code,string Name,Guid CategoryId,string Category,string Unit,decimal QuantityOnHand,decimal MinimumStock,string Status,bool IsActive,bool TracksLots=false,bool TracksExpiration=false);
 public sealed record LineInput(Guid InventoryItemId,decimal Quantity,Guid? InventoryLotId=null,string? BatchNumber=null,DateOnly? ExpirationDate=null,DateOnly? ManufacturedAt=null,string? SupplierName=null);
 public sealed record MovementInput(Guid CenterId,Guid? RecipientDoctorProfileId,Guid IdempotencyKey,[Required,MinLength(1),MaxLength(100)]LineInput[] Lines,[MaxLength(2000)]string? Notes,string? AdjustmentDirection=null);
@@ -24,5 +24,5 @@ public sealed record InitializeLotsInput(bool TracksExpiration,[Required,MinLeng
 public sealed record LotDto(Guid Id,Guid InventoryItemId,string Item,Guid CategoryId,string BatchNumber,Guid? CenterId,string? Center,decimal QuantityOnHand,DateTime ReceivedAt,DateOnly? ExpirationDate,DateOnly? ManufacturedAt,string? SupplierName,bool IsActive,int? DaysRemaining,string Status);
 public sealed record ExpirationAlerts(int Expired,int Within30,int Within60,int Within90,int LowStock,int OutOfStock);
 
-public sealed record InitialStockInput(Guid CenterId,decimal Quantity,[MaxLength(100)]string? BatchNumber=null,DateOnly? ExpirationDate=null,DateOnly? ManufacturedAt=null);
+public sealed record InitialStockInput(Guid CenterId,decimal Quantity,[MaxLength(100)]string? BatchNumber=null,DateOnly? ExpirationDate=null,DateOnly? ManufacturedAt=null,bool QuantityInPackages=false);
 public sealed record CreateItemWithStockInput([Required]ItemInput Item,[Required]InitialStockInput InitialStock,Guid IdempotencyKey);

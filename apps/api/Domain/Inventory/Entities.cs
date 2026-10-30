@@ -19,6 +19,8 @@ public sealed class InventoryItem
     public string Name { get; set; } = "";
     public string? Description { get; set; }
     public string Unit { get; set; } = "UNIT";
+    public string? PackageUnit { get; set; }
+    public decimal? UnitsPerPackage { get; set; }
     public decimal MinimumStock { get; set; }
     public bool TracksLots { get; set; }
     public bool TracksExpiration { get; set; }

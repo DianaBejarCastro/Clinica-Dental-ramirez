@@ -26,8 +26,16 @@ public sealed class InventoryItemCreation(AppDbContext db,InventoryService inven
         }
         var id=await inventory.SaveItem(null,input.Item);
         var stock=input.InitialStock;
+        InventoryService.Quantity(stock.Quantity);
+        var quantity=stock.Quantity;
+        if(stock.QuantityInPackages) {
+            if(input.Item.PackageUnit==null || input.Item.UnitsPerPackage==null || decimal.Truncate(quantity)!=quantity)
+                throw new ApiException(400,"Indica una presentación y un número entero de envases.");
+            quantity*=input.Item.UnitsPerPackage.Value;
+            InventoryService.Quantity(quantity);
+        }
         await movements.Create("ENTRY",new(stock.CenterId,null,input.IdempotencyKey,
-            [new(id,stock.Quantity,null,stock.BatchNumber,stock.ExpirationDate,stock.ManufacturedAt)],"Entrada inicial al crear artículo"),creationFingerprint:fingerprint);
+            [new(id,quantity,null,stock.BatchNumber,stock.ExpirationDate,stock.ManufacturedAt)],"Entrada inicial al crear artículo"),creationFingerprint:fingerprint);
         await tx.CommitAsync();return id;
     }
 }

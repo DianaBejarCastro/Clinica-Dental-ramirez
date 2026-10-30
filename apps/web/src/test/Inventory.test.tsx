@@ -1,12 +1,13 @@
 import { fireEvent, render, screen, within, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
+import { CatalogEditor } from '../modules/inventory/InventoryEditors';
 import InventoryPage from '../modules/inventory/InventoryPage';
 import { doctorNavigation, navigationGroups } from '../layouts/navigation';
 import { ApiError } from '../services/api';
 const mock=vi.hoisted(()=>vi.fn());
 vi.mock('../services/api',async original=>({...await original<typeof import('../services/api')>(),api:mock}));
 vi.mock('../modules/admin/shared',()=>({usePermissions:()=>()=>true}));
-const options={categories:[{id:'cat',code:'PROTECTION',name:'Protección',isActive:true,displayOrder:0}],centers:[{id:'c1',name:'Central'},{id:'c2',name:'Norte'}],doctors:[{id:'d',name:'Ana Doctor',professionalLicense:'LP-123',centerIds:['c1']}]};
+const options={categories:[{id:'cat',code:'PROTECTION',name:'Protección',description:null,isActive:true,displayOrder:0}],centers:[{id:'c1',name:'Central'},{id:'c2',name:'Norte'}],doctors:[{id:'d',name:'Ana Doctor',professionalLicense:'LP-123',centerIds:['c1']}]};
 const stocks=[{inventoryItemId:'i1',centerId:'c1',center:'Central',code:'G1',name:'Guantes',categoryId:'cat',category:'Protección',unit:'BOX',quantityOnHand:20,minimumStock:5,status:'AVAILABLE',isActive:true},
 {inventoryItemId:'i2',centerId:'c1',center:'Central',code:'M1',name:'Mascarillas',categoryId:'cat',category:'Protección',unit:'UNIT',quantityOnHand:2,minimumStock:5,status:'LOW_STOCK',isActive:true},
 {inventoryItemId:'i3',centerId:'c2',center:'Norte',code:'A1',name:'Agujas',categoryId:'cat',category:'Protección',unit:'UNIT',quantityOnHand:0,minimumStock:5,status:'OUT_OF_STOCK',isActive:true}];
@@ -28,7 +29,7 @@ it('admin and doctor navigation expose separate inventory routes',()=>{expect(na
 it('loads item stock with branch category and units',async()=>{await ready();expect(screen.getByText('Guantes')).toBeTruthy();expect(screen.getAllByText('Central').length).toBeGreaterThan(0);expect(screen.getByText('Caja')).toBeTruthy();expect(mock).toHaveBeenCalledWith('/api/admin/inventory/options');});
 it.each(['Stock bajo','Sin stock','Disponible'])('shows derived status %s',async label=>{await ready();expect(screen.getAllByText(label).length).toBeGreaterThan(0);});
 it('filters name category branch and stock',async()=>{await ready();select('Estado','OUT_OF_STOCK');expect(screen.queryByText('Guantes')).toBeNull();expect(within(screen.getByRole('region',{name:'Existencias por sucursal'})).getByText('Agujas')).toBeTruthy();select('Sucursal','c1');expect(screen.getByText('No hay artículos para estos filtros.')).toBeTruthy();});
-it('creates item with category unit minimum and no initial stock',async()=>{await ready();fireEvent.click(screen.getByRole('button',{name:'Crear artículo'}));select('Código','X1');select('Nombre','Nuevo');fireEvent.change(within(screen.getByRole('heading',{name:'Crear artículo'}).closest('form')!).getByLabelText('Categoría'),{target:{value:'cat'}});select('Unidad','SYRINGE');select('Stock mínimo','2');fireEvent.click(screen.getByRole('button',{name:'Guardar artículo'}));await waitFor(()=>expect(mock).toHaveBeenCalledWith('/api/admin/inventory/items','POST',expect.objectContaining({unit:'SYRINGE',minimumStock:2})));expect(screen.queryByLabelText('Stock inicial')).toBeNull();});
+it('creates item with category unit minimum and no initial stock',async()=>{await ready();fireEvent.click(screen.getByRole('button',{name:'Crear artículo'}));select('Código','X1');select('Nombre','Nuevo');fireEvent.change(within(screen.getByRole('heading',{name:'Crear artículo'}).closest('form')!).getByLabelText('Categoría'),{target:{value:'cat'}});select('Unidad de stock','SYRINGE');select('Stock mínimo','2');fireEvent.click(screen.getByRole('button',{name:'Guardar artículo'}));await waitFor(()=>expect(mock).toHaveBeenCalledWith('/api/admin/inventory/items','POST',expect.objectContaining({unit:'SYRINGE',minimumStock:2})));expect(screen.queryByLabelText('Stock inicial')).toBeNull();});
 it('edits item without editing stock',async()=>{await ready();fireEvent.click(screen.getByRole('button',{name:'Editar Guantes'}));select('Nombre','Guantes actualizados');fireEvent.click(screen.getByRole('button',{name:'Guardar cambios'}));await waitFor(()=>expect(mock).toHaveBeenCalledWith('/api/admin/inventory/items/i1','PUT',expect.objectContaining({name:'Guantes actualizados'})));});
 it('creates category',async()=>{await ready();fireEvent.click(screen.getByRole('button',{name:'Crear categoría'}));select('Código','NEW');select('Nombre','Nueva');fireEvent.click(screen.getByRole('button',{name:'Guardar'}));await waitFor(()=>expect(mock).toHaveBeenCalledWith('/api/admin/inventory/categories','POST',expect.objectContaining({code:'NEW'})));});
 it.each(['ENTRY','WITHDRAWAL','RETURN','ADJUSTMENT'])('records %s through movement endpoint',async type=>{await openMove();select('Tipo de movimiento',type);if(type==='WITHDRAWAL'||type==='RETURN')select('Doctor','d');if(type==='ADJUSTMENT'){select('Dirección','DECREASE');select('Motivo obligatorio','Corrección');}fireEvent.click(screen.getByRole('button',{name:'Confirmar movimiento'}));await waitFor(()=>expect(mock).toHaveBeenCalledWith('/api/admin/inventory/movements/'+type.toLowerCase(),'POST',expect.objectContaining({lines:[{inventoryItemId:'i1',quantity:3}]})));});
@@ -65,7 +66,7 @@ it('admin table combines code and unit and keeps expiration column',async()=>{
 
 it('item sections retain tracking dependency and cancel without writes',async()=>{
  await ready();fireEvent.click(screen.getByRole('button',{name:'Crear artículo'}));
- for(const name of ['Información básica','Control de stock','Vencimiento y lotes','Descripción','Estado','Información'])expect(screen.getByRole('heading',{name})).toBeTruthy();
+ for(const name of ['Información básica','Control de stock','Vencimiento y lotes','Presentación del producto','Estado','Información'])expect(screen.getByRole('heading',{name})).toBeTruthy();
  expect(screen.getByLabelText('Control de vencimiento')).toHaveProperty('disabled',true);
  fireEvent.click(screen.getByLabelText('Seguimiento de lotes'));
  expect(screen.getByLabelText('Control de vencimiento')).toHaveProperty('disabled',false);
@@ -81,22 +82,22 @@ it('item form submits existing fields and tracking flags without stock or lot da
  const form=screen.getByRole('heading',{name:'Crear artículo'}).closest('form')!;
  expect((within(form).getByLabelText('Código') as HTMLInputElement).checkValidity()).toBe(false);
  select('Código','NEW');select('Nombre','Material');fireEvent.change(within(form).getByLabelText('Categoría'),{target:{value:'cat'}});
- select('Unidad','BOX');select('Stock mínimo','3.5');select('Descripción','Uso clínico');
+ select('Unidad de stock','BOX');select('Stock mínimo','3.5');select('Descripción','Uso clínico');
  fireEvent.click(screen.getByLabelText('Seguimiento de lotes'));fireEvent.click(screen.getByLabelText('Control de vencimiento'));fireEvent.click(screen.getByLabelText('Activo'));
  fireEvent.click(screen.getByRole('button',{name:'Guardar artículo'}));
  await waitFor(()=>expect(mock).toHaveBeenCalledWith('/api/admin/inventory/items','POST',{
- code:'NEW',name:'Material',categoryId:'cat',unit:'BOX',minimumStock:3.5,description:'Uso clínico',isActive:false,tracksLots:true,tracksExpiration:true
+ code:'NEW',name:'Material',categoryId:'cat',unit:'BOX',minimumStock:3.5,description:'Uso clínico',isActive:false,tracksLots:true,tracksExpiration:true,packageUnit:null,unitsPerPackage:null
  }));
 });
 
 it('initial stock is optional and only shown on creation',async()=>{
  await ready();fireEvent.click(screen.getByRole('button',{name:'Crear artículo'}));
- expect(screen.getByLabelText('Registrar stock ahora')).toHaveProperty('checked',false);
+ expect(screen.getByLabelText('Sí, registrar stock')).toHaveProperty('checked',false);
  expect(screen.queryByLabelText('Sucursal inicial')).toBeNull();
  expect(screen.getByText(/No representa el stock actual/)).toBeTruthy();
  fireEvent.click(screen.getByRole('button',{name:'Cancelar'}));
  fireEvent.click(screen.getByRole('button',{name:'Editar Guantes'}));
- expect(screen.queryByLabelText('Registrar stock ahora')).toBeNull();
+ expect(screen.queryByLabelText('Sí, registrar stock')).toBeNull();
  expect(screen.getByText('El stock se modifica mediante movimientos de inventario.')).toBeTruthy();
 });
 it.each([false,true])('initial entry uses dedicated operation and conditional lot fields: %s',async(tracked)=>{
@@ -104,7 +105,7 @@ it.each([false,true])('initial entry uses dedicated operation and conditional lo
  const form=screen.getByRole('heading',{name:'Crear artículo'}).closest('form')!;
  select('Código','INIT');select('Nombre','Inicial');
  fireEvent.change(within(form).getByLabelText('Categoría'),{target:{value:'cat'}});
- fireEvent.click(screen.getByLabelText('Registrar stock ahora'));
+ fireEvent.click(screen.getByLabelText('Sí, registrar stock'));
  expect(screen.getByLabelText('Sucursal inicial')).toHaveProperty('required',true);
  expect(screen.getByLabelText('Cantidad inicial')).toHaveProperty('min','.001');
  select('Sucursal inicial','c1');select('Cantidad inicial','20');
@@ -116,11 +117,47 @@ it.each([false,true])('initial entry uses dedicated operation and conditional lo
   select('Número de lote inicial','REAL-1');fireEvent.click(screen.getByLabelText('Control de vencimiento'));
   select('Vencimiento del lote inicial','2035-01-01');
  }
- expect(screen.getByRole('region',{name:'Resumen de entrada inicial'}).textContent).toContain('20 unidades');
+ expect(screen.getByRole('region',{name:'Resumen de registro'}).textContent).toContain('20 unidades');
  fireEvent.click(screen.getByRole('button',{name:'Guardar artículo'}));
  await waitFor(()=>expect(mock).toHaveBeenCalledWith('/api/admin/inventory/items/with-initial-stock','POST',expect.objectContaining({
  item:expect.objectContaining({code:'INIT',tracksLots:tracked,tracksExpiration:tracked}),
  initialStock:tracked?{centerId:'c1',quantity:20,batchNumber:'REAL-1',expirationDate:'2035-01-01'}:{centerId:'c1',quantity:20},
  idempotencyKey:expect.any(String)
  })));
+});
+
+it('package preview explains 2 boxes of 100 and submits package quantity for server conversion',async()=>{
+ await ready();fireEvent.click(screen.getByRole('button',{name:'Crear artículo'}));
+ expect(screen.getByLabelText('Unidad de stock')).toBeTruthy();
+ expect(screen.getByText('Es la unidad que el sistema usará para contar y descontar este artículo.')).toBeTruthy();
+ select('Código','GLOVE');select('Nombre','Guantes');
+ const form=screen.getByRole('heading',{name:'Crear artículo'}).closest('form')!;
+ fireEvent.change(within(form).getByLabelText('Categoría'),{target:{value:'cat'}});
+ select('Presentación','BOX');select('Unidades por presentación','100');select('Stock mínimo','20');
+ expect(screen.getByText('1 caja = 100 unidades')).toBeTruthy();
+ expect(screen.getByText('Se mostrará una alerta cuando queden 20 unidades o menos.')).toBeTruthy();
+ fireEvent.click(screen.getByLabelText('Sí, registrar stock'));select('Sucursal inicial','c1');select('Número de envases','2');
+ expect(screen.getByText('2 cajas × 100 unidades = 200 unidades')).toBeTruthy();
+ expect(screen.getByText('Se añadirán 200 unidades al inventario.')).toBeTruthy();
+ expect(screen.queryByLabelText('Cantidad inicial')).toBeNull();
+ expect(screen.getByRole('region',{name:'Resumen de registro'}).textContent).toContain('200 unidades');
+ fireEvent.click(screen.getByRole('button',{name:'Guardar artículo'}));
+ await waitFor(()=>expect(mock).toHaveBeenCalledWith('/api/admin/inventory/items/with-initial-stock','POST',expect.objectContaining({item:expect.objectContaining({unit:'UNIT',packageUnit:'BOX',unitsPerPackage:100}),initialStock:{centerId:'c1',quantity:2,quantityInPackages:true}})));
+});
+it('invalid package content and fractional package counts fail native validation',async()=>{
+ await ready();fireEvent.click(screen.getByRole('button',{name:'Crear artículo'}));select('Presentación','BOX');
+ const content=screen.getByLabelText('Unidades por presentación') as HTMLInputElement;
+ for(const value of ['0','-1']){select('Unidades por presentación',value);expect(content.checkValidity()).toBe(false);}
+ select('Unidades por presentación','100');fireEvent.click(screen.getByLabelText('Sí, registrar stock'));select('Número de envases','1.5');
+ expect((screen.getByLabelText('Número de envases') as HTMLInputElement).checkValidity()).toBe(false);
+ select('Unidad de stock','BOX');expect(screen.getByText('El inventario se llevará por cajas completas.')).toBeTruthy();
+ select('Stock mínimo','2');expect(screen.getByText('Se mostrará una alerta cuando queden 2 cajas o menos.')).toBeTruthy();
+});
+
+it('editing an item with movement history locks stock unit and packaging but keeps metadata editable',()=>{
+ render(<CatalogEditor item={{id:'i',categoryId:'cat',category:'Protección',code:'G1',name:'Guantes',description:null,unit:'UNIT',minimumStock:20,isActive:true,packageUnit:'BOX',unitsPerPackage:100,hasMovements:true}} options={options} busy={false} save={vi.fn()} cancel={vi.fn()}/>);
+ for(const label of ['Unidad de stock','Presentación','Unidades por presentación'])expect(screen.getByLabelText(label)).toHaveProperty('disabled',true);
+ expect(screen.getByLabelText('Nombre')).toHaveProperty('disabled',false);
+ expect(screen.getByText('Esta configuración no se puede modificar porque el artículo ya tiene movimientos de inventario.')).toBeTruthy();
+ expect(screen.queryByLabelText('Sí, registrar stock')).toBeNull();
 });

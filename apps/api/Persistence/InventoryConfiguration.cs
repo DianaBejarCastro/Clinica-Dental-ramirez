@@ -26,6 +26,7 @@ public static class InventoryConfiguration
             e.ToTable("InventoryItems",t=>{
                 t.HasCheckConstraint("CK_InventoryItems_Unit","\"Unit\" IN ('UNIT','BOX','PACKAGE','BOTTLE','SYRINGE','ROLL','PAIR','KIT','BAG','TUBE')");
                 t.HasCheckConstraint("CK_InventoryItems_Tracking", "NOT \"TracksExpiration\" OR \"TracksLots\"");
+                t.HasCheckConstraint("CK_InventoryItems_Package", "(\"PackageUnit\" IS NULL AND \"UnitsPerPackage\" IS NULL) OR (\"PackageUnit\" IS NOT NULL AND \"PackageUnit\" IN ('UNIT','BOX','PACKAGE','BOTTLE','SYRINGE','ROLL','PAIR','KIT','BAG','TUBE') AND \"UnitsPerPackage\" IS NOT NULL AND \"UnitsPerPackage\" > 0)");
                 t.HasCheckConstraint("CK_InventoryItems_Minimum","\"MinimumStock\" >= 0");
             });
             e.HasKey(x=>x.Id);
@@ -33,6 +34,8 @@ public static class InventoryConfiguration
             e.Property(x=>x.Name).HasMaxLength(150).IsRequired();
             e.Property(x=>x.Description).HasMaxLength(1000);
             e.Property(x=>x.Unit).HasMaxLength(20).IsRequired();
+            e.Property(x=>x.PackageUnit).HasMaxLength(20);
+            e.Property(x=>x.UnitsPerPackage).HasPrecision(14,3);
             e.Property(x=>x.TracksLots).HasDefaultValue(false);
             e.Property(x=>x.TracksExpiration).HasDefaultValue(false);
             e.Property(x=>x.MinimumStock).HasPrecision(14,3).HasDefaultValue(0m);

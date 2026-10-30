@@ -67,3 +67,10 @@
 .inventory-item-actions button { min-height:42px; margin:0; }
 @media(max-width:900px) { .inventory-item-layout { grid-template-columns:minmax(0,1fr); } }
 @media(max-width:500px) { .inventory-item-heading { flex-direction:column; align-items:flex-start; } .inventory-item-fields { grid-template-columns:minmax(0,1fr); } .inventory-item-actions { flex-wrap:wrap; } .inventory-item-actions button { flex:1; } }
+
+.inventory-conversion { background:#e9f7f5; border:1px solid #c6e7e3; border-radius:8px; padding:1rem; color:#116568; overflow-wrap:anywhere; }
+.inventory-conversion strong { display:block; margin-top:.4rem; }
+.inventory-initial-choice { display:flex; flex-wrap:wrap; gap:1rem; }
+.inventory-item-editor input[type=radio] { width:18px; height:18px; flex-shrink:0; }
+.inventory-registration-summary dl>div { display:flex; justify-content:space-between; gap:1rem; border-bottom:1px solid #edf2f5; padding:.6rem 0; font-size:.85rem; }
+.inventory-registration-summary dd { margin:0; text-align:right; overflow-wrap:anywhere; }

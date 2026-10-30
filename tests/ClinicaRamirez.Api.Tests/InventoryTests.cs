@@ -164,4 +164,52 @@ public sealed class InventoryTests(IdentityFixture f):IClassFixture<IdentityFixt
         var x=await Setup();var input=await InitialRequest(x.Center);
         Assert.Equal(HttpStatusCode.Forbidden,(await x.Doctor.PostAsJsonAsync(Base+"/items/with-initial-stock",input)).StatusCode);
     }
+
+    [Theory][InlineData(false,false)][InlineData(true,false)][InlineData(true,true)]
+    public async Task PackagesConvertToStockUnitsAndWithdrawInStockUnits(bool lots,bool expiration) {
+        var x=await Setup();var original=await InitialRequest(x.Center,lots,expiration);
+        var input=original with {Item=original.Item with{PackageUnit="BOX",UnitsPerPackage=100},InitialStock=original.InitialStock with{Quantity=2,QuantityInPackages=true}};
+        var response=await x.Admin.PostAsJsonAsync(Base+"/items/with-initial-stock",input);
+        Assert.Equal(HttpStatusCode.OK,response.StatusCode);var id=await response.Content.ReadFromJsonAsync<Guid>();
+        Assert.Equal(200,await Stock(x.Admin,x.Center,id));
+        Assert.Equal(id,await (await x.Admin.PostAsJsonAsync(Base+"/items/with-initial-stock",input)).Content.ReadFromJsonAsync<Guid>());
+        using var scope=f.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Equal(200,await db.Set<InventoryMovementLine>().Where(l=>l.InventoryItemId==id).SumAsync(l=>l.Quantity));
+        if(lots)Assert.Equal(200,await (from ls in db.Set<InventoryLotStock>() join l in db.Set<InventoryLot>() on ls.InventoryLotId equals l.Id where l.InventoryItemId==id select ls.QuantityOnHand).SumAsync());
+        var withdrawal=new DoctorWithdrawalInput(x.Center,Guid.NewGuid(),[new(id,10)],null);
+        Assert.Equal(HttpStatusCode.OK,(await x.Doctor.PostAsJsonAsync("/api/doctor/inventory/withdraw",withdrawal)).StatusCode);
+        Assert.Equal(190,await Stock(x.Admin,x.Center,id));
+        var dto=(await x.Admin.GetFromJsonAsync<ItemDto[]>(Base+"/items"))!.Single(i=>i.Id==id);
+        Assert.True(dto.HasMovements);Assert.Equal("UNIT",dto.Unit);Assert.Equal("BOX",dto.PackageUnit);Assert.Equal(100,dto.UnitsPerPackage);
+    }
+    [Theory][InlineData("unit")][InlineData("package")][InlineData("factor")]
+    public async Task MovementHistoryPreventsStructuralConversionChanges(string change) {
+        var x=await Setup();var original=await InitialRequest(x.Center);
+        var input=original with{Item=original.Item with{PackageUnit="BOX",UnitsPerPackage=100},InitialStock=original.InitialStock with{Quantity=2,QuantityInPackages=true}};
+        var response=await x.Admin.PostAsJsonAsync(Base+"/items/with-initial-stock",input);response.EnsureSuccessStatusCode();var id=await response.Content.ReadFromJsonAsync<Guid>();
+        var edit=change switch{"unit"=>input.Item with{Unit="BOX"},"package"=>input.Item with{PackageUnit="BAG"},_=>input.Item with{UnitsPerPackage=50}};
+        Assert.Equal(HttpStatusCode.Conflict,(await x.Admin.PutAsJsonAsync(Base+"/items/"+id,edit)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK,(await x.Admin.PutAsJsonAsync(Base+"/items/"+id,input.Item with{Name="Renamed"})).StatusCode);
+        Assert.Equal(200,await Stock(x.Admin,x.Center,id));
+    }
+    [Theory][InlineData("zero")][InlineData("negative")][InlineData("precision")][InlineData("missing")][InlineData("unknown")][InlineData("fractional-packages")][InlineData("overflow")]
+    public async Task InvalidPackageConversionRollsBack(string error) {
+        var x=await Setup();var original=await InitialRequest(x.Center);
+        var item=original.Item with{PackageUnit="BOX",UnitsPerPackage=100};
+        item=error switch{"zero"=>item with{UnitsPerPackage=0},"negative"=>item with{UnitsPerPackage=-1},"precision"=>item with{UnitsPerPackage=0.0001m},"missing"=>item with{UnitsPerPackage=null},"unknown"=>item with{PackageUnit="UNKNOWN"},"overflow"=>item with{UnitsPerPackage=99999999999m},_=>item};
+        var input=original with{Item=item,InitialStock=original.InitialStock with{Quantity=error=="fractional-packages"?1.5m:2m,QuantityInPackages=true}};
+        Assert.Equal(HttpStatusCode.BadRequest,(await x.Admin.PostAsJsonAsync(Base+"/items/with-initial-stock",input)).StatusCode);
+        using var scope=f.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.False(await db.Set<InventoryItem>().AnyAsync(i=>i.Code==item.Code.ToUpperInvariant()));
+        Assert.False(await db.Set<InventoryMovement>().AnyAsync(m=>m.IdempotencyKey==input.IdempotencyKey));
+    }
+    [Fact] public async Task PackagingCanChangeBeforeMovementsAndDirectQuantityRemainsDirect() {
+        var x=await Setup();var original=await InitialRequest(x.Center);
+        var item=original.Item with{PackageUnit="BOX",UnitsPerPackage=100};
+        var created=await x.Admin.PostAsJsonAsync(Base+"/items",item);created.EnsureSuccessStatusCode();var id=await created.Content.ReadFromJsonAsync<Guid>();
+        Assert.Equal(HttpStatusCode.OK,(await x.Admin.PutAsJsonAsync(Base+"/items/"+id,item with{UnitsPerPackage=50})).StatusCode);
+        var direct=original with{Item=item with{Code=Guid.NewGuid().ToString("N")},InitialStock=original.InitialStock with{Quantity=12}};
+        var result=await x.Admin.PostAsJsonAsync(Base+"/items/with-initial-stock",direct);result.EnsureSuccessStatusCode();
+        Assert.Equal(12,await Stock(x.Admin,x.Center,await result.Content.ReadFromJsonAsync<Guid>()));
+    }
 }

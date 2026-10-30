@@ -3261,6 +3261,10 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
+                    b.Property<string>("PackageUnit")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<bool>("TracksExpiration")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -3276,6 +3280,10 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<decimal?>("UnitsPerPackage")
+                        .HasPrecision(14, 3)
+                        .HasColumnType("numeric(14,3)");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -3289,6 +3297,8 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                     b.ToTable("InventoryItems", null, t =>
                         {
                             t.HasCheckConstraint("CK_InventoryItems_Minimum", "\"MinimumStock\" >= 0");
+
+                            t.HasCheckConstraint("CK_InventoryItems_Package", "(\"PackageUnit\" IS NULL AND \"UnitsPerPackage\" IS NULL) OR (\"PackageUnit\" IS NOT NULL AND \"PackageUnit\" IN ('UNIT','BOX','PACKAGE','BOTTLE','SYRINGE','ROLL','PAIR','KIT','BAG','TUBE') AND \"UnitsPerPackage\" IS NOT NULL AND \"UnitsPerPackage\" > 0)");
 
                             t.HasCheckConstraint("CK_InventoryItems_Tracking", "NOT \"TracksExpiration\" OR \"TracksLots\"");
 
