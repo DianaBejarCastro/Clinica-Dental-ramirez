@@ -5,7 +5,7 @@ import { api, ApiError } from '../../../services/api';
 import { useAuth } from '../../auth/AuthProvider';
 import './protected-delete.css';
 
-type Entity = 'centers' | 'specialties' | 'doctors' | 'schedules' | 'patients' | 'appointments' | 'social-networks' | 'users' | 'roles';
+type Entity = 'clinic-services' | 'centers' | 'specialties' | 'doctors' | 'schedules' | 'patients' | 'appointments' | 'social-networks' | 'users' | 'roles';
 interface Check { canDelete: boolean; message: string; dependencies: { type: string; count: number }[]; protected?: boolean }
 interface Props { entity: Entity; id: string; label: string; protected?: boolean; onDeleted: () => void | Promise<void> }
 const dependencyLabels: Record<string, string> = {

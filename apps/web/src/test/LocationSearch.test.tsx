@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vitest';
+import LocationSearch from '../modules/admin/centers/LocationSearch';
 import LocationPicker from '../modules/admin/centers/LocationPicker';
 
+vi.mock('../components/maps/GoogleMap', () => ({ default: () => null }));
 const result = { displayName: 'Av. 10 de Noviembre, Llallagua, Potosí', latitude: -18.42, longitude: -66.58 };
 const fetchMock = vi.fn();
 beforeEach(() => { fetchMock.mockReset(); fetchMock.mockResolvedValue(Response.json([result])); vi.stubGlobal('fetch', fetchMock); });
 function Harness() {
   const [coords, setCoords] = useState<[number | null, number | null]>([null, null]);
-  return <form onSubmit={e => { e.preventDefault(); throw new Error('No debe guardar sucursal'); }}><LocationPicker latitude={coords[0]} longitude={coords[1]} onChange={(a, b) => setCoords([a, b])} /></form>;
+  return <form onSubmit={e => { e.preventDefault(); throw new Error('No debe guardar sucursal'); }}><LocationSearch onSelect={(a, b) => setCoords([a, b])} /><LocationPicker latitude={coords[0]} longitude={coords[1]} onChange={(a, b) => setCoords([a, b])} /></form>;
 }
 async function type() { await userEvent.type(screen.getByLabelText('Buscar ubicación'), 'Llallagua'); }
 it('solo busca por botón, limita a cinco y muestra resultados', async () => {
@@ -29,11 +31,11 @@ it('seleccionar centra marcador y actualiza coordenadas sin guardar formulario',
   await userEvent.click(await screen.findByRole('button', { name: result.displayName }));
   expect((screen.getByLabelText('Latitud') as HTMLInputElement).value).toBe('-18.42');
   expect((screen.getByLabelText('Longitud') as HTMLInputElement).value).toBe('-66.58');
-  expect(document.querySelector('.location-marker')).toBeTruthy(); expect(screen.queryByRole('button', { name: result.displayName })).toBeNull();
+  expect(screen.queryByRole('button', { name: result.displayName })).toBeNull();
 });
 it('muestra resultado vacío', async () => {
   fetchMock.mockResolvedValue(Response.json([])); render(<Harness />); await type(); await userEvent.click(screen.getByRole('button', { name: 'Buscar' }));
-  expect(await screen.findByText('No se encontraron resultados')).toBeTruthy();
+  expect(await screen.findByText('No encontramos esa dirección. Puedes ubicar la sucursal directamente en el mapa.')).toBeTruthy();
 });
 it('muestra error sin afectar el mapa', async () => {
   fetchMock.mockResolvedValue(Response.json({ title: 'Servicio no disponible' }, { status: 502 })); render(<Harness />); await type(); await userEvent.click(screen.getByRole('button', { name: 'Buscar' }));

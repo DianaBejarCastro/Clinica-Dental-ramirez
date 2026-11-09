@@ -103,3 +103,10 @@ it('selecting another tooth surface cancels the previous finding edit',async()=>
  expect(screen.getByRole('button',{name:'Agregar hallazgo'})).toBeTruthy();
  expect(screen.getByText('Original')).toBeTruthy();
 });
+
+it('patient history mode prevents edits even when the selected exam is a draft',async()=>{
+ render(<OdontogramPanel patientId="patient" encounterId={null} readOnly/>);
+ const notes=await screen.findByLabelText('Notas generales del examen');expect((notes as HTMLTextAreaElement).disabled).toBe(true);
+ for(const name of ['Guardar borrador', 'Finalizar odontograma', 'Crear nueva actualización'])expect(screen.queryByRole('button',{name})).toBeNull();
+ expect(saved).not.toHaveBeenCalled();
+});

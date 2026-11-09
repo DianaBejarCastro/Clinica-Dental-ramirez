@@ -14,8 +14,8 @@ const drawImage = vi.fn(), encode = vi.fn();
 const fetchMock = vi.fn(async (input: unknown, init?: RequestInit): Promise<Response> => {
   const path = new URL(String(input)).pathname;
   if (path === '/api/auth/refresh') return Response.json({ accessToken: 'test', expiresAt: '', user: { id: 'u', firstName: 'Admin', lastName: '', email: '', roles: [], permissions: permission ? ['clinic.view', 'clinic.update'] : ['clinic.view'] } });
-  if (path.endsWith('/meta')) return exists ? Response.json(metadata) : new Response(null, { status: 404 });
-  if (path === '/api/admin/clinic/site-images/hero') {
+  if (path === '/api/clinic/site-images/hero/meta') return exists ? Response.json(metadata) : new Response(null, { status: 404 });
+  if (['/api/admin/clinic/site-images/hero', '/api/admin/clinic/site-images/care'].includes(path)) {
     if (fail) return Response.json({ title: 'Imagen inválida.' }, { status: 400 });
     if (init?.method === 'DELETE') { exists = false; return new Response(null, { status: 204 }); }
     if (init?.method === 'PUT') { exists = true; return Response.json(metadata); }
@@ -147,4 +147,33 @@ it('sin portada no hay wrapper, placeholder ni hueco y conserva hero', async () 
 it('fallo de imagen no deja hueco y cambio de versión invalida caché', async () => {
   exists = true; const { container } = render(<ClinicHeroBanner />); const image = await screen.findByAltText('Instalaciones'); fireEvent.error(image);
   expect(container.innerHTML).toBe(''); exists = false; fireEvent(window, new Event('clinic-cover-changed')); await act(async () => {}); expect(container.innerHTML).toBe('');
+});
+
+it('reutiliza el editor vertical para atención y guarda/elimina solo su endpoint', async () => {
+  render(<AuthProvider><ClinicCoverUploader purpose="care" /></AuthProvider>);
+  await screen.findByRole('button', { name: 'Subir imagen de atención' });
+  await userEvent.upload(screen.getByLabelText('Archivo de imagen de atención'), new File(['pixels'], 'care.png', { type: 'image/png' }));
+  loadCrop();
+  await userEvent.click(screen.getByRole('button', { name: 'Aplicar recorte' }));
+  expect(encode).toHaveBeenCalledWith(1200, 1350);
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar imagen de atención' }));
+  await screen.findByText('Imagen de atención guardada.');
+  const upload = fetchMock.mock.calls.find(([, init]) => init?.method === 'PUT')!;
+  expect(String(upload[0])).toContain('/site-images/care');
+  await userEvent.click(screen.getByRole('button', { name: 'Eliminar imagen de atención' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Confirmar eliminación' }));
+  await screen.findByText('Imagen de atención eliminada.');
+  expect(fetchMock.mock.calls.filter(([, init]) => ['PUT', 'DELETE'].includes(init?.method ?? '')).every(([url]) => String(url).includes('/site-images/care'))).toBe(true);
+});
+
+it('muestra la causa segura del servidor y conserva el recorte para reintentar', async () => {
+  render(<AuthProvider><ClinicCoverUploader purpose="care" /></AuthProvider>);
+  await screen.findByRole('button', { name: 'Subir imagen de atención' });
+  await userEvent.upload(screen.getByLabelText('Archivo de imagen de atención'), new File(['pixels'], 'care.png', { type: 'image/png' }));
+  loadCrop(); await userEvent.click(screen.getByRole('button', { name: 'Aplicar recorte' }));
+  fetchMock.mockResolvedValueOnce(Response.json({ title: 'La configuración de imágenes de la clínica requiere una actualización.' }, { status: 503 }));
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar imagen de atención' }));
+  expect((await screen.findByRole('alert')).textContent).toContain('requiere una actualización');
+  expect(screen.getByAltText('Vista previa de imagen de atención')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Guardar imagen de atención' })).toBeTruthy();
 });

@@ -1,0 +1,11 @@
+﻿.public-branches-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 24px; }
+.public-branches-map { min-width: 0; height: 440px; border-radius: 18px; z-index: 0; }
+.public-branches-list { min-width: 0; display: grid; gap: 16px; align-content: start; }
+.public-branch-card { padding: 24px; border: 1px solid #d8e5ec; border-radius: 16px; overflow-wrap: anywhere; }
+.public-branch-card h3 { margin-top: 0; }
+.public-branch-card address { font-style: normal; line-height: 1.7; }
+.public-branch-card .public-button { margin-top: 16px; }
+@media (max-width: 800px) {
+  .public-branches-layout { grid-template-columns: minmax(0, 1fr); }
+  .public-branches-map { height: 320px; }
+}

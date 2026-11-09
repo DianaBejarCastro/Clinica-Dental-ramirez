@@ -17,7 +17,7 @@ public static class ClinicSiteImagesConfiguration
         e.Property(x => x.FocalPointX).HasPrecision(6, 5);
         e.Property(x => x.FocalPointY).HasPrecision(6, 5);
         e.ToTable("ClinicSiteImages", t => {
-            t.HasCheckConstraint("CK_ClinicSiteImages_Hero", "\"ImageType\" = 'HERO' AND \"Width\" = 1916 AND \"Height\" = 821");
+            t.HasCheckConstraint("CK_ClinicSiteImages_Purpose", "(\"ImageType\" = 'HERO' AND \"Width\" = 1916 AND \"Height\" = 821) OR (\"ImageType\" = 'CARE' AND \"Width\" = 1200 AND \"Height\" = 1350)");
             t.HasCheckConstraint("CK_ClinicSiteImages_Content", "\"ContentType\" IN ('image/png','image/jpeg','image/webp') AND \"Size\" > 0 AND \"Size\" <= 10485760 AND octet_length(\"ImageData\") = \"Size\"");
             t.HasCheckConstraint("CK_ClinicSiteImages_FocalPoint", "(\"FocalPointX\" IS NULL OR \"FocalPointX\" BETWEEN 0 AND 1) AND (\"FocalPointY\" IS NULL OR \"FocalPointY\" BETWEEN 0 AND 1)");
         });

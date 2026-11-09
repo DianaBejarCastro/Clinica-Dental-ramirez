@@ -50,3 +50,10 @@ it('enforces range validation before save',async()=>{await ready();value(depth,'
 it('loading does not show editable fields',()=>{vi.mocked(service.catalogs).mockReturnValue(new Promise(()=>{}));render(<PeriodontalPanel patientId="patient" encounterId="encounter"/>);expect(screen.getByRole('status').textContent).toContain('Cargando');expect(screen.queryByLabelText(depth)).toBeNull();});
 it.each([400,403,404,500])('handles %s without exposing internal details',async status=>{await ready();saved.mockRejectedValueOnce(new ApiError(status,'secret SQL'));click('Guardar borrador periodontal');expect((await screen.findByRole('alert')).textContent).not.toContain('secret');});
 it('uses internal horizontal scrolling and readable columns on mobile',async()=>{await ready();expect(screen.getByRole('region',{name:/Tabla periodontal/}).className).toBe('perio-chart');const css=readFileSync('src/modules/doctor/periodontal/periodontal.css','utf8');expect(css).toContain('overflow-x:auto');expect(css).toContain('flex-basis:290px');});
+
+it('patient history mode prevents edits even when the selected exam is a draft',async()=>{
+ render(<PeriodontalPanel patientId="patient" encounterId={null} readOnly/>);
+ const notes=await screen.findByLabelText('Notas generales del examen periodontal');expect((notes as HTMLTextAreaElement).disabled).toBe(true);
+ for(const name of ['Guardar borrador periodontal', 'Finalizar periodontograma', 'Crear nueva actualización periodontal'])expect(screen.queryByRole('button',{name})).toBeNull();
+ expect(saved).not.toHaveBeenCalled();
+});

@@ -13,6 +13,7 @@ public sealed class ApiExceptionHandler : IExceptionHandler
             ApiException ex => (ex.Status, ex.Message),
             DbUpdateException { InnerException: PostgresException { SqlState: "23505", ConstraintName: "IX_Users_IdentityDocument" } } => (409, ClinicaRamirez.Api.Application.Identity.IdentityDocument.ConflictMessage),
             DbUpdateException { InnerException: PostgresException { SqlState: "23505" } } => (409, "El valor ya existe."),
+            DbUpdateException { InnerException: PostgresException { SqlState: "23514", ConstraintName: "CK_ClinicSiteImages_Hero" } } => (503, "La configuración de imágenes de la clínica requiere una actualización. Contacta al administrador; no es necesario cambiar la imagen."),
             DbUpdateException { InnerException: PostgresException { SqlState: "23503" or "23514" or "23502" } } => (400, "Datos o referencias inválidos."),
             DbUpdateConcurrencyException => (409, "El registro cambió. Vuelva a intentarlo."),
             _ => (500, "No se pudo completar la operación.")

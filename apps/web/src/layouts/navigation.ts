@@ -1,7 +1,8 @@
 export interface NavigationItem { label: string; route: string; permission?: string }
 export interface NavigationGroup { label: string; items: NavigationItem[] }
 export interface NavigationConfiguration { items: NavigationItem[]; groups: NavigationGroup[] }
-export const doctorNavigation: NavigationConfiguration = { items: [{ label: 'Mis citas', route: '/doctor/appointments' }, { label: 'Inventario', route: '/doctor/inventory', permission: 'inventory.view' }], groups: [] };
+export const doctorNavigation: NavigationConfiguration = { items: [{ label: 'Mis citas', route: '/doctor/appointments' },
+    { label: 'Mis pacientes', route: '/doctor/patients', permission: 'patients.view' }, { label: 'Inventario', route: '/doctor/inventory', permission: 'inventory.view' }], groups: [] };
 export const overview: NavigationItem = { label: 'Resumen', route: '/' };
 export const navigationGroups: NavigationGroup[] = [
   { label: 'Administración', items: [

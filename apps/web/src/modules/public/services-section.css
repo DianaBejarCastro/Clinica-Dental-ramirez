@@ -1,0 +1,21 @@
+.services-controls { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; margin: 24px 0 12px; color: #476478; font-size: .8rem; }
+.services-controls button { font: inherit; border-radius: 24px; }
+.services-viewport { width: 100%; overflow: hidden; touch-action: pan-y; cursor: grab; padding-block: 10px; user-select: none; border-radius: 16px; }
+.services-viewport:active { cursor: grabbing; }
+.services-viewport:focus-visible { outline: 3px solid #008b8b; outline-offset: 4px; }
+.services-track { display: flex; width: max-content; will-change: transform; }
+.services-group { display: flex; flex: none; gap: 18px; padding-right: 18px; }
+.service-tile { --tile-bg: #07696c; --tile-ink: #fff; position: relative; isolation: isolate; overflow: hidden; flex: 0 0 320px; width: 320px; min-height: 166px; box-sizing: border-box; padding: 22px 24px; background: var(--tile-bg); color: var(--tile-ink); border: 1px solid #ffffff24; border-radius: 16px; transition: translate .2s ease; overflow-wrap: anywhere; }
+.service-tile::after { content: ''; position: absolute; z-index: -1; width: 250px; height: 250px; border: 1px solid currentColor; opacity: .13; border-radius: 50%; right: -140px; top: -60px; box-shadow: 0 0 0 22px #ffffff08, 0 0 0 45px #ffffff06; }
+.service-tile--CYAN { --tile-bg: #b9eef1; --tile-ink: #123b4c; }
+.service-tile--NAVY { --tile-bg: #14334c; }
+.service-tile--AQUA { --tile-bg: #28d6cb; --tile-ink: #09383b; }
+.service-tile--MINT { --tile-bg: #d0f0df; --tile-ink: #153c37; }
+.service-tile--DARK_TEAL { --tile-bg: #073c40; }
+.service-tile h3 { color: inherit; font-size: 1.1rem; line-height: 1.3; margin: 12px 0 8px; }
+.service-tile p { color: inherit; font-size: .85rem; line-height: 1.5; margin: 0; }
+.service-tile-number { font-size: .72rem; letter-spacing: .12em; }
+@media (hover: hover) { .service-tile:hover { translate: 0 -4px; } }
+@media (max-width: 850px) { .service-tile { flex-basis: 280px; width: 280px; } }
+@media (max-width: 480px) { .service-tile { flex-basis: 78vw; width: 78vw; padding: 20px; } }
+@media (prefers-reduced-motion: reduce) { .service-tile { transition: none; } }

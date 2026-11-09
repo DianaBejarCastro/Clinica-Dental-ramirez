@@ -22,10 +22,10 @@ public sealed class ClinicSiteImageTests(IdentityFixture f) : IClassFixture<Iden
         using var bitmap = new SKBitmap(width, height); bitmap.Erase(new SKColor(40, 120, 110));
         using var image = SKImage.FromBitmap(bitmap); using var bytes = image.Encode(format, 95); return bytes.ToArray();
     }
-    private static Task<HttpResponseMessage> Upload(HttpClient c, byte[] bytes, string mime = "image/png", string focal = "0.25", string alt = "Instalaciones") {
+    private static Task<HttpResponseMessage> Upload(HttpClient c, byte[] bytes, string mime = "image/png", string focal = "0.25", string alt = "Instalaciones", string path = AdminPath) {
         var form = new MultipartFormDataContent(); var file = new ByteArrayContent(bytes); file.Headers.ContentType = new MediaTypeHeaderValue(mime);
         form.Add(file, "file", "photo.png"); form.Add(new StringContent(focal), "focalPointX"); form.Add(new StringContent("0.5"), "focalPointY"); form.Add(new StringContent(alt), "altText");
-        return c.PutAsync(AdminPath, form);
+        return c.PutAsync(path, form);
     }
     [Theory][InlineData(SKEncodedImageFormat.Png, "image/png")][InlineData(SKEncodedImageFormat.Jpeg, "image/jpeg")][InlineData(SKEncodedImageFormat.Webp, "image/webp")]
     public async Task ValidImageStoredAndPublicBytes(SKEncodedImageFormat format, string mime) {
@@ -98,4 +98,82 @@ public sealed class ClinicSiteImageTests(IdentityFixture f) : IClassFixture<Iden
         Assert.Equal("bytea", model.FindProperty("ImageData")!.GetColumnType());
         Assert.DoesNotContain(db.Model.FindEntityType(typeof(Clinic))!.GetProperties(), p => p.Name.StartsWith("Hero"));
     }
+    [Theory]
+    [InlineData(SKEncodedImageFormat.Png, "image/png")]
+    [InlineData(SKEncodedImageFormat.Jpeg, "image/jpeg")]
+    [InlineData(SKEncodedImageFormat.Webp, "image/webp")]
+    public async Task CareImageIndependentFromHeroAndReplacementKeepsRelationship(SKEncodedImageFormat format, string mime) {
+        const string care = "/api/admin/clinic/site-images/care";
+        using var c = await Admin();
+        await Upload(c, Image());
+        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var hero = await db.ClinicSiteImages.AsNoTracking().SingleAsync(x => x.ImageType == ClinicSiteImageType.HERO);
+        try {
+            var bytes = Image(format, 1200, 1350);
+            Assert.Equal(HttpStatusCode.OK, (await Upload(c, bytes, mime, path: care)).StatusCode);
+            var first = await db.ClinicSiteImages.AsNoTracking().SingleAsync(x => x.ImageType == ClinicSiteImageType.CARE);
+            Assert.Equal(hero.ClinicId, first.ClinicId);
+            Assert.Equal(1200, first.Width); Assert.Equal(1350, first.Height);
+            Assert.Equal(HttpStatusCode.OK, (await Upload(c, bytes, mime, path: care)).StatusCode);
+            var next = await db.ClinicSiteImages.AsNoTracking().SingleAsync(x => x.ImageType == ClinicSiteImageType.CARE);
+            Assert.Equal(first.Id, next.Id);
+            Assert.Equal(first.CreatedAt, next.CreatedAt);
+            using var anonymous = f.Client();
+            var content = await anonymous.GetAsync("/api/clinic/site-images/care");
+            Assert.Equal(bytes, await content.Content.ReadAsByteArrayAsync());
+            Assert.Equal(mime, content.Content.Headers.ContentType!.MediaType);
+            Assert.NotNull(content.Headers.ETag);
+            var metadata = await anonymous.GetStringAsync("/api/clinic/site-images/care/meta");
+            Assert.DoesNotContain("imageData", metadata, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(HttpStatusCode.NoContent, (await c.DeleteAsync(care)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync("/api/clinic/site-images/care")).StatusCode);
+            var retained = await db.ClinicSiteImages.AsNoTracking().SingleAsync(x => x.ImageType == ClinicSiteImageType.HERO);
+            Assert.Equal(hero.Id, retained.Id); Assert.Equal(hero.ImageData, retained.ImageData);
+            var actions = await db.AuditLogs.Where(x => x.EntityId == first.Id).Select(x => x.Action).ToListAsync();
+            Assert.Contains("clinic_care_uploaded", actions); Assert.Contains("clinic_care_updated", actions); Assert.Contains("clinic_care_deleted", actions);
+        } finally { await c.DeleteAsync(care); }
+    }
+    [Fact] public async Task CareValidatesContentDimensionsSizeAndPermissions() {
+        const string care = "/api/admin/clinic/site-images/care";
+        using var c = await Admin();
+        Assert.Equal(HttpStatusCode.BadRequest, (await Upload(c, Image(), path: care)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await Upload(c, "fake"u8.ToArray(), path: care)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await Upload(c, Image(SKEncodedImageFormat.Jpeg, 1200, 1350), path: care)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await Upload(c, Image(width: 1200, height: 1350), "image/svg+xml", path: care)).StatusCode);
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, (await Upload(c, new byte[10 * 1024 * 1024 + 1], path: care)).StatusCode);
+        using var anonymous = f.Client();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Upload(anonymous, Image(), path: care)).StatusCode);
+        var login = await f.Login(anonymous, await f.CreateUser()); anonymous.DefaultRequestHeaders.Authorization = new("Bearer", login.Body.AccessToken);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Upload(anonymous, Image(), path: care)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await anonymous.DeleteAsync(care)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await anonymous.GetAsync(care)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await c.GetAsync("/api/clinic/site-images/unknown")).StatusCode);
+    }
+
+    [Fact] public async Task CareAcceptsEmptyAltAndReportsPendingSchemaSafely() {
+        const string care = "/api/admin/clinic/site-images/care";
+        using var c = await Admin();
+        using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await c.DeleteAsync(care);
+        await db.Database.ExecuteSqlRawAsync("""ALTER TABLE "ClinicSiteImages" ADD CONSTRAINT "CK_ClinicSiteImages_Hero" CHECK ("ImageType" = 'HERO' AND "Width" = 1916 AND "Height" = 821);""");
+        try {
+            var response = await Upload(c, Image(width: 1200, height: 1350), alt: "", path: care);
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+            var body = await response.Content.ReadAsStringAsync();
+            Assert.Contains("requiere una actualización", body);
+            Assert.DoesNotContain("CK_ClinicSiteImages", body);
+            Assert.False(await db.ClinicSiteImages.AnyAsync(x => x.ImageType == ClinicSiteImageType.CARE));
+        } finally {
+            await db.Database.ExecuteSqlRawAsync("""ALTER TABLE "ClinicSiteImages" DROP CONSTRAINT "CK_ClinicSiteImages_Hero";""");
+        }
+        try {
+            Assert.Equal(HttpStatusCode.OK, (await Upload(c, Image(width: 1200, height: 1350), alt: "", path: care)).StatusCode);
+            var row = await db.ClinicSiteImages.AsNoTracking().SingleAsync(x => x.ImageType == ClinicSiteImageType.CARE);
+            Assert.Null(row.AltText); Assert.Equal(.25m, row.FocalPointX); Assert.Equal(.5m, row.FocalPointY);
+            Assert.True(await db.Clinics.AnyAsync(x => x.Id == row.ClinicId));
+            var meta = await c.GetFromJsonAsync<HeroPublicMetadata>("/api/clinic/site-images/care/meta");
+            Assert.StartsWith("Atención en ", meta!.AltText);
+        } finally { await c.DeleteAsync(care); }
+    }
+
 }

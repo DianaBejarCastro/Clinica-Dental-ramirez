@@ -7,6 +7,8 @@ namespace ClinicaRamirez.Api.Persistence;
 
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    public DbSet<ClinicFeaturedDoctor> ClinicFeaturedDoctors => Set<ClinicFeaturedDoctor>();
+    public DbSet<ClinicService> ClinicServices => Set<ClinicService>();
     public DbSet<ClinicSiteImage> ClinicSiteImages => Set<ClinicSiteImage>();
     public DbSet<ClinicSocialNetwork> ClinicSocialNetworks => Set<ClinicSocialNetwork>();
     public DbSet<ClinicaRamirez.Api.Domain.Appointments.Appointment> Appointments => Set<ClinicaRamirez.Api.Domain.Appointments.Appointment>();
@@ -44,6 +46,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.ConfigureClinicAdministration();
+        b.ConfigureClinicServices();
+        b.ConfigureClinicFeaturedDoctors();
         b.ConfigureUserProfilePhotos();
         b.ConfigureClinicSiteImages();
         b.ConfigureClinicSocialNetworks();

@@ -1,6 +1,6 @@
 namespace ClinicaRamirez.Api.Domain.ClinicAdministration;
 
-public enum ClinicSiteImageType { HERO }
+public enum ClinicSiteImageType { HERO, CARE }
 
 public sealed class ClinicSiteImage
 {

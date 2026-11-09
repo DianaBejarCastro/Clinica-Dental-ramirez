@@ -25,9 +25,10 @@ export default function LocationSearch({ onSelect }: { onSelect: (latitude: numb
       onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); event.stopPropagation(); void search(); } }} /></label>
       <button type="button" disabled={busy} onClick={() => void search()}>Buscar</button></div>
     <p className="muted" id={`${id}-help`}>Busca la dirección de la sucursal. Se consulta OpenStreetMap; no incluyas datos personales o confidenciales.</p>
+    <p className="muted">Si la búsqueda no encuentra la dirección, haz clic directamente en el mapa.</p>
     {busy && <p role="status">Buscando ubicación…</p>}
-    {error && <p role="alert">{error}</p>}
-    {results?.length === 0 && <p role="status">No se encontraron resultados</p>}
+    {error && <p role="alert">{error} Puedes ubicar la sucursal directamente en el mapa.</p>}
+    {results?.length === 0 && <p role="status">No encontramos esa dirección. Puedes ubicar la sucursal directamente en el mapa.</p>}
     <ul id={`${id}-results`} className="location-search-results" aria-label="Resultados de ubicación" hidden={!results?.length}>
       {results?.map((result, index) => <li key={index}><button type="button" className="secondary" onClick={() => {
         onSelect(result.latitude, result.longitude); close();

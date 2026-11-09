@@ -55,4 +55,62 @@ public sealed class ClinicalCareTests(IdentityFixture f) : IClassFixture<Identit
     [Fact] public async Task FinancialPermissionsRequired(){var c=await Started();await Plan(c);Assert.Null((await Get(c)).Plan!.Finance);Assert.Equal(HttpStatusCode.Forbidden,(await c.Client.PostAsJsonAsync(Url(c,"/payments"),new PaymentInput(Guid.NewGuid(),1m,null,null,null))).StatusCode);}
     [Fact] public async Task AuditNoClinicalText(){var c=await Started(true);await Plan(c);await Ok(c.Client.PutAsJsonAsync(Url(c,"/soap"),new SoapInput("PRIVATE S","PRIVATE O","PRIVATE A","PRIVATE P",0,true)));await Ok(c.Client.PostAsJsonAsync(Url(c,"/payments"),new PaymentInput(Guid.NewGuid(),1m,null,null,"PRIVATE PAYMENT")));using var s=f.Services.CreateScope();var db=s.ServiceProvider.GetRequiredService<AppDbContext>();var logs=await db.AuditLogs.Where(x=>x.UserId==c.User).ToArrayAsync();foreach(var action in new[]{"clinical_encounter_started","medical_history_updated","treatment_episode_created","soap_note_signed","treatment_plan_created","treatment_plan_updated","payment_recorded"})Assert.Contains(logs,x=>x.Action==action);Assert.DoesNotContain("PRIVATE",string.Join(" ",logs.Select(x=>x.MetadataJson)));}
     [Fact] public void ClinicalModelNormalizedAndRestrict(){using var s=f.Services.CreateScope();var db=s.ServiceProvider.GetRequiredService<AppDbContext>();var entities=db.Model.GetEntityTypes().Where(x=>typeof(IClinicalRecord).IsAssignableFrom(x.ClrType)).ToArray();Assert.Equal(13,entities.Length);Assert.All(entities.SelectMany(x=>x.GetForeignKeys()),fk=>Assert.Equal(DeleteBehavior.Restrict,fk.DeleteBehavior));Assert.DoesNotContain(entities.SelectMany(x=>x.GetProperties()),p=>p.GetColumnType() is "json" or "jsonb");}
+
+    [Fact] public async Task MyPatientsAreScopedAndDistinct()
+    {
+        var own=await Setup();await Second(own);var other=await Setup();
+        var page=await own.Client.GetFromJsonAsync<ClinicaRamirez.Api.DTOs.Doctors.DoctorPatientsPage>("/api/doctor/me/patients");
+        Assert.Equal(1,page!.Total);Assert.Equal(own.Appointment.PatientId,Assert.Single(page.Items).Id);
+        Assert.DoesNotContain(page.Items,p=>p.Id==other.Appointment.PatientId);
+    }
+    [Theory]
+    [InlineData("diana")][InlineData("bejar")][InlineData("DIANA BEJ")][InlineData("54321")][InlineData("65700")]
+    public async Task MyPatientsRemotePartialSearch(string term)
+    {
+        var c=await Setup();using(var s=f.Services.CreateScope()){
+            var db=s.ServiceProvider.GetRequiredService<AppDbContext>();var p=await db.PatientProfiles.Include(x=>x.User).SingleAsync(x=>x.Id==c.Appointment.PatientId);
+            p.User.FirstName="Diana";p.User.LastName="Bejar";p.User.DocumentNumber="P54321"+Guid.NewGuid().ToString("N").ToUpperInvariant();p.User.Phone="65700345";await db.SaveChangesAsync();
+        }
+        var result=await c.Client.GetFromJsonAsync<ClinicaRamirez.Api.DTOs.Doctors.DoctorPatientsPage>("/api/doctor/me/patients?q="+Uri.EscapeDataString(term));
+        Assert.Equal(c.Appointment.PatientId,Assert.Single(result!.Items).Id);
+        Assert.Empty((await c.Client.GetFromJsonAsync<ClinicaRamirez.Api.DTOs.Doctors.DoctorPatientsPage>("/api/doctor/me/patients?q=NO_MATCH"))!.Items);
+    }
+    [Theory][InlineData(true)][InlineData(false)]
+    public async Task MyPatientsExcludeInactiveButPreserveHistoricalAccess(bool profile)
+    {
+        var c=await Setup();using(var s=f.Services.CreateScope()){
+            var db=s.ServiceProvider.GetRequiredService<AppDbContext>();var p=await db.PatientProfiles.Include(x=>x.User).SingleAsync(x=>x.Id==c.Appointment.PatientId);
+            if(profile)p.IsActive=false;else p.User.IsActive=false;await db.SaveChangesAsync();
+        }
+        Assert.Empty((await c.Client.GetFromJsonAsync<ClinicaRamirez.Api.DTOs.Doctors.DoctorPatientsPage>("/api/doctor/me/patients"))!.Items);
+        Assert.Equal(HttpStatusCode.OK,(await c.Client.GetAsync($"/api/doctor/me/patients/{c.Appointment.PatientId}/clinical")).StatusCode);
+    }
+    [Fact] public async Task MyPatientsRejectUnrelatedHistoryAndKeepAdminAccess()
+    {
+        var own=await Setup();var other=await Setup();
+        Assert.Equal(HttpStatusCode.NotFound,(await own.Client.GetAsync($"/api/doctor/me/patients/{other.Appointment.PatientId}/clinical")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound,(await own.Client.GetAsync($"/api/doctor/me/patients/{Guid.NewGuid()}/clinical")).StatusCode);
+        var context=await own.Client.GetFromJsonAsync<ClinicalContext>($"/api/doctor/me/patients/{own.Appointment.PatientId}/clinical");
+        Assert.Equal(own.Appointment.PatientId,context!.Patient.Id);
+        using var admin=f.Client();var login=await f.Login(admin);admin.DefaultRequestHeaders.Authorization=new("Bearer",login.Body.AccessToken);
+        Assert.Equal(HttpStatusCode.OK,(await admin.GetAsync($"/api/admin/patients/{other.Appointment.PatientId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,(await admin.GetAsync("/api/doctor/me/patients")).StatusCode);
+    }
+    [Fact] public async Task MyPatientsPaginateAndValidateBounds()
+    {
+        var c=await Setup();using(var s=f.Services.CreateScope()){
+            var db=s.ServiceProvider.GetRequiredService<AppDbContext>();
+            for(var i=0;i<22;i++){
+                var p=new PatientProfile{User=new User{FirstName="Page",LastName=$"Patient{i:00}",CanLogin=false},BloodType="UNKNOWN",EmergencyContactName="Test",EmergencyContactPhone="70000000"};db.Add(p);
+                db.Add(new Appointment{DoctorId=c.Appointment.DoctorId,PatientId=p.Id,CenterId=c.Appointment.CenterId,SpecialtyId=c.Appointment.SpecialtyId,AppointmentDate=c.Appointment.AppointmentDate.AddDays(i+1),StartTime=new(9,0),EndTime=new(9,30)});
+            }
+            await db.SaveChangesAsync();
+        }
+        var first=(await c.Client.GetFromJsonAsync<ClinicaRamirez.Api.DTOs.Doctors.DoctorPatientsPage>("/api/doctor/me/patients"))!;
+        var second=(await c.Client.GetFromJsonAsync<ClinicaRamirez.Api.DTOs.Doctors.DoctorPatientsPage>("/api/doctor/me/patients?page=2"))!;
+        Assert.Equal(23,first.Total);Assert.Equal(20,first.Items.Length);Assert.Equal(3,second.Items.Length);
+        Assert.Empty(first.Items.Select(x=>x.Id).Intersect(second.Items.Select(x=>x.Id)));
+        foreach(var query in new[]{"page=0","pageSize=101","page=2147483647","q="+new string('x',201)})
+            Assert.Equal(HttpStatusCode.BadRequest,(await c.Client.GetAsync("/api/doctor/me/patients?"+query)).StatusCode);
+    }
 }

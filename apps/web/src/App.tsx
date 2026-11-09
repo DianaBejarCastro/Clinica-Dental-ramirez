@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect } from 'react';
 const CashierPayments = lazy(() => import('./modules/cashier/CashierPayments'));
 import PatientRegisterPage from './modules/auth/PatientRegisterPage';
 import PatientDashboard from './modules/patient/PatientDashboard';
+import DoctorPatients from './modules/doctor/DoctorPatients';
 import DoctorDashboard from './modules/doctor/DoctorDashboard';
 import ClinicalConsultation from './modules/doctor/clinical/ClinicalConsultation';
 import { Protected, useRoute } from './router/Router';
@@ -35,6 +36,8 @@ function Workspace() {
   if (path === '/cashier/payments' || path === '/cashier' || !loading && isCashier && !isDoctor && (path === '/' || path === '/login'))
     return <Protected permission="payments.view"><Suspense fallback={<p role="status">Cargando cobros…</p>}><CashierPayments /></Suspense></Protected>;
   if (path === '/doctor/inventory') return <Protected permission="inventory.view">{isDoctor ? <AdminLayout path={path} doctorPortal><InventoryPage doctor /></AdminLayout> : <p>Acceso restringido</p>}</Protected>;
+  if (path === '/doctor/patients') return <Protected permission="patients.view">{isDoctor ? <DoctorPatients /> : <p>Acceso restringido</p>}</Protected>;
+  if (path === '/doctor/patient-history') return <Protected permission="clinical_history.view">{isDoctor ? <ClinicalConsultation key={query} patientId={new URLSearchParams(query).get('patient') || 'invalid'} /> : <p>Acceso restringido</p>}</Protected>;
   if (path === '/doctor/consultation')
     return <Protected permission="clinical_history.view">{isDoctor ? <ClinicalConsultation key={query} appointmentId={new URLSearchParams(query).get('appointment') ?? ''} /> : <section className="card"><h1>Acceso restringido</h1></section>}</Protected>;
   if (path === '/doctor' || path === '/doctor/appointments' || !loading && isDoctor && (path === '/' || path === '/login'))

@@ -12,9 +12,9 @@ function Icon({name}:{name:keyof typeof icons}){
   return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{icons[name]}</svg>;
 }
 
-export default function ClinicalPatientHeader({patient,appointment}:{patient:Context['patient'];appointment:Context['appointment']}){
+export default function ClinicalPatientHeader({patient,appointment,historical=false}:{patient:Context['patient'];appointment:Context['appointment'];historical?:boolean}){
   const initials = [patient.firstName,patient.lastName].map(value=>value.trim().charAt(0)).join('').toLocaleUpperCase('es') || 'P';
-  return <section className="card clinical-patient" aria-label="Resumen del paciente y cita actual">
+  return <section className="card clinical-patient" aria-label={historical?"Resumen del paciente y última cita relacionada":"Resumen del paciente y cita actual"}>
     <div className="clinical-patient-profile">
       <div className="clinical-patient-heading">
         <span className="clinical-patient-avatar" aria-hidden="true">{initials}</span>
@@ -29,8 +29,8 @@ export default function ClinicalPatientHeader({patient,appointment}:{patient:Con
         </div>)}
       </dl>
     </div>
-    <section className="clinical-patient-appointment" aria-label="Cita actual">
-      <div className="clinical-patient-appointment-title"><Icon name="calendar"/><h3>Cita actual</h3><span className="clinical-patient-tag">Consulta</span></div>
+    <section className="clinical-patient-appointment" aria-label={historical?"Última cita relacionada":"Cita actual"}>
+      <div className="clinical-patient-appointment-title"><Icon name="calendar"/><h3>{historical?"Última cita relacionada":"Cita actual"}</h3><span className="clinical-patient-tag">Consulta</span></div>
       <div className="clinical-patient-time"><time dateTime={`${appointment.date}T${appointment.startTime}`}>{appointment.startTime.slice(0,5)}<span> – </span>{appointment.endTime.slice(0,5)}</time><time className="clinical-patient-date" dateTime={appointment.date}>{appointment.date}</time></div>
       <p className="clinical-patient-branch"><Icon name="location"/><span><span className="clinical-patient-label">Sucursal</span>{appointment.center||'No registrada'}</span></p>
       <div className="clinical-patient-reason"><span className="clinical-patient-label">Motivo de la cita</span><p>{appointment.reason||'Sin motivo registrado'}</p></div>

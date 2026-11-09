@@ -24,6 +24,7 @@ public sealed class DeletionGuardService(AppDbContext db, IdentitySupport suppor
         ["centers"] = new(typeof(Center), "center_deleted"), ["specialties"] = new(typeof(Specialty), "specialty_deleted"),
         ["doctors"] = new(typeof(DoctorProfile), "doctor_deleted"), ["schedules"] = new(typeof(DoctorSchedule), "schedule_deleted"),
         ["patients"] = new(typeof(PatientProfile), "patient_deleted"), ["appointments"] = new(typeof(Appointment), "appointment_deleted"),
+        ["clinic-services"] = new(typeof(ClinicService), "clinic_service_deleted"),
         ["social-networks"] = new(typeof(ClinicSocialNetwork), "clinic_social_network_deleted"),
         ["users"] = new(typeof(User), "user_deleted"), ["roles"] = new(typeof(Role), "role_deleted")
     };
@@ -55,7 +56,7 @@ public sealed class DeletionGuardService(AppDbContext db, IdentitySupport suppor
         var dependencies = await Dependencies(rule.Type, id, ct);
         if (dependencies.Length > 0) return new(false, "Este registro tiene información vinculada y no puede eliminarse.", dependencies);
         var inactive = entity switch {
-            Center x => !x.IsActive, Specialty x => !x.IsActive, DoctorProfile x => !x.IsActive,
+            ClinicService x => !x.IsActive, Center x => !x.IsActive, Specialty x => !x.IsActive, DoctorProfile x => !x.IsActive,
             DoctorSchedule x => !x.IsActive, PatientProfile x => !x.IsActive, ClinicSocialNetwork x => !x.IsActive,
             User x => !x.IsActive, Role x => !x.IsActive,
             Appointment x => x.Status is "CANCELLED" or "NO_SHOW", _ => false

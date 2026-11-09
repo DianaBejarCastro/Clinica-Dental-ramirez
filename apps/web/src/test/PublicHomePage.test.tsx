@@ -4,16 +4,19 @@ import userEvent from '@testing-library/user-event';
 import App from '../App';
 import { setSession } from '../services/api';
 
-const fetchMock = vi.fn(async (_input: unknown) => ({ ok: false, status: 401, json: async () => ({ title: 'Sin sesión' }) }) as Response);
+const fetchMock = vi.fn(async (_input: unknown) => String(_input).endsWith('/api/clinic/services') ? ({ ok: true, json: async () => [{ id: 's1', name: 'Servicio de prueba', shortDescription: '', visualVariant: 'TEAL' }] }) as Response : ({ ok: false, status: 401, json: async () => ({ title: 'Sin sesión' }) }) as Response);
 beforeEach(() => {
   setSession(null); window.history.replaceState(null, '', '#/inicio');
+  vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
+  window.matchMedia = vi.fn(() => ({ matches: true, addEventListener() {}, removeEventListener() {} }) as unknown as MediaQueryList);
   fetchMock.mockClear(); vi.stubGlobal('fetch', fetchMock);
 });
-it('muestra la landing pública y sus secciones sin consultar APIs privadas', () => {
+it('muestra la landing pública y sus secciones sin consultar APIs privadas', async () => {
   render(<App />);
   expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Cuidamos tu sonrisa');
+  await screen.findByRole('heading', { name: 'Nuestros servicios' });
   for (const name of ['Nuestros servicios', 'Nuestro equipo', 'Contacto', 'Agenda tu próxima consulta']) expect(screen.getByRole('heading', { name })).toBeTruthy();
-  expect(fetchMock.mock.calls.every(call => ['/api/clinic/site-images/hero/meta', '/api/clinic/social-networks'].some(path => String(call[0]).endsWith(path)))).toBe(true);
+  expect(fetchMock.mock.calls.every(call => ['/api/clinic/branches', '/api/clinic/team', '/api/clinic/services', '/api/clinic/site-images/care/meta', '/api/clinic/site-images/hero/meta', '/api/clinic/social-networks'].some(path => String(call[0]).endsWith(path)))).toBe(true);
 });
 it('reutiliza el logo público y muestra la imagen al cargar', () => {
   render(<App />);
@@ -48,7 +51,7 @@ it('navegar a una sección cierra el menú y enfoca el destino', async () => {
 it('reservar dirige a contacto sin abrir agenda interna', () => {
   render(<App />);
   screen.getAllByRole('link', { name: 'Reservar cita' }).forEach(link => expect(link.getAttribute('href')).toBe('#/inicio?section=contacto'));
-  expect(fetchMock.mock.calls.every(call => ['/api/clinic/site-images/hero/meta', '/api/clinic/social-networks'].some(path => String(call[0]).endsWith(path)))).toBe(true);
+  expect(fetchMock.mock.calls.every(call => ['/api/clinic/branches', '/api/clinic/team', '/api/clinic/services', '/api/clinic/site-images/care/meta', '/api/clinic/site-images/hero/meta', '/api/clinic/social-networks'].some(path => String(call[0]).endsWith(path)))).toBe(true);
 });
 it('Acceso al sistema abre el login funcional', async () => {
   render(<App />); const u = userEvent.setup();

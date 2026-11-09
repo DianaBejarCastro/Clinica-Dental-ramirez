@@ -33,7 +33,7 @@ it('shares admin shell, logo, header, footer and only one active navigation item
   await ready();
   const navigation=screen.getByRole('navigation',{name:'Navegación principal'});
   expect(navigation.classList.contains('sidebar-navigation')).toBe(true);
-  expect(within(navigation).getAllByRole('link')).toHaveLength(1);
+  expect(within(navigation).getAllByRole('link')).toHaveLength(2);
   expect(within(navigation).getByRole('link',{name:'Mis citas'}).getAttribute('aria-current')).toBe('page');
   for(const name of ['Resumen','Administración','Clínica','Equipo médico','Atención','Usuarios','Pacientes','Horarios'])expect(within(navigation).queryByText(name)).toBeNull();
   expect(document.querySelector('.shell > aside .brand')).toBeTruthy();
@@ -47,7 +47,7 @@ it('shares admin shell, logo, header, footer and only one active navigation item
 });
 it('legacy doctor overview redirects to appointments',async()=>{window.location.hash='/doctor';await ready();await waitFor(()=>expect(window.location.hash).toBe('#/doctor/appointments'));expect(screen.queryByRole('link',{name:'Resumen'})).toBeNull();});
 it('shared footer logs out normally',async()=>{await ready();mock.mockImplementationOnce(async()=>new Response(null,{status:204}));await userEvent.click(screen.getByRole('button',{name:'Cerrar sesión'}));expect(await screen.findByRole('button',{name:'Ingresar'})).toBeTruthy();expect(mock.mock.calls.some(([url])=>String(url).endsWith('/logout'))).toBe(true);});
-it('doctor portal remains single-option for users with additional roles',async()=>{user.roles=['DOCTOR','ADMINISTRATOR','PATIENT'];await ready();const nav=screen.getByRole('navigation',{name:'Navegación principal'});expect(within(nav).getAllByRole('link')).toHaveLength(1);expect(document.querySelector('.account a')).toBeNull();});
+it('doctor portal keeps scoped navigation for users with additional roles',async()=>{user.roles=['DOCTOR','ADMINISTRATOR','PATIENT'];await ready();const nav=screen.getByRole('navigation',{name:'Navegación principal'});expect(within(nav).getAllByRole('link')).toHaveLength(2);expect(document.querySelector('.account a')).toBeNull();});
 it('non-doctor cannot open portal',async()=>{user.roles=['ADMINISTRATOR'];render(<App/>);expect(await screen.findByText('Acceso restringido')).toBeTruthy();expect(mock.mock.calls.some(([url])=>String(url).includes('/api/doctor/'))).toBe(false);});
 it('successful doctor login leaves an old administrative route for the doctor dashboard',async()=>{
   window.location.hash='/users';
@@ -92,4 +92,35 @@ it('renders multiple same-day appointments as separate cards',async()=>{
  });
  await ready();expect(screen.getAllByRole('article')).toHaveLength(2);
  expect(screen.getByText('Maria Bejar')).toBeTruthy();expect(screen.getByText('09:00–10:00')).toBeTruthy();
+});
+it('shows real selected-day KPI counts with existing statuses only',async()=>{
+ mock.mockImplementation(async(input)=>{
+  const url=String(input);if(url.endsWith('/refresh'))return Response.json(session);
+  if(url.includes('/api/doctor/me/appointments')){
+   const date=new URL(url).searchParams.get('date');
+   return Response.json({from:date,to:date,items:[{...item,date},{...item,date,appointmentId:'two',status:'SCHEDULED'},{...item,date,appointmentId:'three',status:'CANCELLED'}]});
+  }
+  return new Response('',{status:404});
+ });
+ render(<App/>);await screen.findByRole('region',{name:'Indicadores del día seleccionado'});
+ const metrics=[...document.querySelectorAll('.doctor-kpi')];
+ expect(metrics.map(x=>x.querySelector('strong')?.textContent)).toEqual(['3','1','1']);
+ expect(metrics.map(x=>x.textContent)).toEqual(['Citas del día3','Confirmadas1','Programadas1']);
+ expect(document.querySelectorAll('.doctor-appointment-list .doctor-appointment')).toHaveLength(3);
+ expect(screen.queryByText('Horario disponible')).toBeNull();
+});
+it('KPI cards are zero for an empty day and do not fetch invented availability',async()=>{
+ empty=true;render(<App/>);await screen.findByText('No tienes citas para esta fecha.');
+ expect([...document.querySelectorAll('.doctor-kpi strong')].map(x=>x.textContent)).toEqual(['0','0','0']);
+ expect(mock.mock.calls.some(([url])=>String(url).includes('availability'))).toBe(false);
+ expect(screen.getByRole('heading',{name:'Agenda del día'})).toBeTruthy();
+});
+it('timeline retains an accessible time and detail action for each appointment',async()=>{
+ await ready();
+ expect(screen.getByLabelText('Línea de tiempo de citas')).toBeTruthy();
+ const card=screen.getByRole('article');
+ expect(within(card).getByText('08:00–08:30')).toBeTruthy();
+ expect(card.querySelector('.doctor-patient-icon svg')?.getAttribute('aria-hidden')).toBe('true');
+ await userEvent.click(within(card).getByRole('button',{name:'Ver cita'}));
+ expect(screen.getByRole('region',{name:'Detalle de cita'}).textContent).toContain('Limpieza dental');
 });

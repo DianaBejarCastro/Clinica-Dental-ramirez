@@ -61,6 +61,8 @@ builder.Services.AddScoped(typeof(ChartExamStore<>));
 builder.Services.AddScoped<OdontogramService>();
 builder.Services.AddScoped<PeriodontalService>();
 builder.Services.AddScoped<ClinicSocialNetworkService>();
+builder.Services.AddScoped<HomeServicesService>();
+builder.Services.AddScoped<FeaturedDoctorsService>();
 builder.Services.AddScoped<ClinicaRamirez.Api.Application.Deletion.DeletionGuardService>();
 builder.Services.AddHttpClient("LocationSearch", client => client.Timeout = TimeSpan.FromSeconds(8)).RemoveAllLoggers();
 builder.Services.AddSingleton<LocationSearchService>();

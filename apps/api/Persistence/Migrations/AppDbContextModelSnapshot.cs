@@ -265,6 +265,101 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicFeaturedDoctor", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ClinicId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("DoctorProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DoctorProfileId");
+
+                    b.HasIndex("ClinicId", "DoctorProfileId")
+                        .IsUnique();
+
+                    b.ToTable("ClinicFeaturedDoctors", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ClinicFeaturedDoctors_Order", "\"DisplayOrder\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicService", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ClinicId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("ShortDescription")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid?>("SpecialtyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("VisualVariant")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SpecialtyId");
+
+                    b.HasIndex("ClinicId", "IsActive", "IsPublic", "DisplayOrder");
+
+                    b.ToTable("ClinicServices", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ClinicServices_Name", "length(btrim(\"Name\")) > 0");
+
+                            t.HasCheckConstraint("CK_ClinicServices_Order", "\"DisplayOrder\" >= 0");
+
+                            t.HasCheckConstraint("CK_ClinicServices_Variant", "\"VisualVariant\" IN ('TEAL','CYAN','NAVY','AQUA','MINT','DARK_TEAL')");
+                        });
+                });
+
             modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicSiteImage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -333,7 +428,7 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
 
                             t.HasCheckConstraint("CK_ClinicSiteImages_FocalPoint", "(\"FocalPointX\" IS NULL OR \"FocalPointX\" BETWEEN 0 AND 1) AND (\"FocalPointY\" IS NULL OR \"FocalPointY\" BETWEEN 0 AND 1)");
 
-                            t.HasCheckConstraint("CK_ClinicSiteImages_Hero", "\"ImageType\" = 'HERO' AND \"Width\" = 1916 AND \"Height\" = 821");
+                            t.HasCheckConstraint("CK_ClinicSiteImages_Purpose", "(\"ImageType\" = 'HERO' AND \"Width\" = 1916 AND \"Height\" = 821) OR (\"ImageType\" = 'CARE' AND \"Width\" = 1200 AND \"Height\" = 1350)");
                         });
                 });
 
@@ -3606,6 +3701,37 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Clinic");
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicFeaturedDoctor", b =>
+                {
+                    b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.Clinic", null)
+                        .WithMany()
+                        .HasForeignKey("ClinicId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.DoctorProfile", "Doctor")
+                        .WithMany()
+                        .HasForeignKey("DoctorProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Doctor");
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicService", b =>
+                {
+                    b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.Clinic", null)
+                        .WithMany()
+                        .HasForeignKey("ClinicId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.Specialty", null)
+                        .WithMany()
+                        .HasForeignKey("SpecialtyId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicSiteImage", b =>

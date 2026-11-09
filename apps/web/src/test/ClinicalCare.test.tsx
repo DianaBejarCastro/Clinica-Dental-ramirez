@@ -49,3 +49,32 @@ it('financial write controls require permission',async()=>{plan(true);getSession
 it('hides treatment section without its permission',async()=>{getSession()!.user.permissions=['clinical_history.view'];await ready();expect(screen.queryByRole('button',{name:'Plan de tratamiento'})).toBeNull();expect(screen.getByLabelText('Tratamiento').closest('fieldset')?.disabled).toBe(true);});
 
 it('includes odontogram between medical history and SOAP',async()=>{await ready();const labels=[...screen.getByRole('navigation',{name:'Secciones de consulta'}).querySelectorAll('button')].map(b=>b.textContent);expect(labels.indexOf('Odontograma')).toBe(labels.indexOf('Antecedentes médicos')+1);expect(labels.indexOf('Periodontograma')).toBe(labels.indexOf('Odontograma')+1);expect(labels.indexOf('Nota clínica')).toBe(labels.indexOf('Periodontograma')+1);});
+
+it('patient history reuses the clinical record in read-only mode even with write permissions',async()=>{
+ render(<ClinicalConsultation patientId="patient"/>);
+ expect(await screen.findByText('Nota de segunda visita')).toBeTruthy();
+ expect(screen.queryByRole('button',{name:'Consulta actual'})).toBeNull();
+ await userEvent.click(screen.getByRole('button',{name:'Antecedentes médicos'}));
+ expect(screen.queryByRole('button',{name:'Guardar revisión'})).toBeNull();
+ await userEvent.click(screen.getByRole('button',{name:'Plan de tratamiento'}));
+ expect(screen.queryByRole('button',{name:'Crear plan'})).toBeNull();
+ expect(mock.mock.calls.every(([,init])=>!init?.method||init.method==='GET')).toBe(true);
+ expect(mock.mock.calls.some(([url])=>String(url).includes('/api/doctor/me/patients/patient/clinical'))).toBe(true);
+});
+it('patient history handles rejected unrelated URLs without displaying patient data',async()=>{
+ fail=true;render(<ClinicalConsultation patientId="unrelated"/>);
+ expect(await screen.findByRole('alert')).toBeTruthy();expect(screen.queryByText('Ana Prueba')).toBeNull();
+ expect(mock.mock.calls.some(([url])=>String(url).endsWith('/history'))).toBe(false);
+});
+
+it('read-only patient history cannot edit a draft clinical note',async()=>{
+ data.encounter={id:'encounter',treatmentEpisodeId:'ep',status:'OPEN',startedAt:'2026-10-14T12:00:00Z',soap:{id:'note',subjective:'Existing note',objective:'O',assessment:'A',plan:'P',status:'DRAFT',revision:0,signedAt:null,signedByUserId:null}};
+ render(<ClinicalConsultation patientId="patient"/>);await screen.findByText('Nota de segunda visita');
+ await userEvent.click(screen.getByRole('button',{name:'Nota clínica'}));
+ expect((screen.getByLabelText('S — Subjetivo') as HTMLTextAreaElement).closest('fieldset')!.disabled).toBe(true);
+ expect(screen.queryByRole('button',{name:'Guardar borrador'})).toBeNull();
+ expect(screen.queryByRole('button',{name:'Firmar nota'})).toBeNull();
+ await userEvent.click(screen.getByRole('button',{name:'Plan de tratamiento'}));
+ expect(screen.queryByRole('button',{name:'Crear plan'})).toBeNull();
+ expect(screen.queryByLabelText('Título del plan')).toBeNull();
+});

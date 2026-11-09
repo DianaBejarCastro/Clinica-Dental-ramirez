@@ -23,7 +23,9 @@ const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit
   const method = init?.method ?? 'GET';
   const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {};
   if (path === '/api/auth/refresh') return response(session);
-  if (path === '/api/admin/clinic/site-images/hero') return Response.json({ title: 'No hay portada.' }, { status: 404 });
+  if (['/api/admin/clinic/site-images/hero', '/api/admin/clinic/site-images/care'].includes(path)) return Response.json({ title: 'No hay portada.' }, { status: 404 });
+  if (path.startsWith('/api/admin/clinic/team')) return response([]);
+  if (path.startsWith('/api/admin/clinic/services')) return response([]);
   if (path === '/api/admin/clinic/social-networks') return response([]);
   if (path === '/api/admin/clinic/social-networks') return response([]);
   if (failure?.path === path && failure.method === method) return response({ title: failure.message }, 400);
@@ -135,7 +137,7 @@ describe.each(catalogs)('$title', catalog => {
     mount(catalog.page, permissions());
     expect(await screen.findByText(catalog.name)).toBeTruthy();
     expect(screen.getByText('Activo')).toBeTruthy();
-    if (catalog.isCenter) expect((screen.getByRole('link', { name: 'Ver mapa' }) as HTMLAnchorElement).href).toBe('https://www.google.com/maps?q=-16.5,-68.15');
+    if (catalog.isCenter) expect((screen.getByRole('link', { name: 'Ver mapa' }) as HTMLAnchorElement).href).toBe('https://www.google.com/maps/dir/?api=1&destination=-16.5,-68.15');
     else {
       expect(screen.getByText('Atención especializada')).toBeTruthy();
       expect(screen.getByRole('columnheader', { name: 'Doctores' })).toBeTruthy();

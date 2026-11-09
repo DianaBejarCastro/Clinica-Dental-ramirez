@@ -1,0 +1,24 @@
+.doctor-patients { min-width: 0; }
+.doctor-patients header { margin-bottom: 1.5rem; }
+.doctor-patients header p, .doctor-patients small { color: var(--color-muted); }
+.doctor-patients-search { display: grid; gap: .5rem; max-width: 36rem; }
+.doctor-patients-search input { width: 100%; min-width: 0; }
+.doctor-patients-list { list-style: none; padding: 0; margin: 1rem 0; display: grid; gap: .75rem; }
+.doctor-patients-list li { display: grid; grid-template-columns: 3rem minmax(0, 1fr) minmax(7rem, .4fr) auto; align-items: center; gap: 1rem; padding: 1.25rem; border: 1px solid var(--color-border); border-radius: 12px; }
+.doctor-patients-avatar { display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 50%; background: #e7f6f5; color: #007b80; font-weight: 700; }
+.doctor-patients-identity h2 { font-size: 1.1rem; margin: 0 0 .35rem; }
+.doctor-patients-identity, .doctor-patients-phone { overflow-wrap: anywhere; min-width: 0; }
+.doctor-patients-phone { display: grid; gap: .35rem; }
+.doctor-patients-history { color: #007379; border: 1px solid #9dd7db; border-radius: 6px; padding: .7rem 1rem; text-align: center; text-decoration: none; font-weight: 600; }
+.doctor-patients-history:hover { background: #e7f6f5; }
+.doctor-patients-history:focus-visible { outline: 3px solid #008b91; outline-offset: 3px; }
+.doctor-patients-empty { padding: 2rem 1rem; background: #f5fafa; text-align: center; border-radius: 10px; }
+.doctor-patients-empty h2 { font-size: 1.1rem; }
+.doctor-patients-pagination { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 1rem; }
+@media (max-width: 900px) { .doctor-patients-list li { grid-template-columns: 3rem minmax(0, 1fr); } .doctor-patients-phone { grid-column: 2; } .doctor-patients-history { grid-column: 2; } }
+@media (max-width: 480px) { .doctor-patients-list li { padding: 1rem; gap: .75rem; } .doctor-patients-history { grid-column: 1 / -1; } .doctor-patients-pagination { justify-content: center; } }
+
+.doctor-patients header { display: flex; align-items: center; gap: 1rem; }
+.doctor-patients-title-icon { flex: 0 0 3.5rem; padding: .8rem; border-radius: 14px; background: #e1f4f5; color: #008a91; }
+.doctor-patients-title-icon svg { display: block; width: 100%; }
+.doctor-patients .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
