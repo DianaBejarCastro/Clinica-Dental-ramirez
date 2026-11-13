@@ -1,3 +1,4 @@
+import { normalizedPhone } from '../../components/phoneRules';
 import BackLink from '../../components/BackLink';
 import { PatientFields, PatientAccountFields, patientData, patientError } from '../patient/PatientFields';
 import { useState, type FormEvent } from 'react';
@@ -18,12 +19,14 @@ export default function PatientRegisterPage() {
     if (password !== confirmPassword) { setError('Las contraseñas no coinciden.'); return; }
     const text = (key: string) => String(form.get(key) ?? '').trim();
     if (!text('firstName') || !text('lastName')) { setError('Nombre y apellido son obligatorios.'); return; }
-    const clinicalError = patientError(form); if (clinicalError) { setError(clinicalError); return; }
+    const clinicalError = patientError(form, true); if (clinicalError) { setError(clinicalError); return; }
+    const registrationData = Object.fromEntries(Object.entries(patientData(form)).filter(([key]) => key !== 'emergencyContactName'));
+    for (const name of ['phone', 'emergencyContactPhone']) registrationData[name] = normalizedPhone(text(`${name}Country`), text(name));
     setBusy(true);
     try {
       const response = await fetch(apiUrl('/api/auth/register/patient'), { method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'X-Clinic-Request': '1' },
-        body: JSON.stringify({ ...patientData(form), email: text('email'), password, confirmPassword }) });
+        body: JSON.stringify({ ...registrationData, email: text('email'), password, confirmPassword }) });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         setError(response.status === 429 ? 'Demasiados intentos. Espera un momento antes de volver a intentar.' :
@@ -37,7 +40,7 @@ export default function PatientRegisterPage() {
   return <main className="login premium-login patient-register"><section className="login-brand"><ClinicLogo /><p>CLÍNICA DENTAL RAMÍREZ</p><h1>Tu sonrisa,<br />más cerca.</h1><p>Crea tu cuenta de paciente.</p></section>
     <section className="login-form"><BackLink href="#/inicio">Volver al inicio</BackLink><p className="eyebrow">REGISTRO DE PACIENTE</p><h2>Crear cuenta de paciente</h2>
       <form onSubmit={submit}><fieldset disabled={busy} className="registration-fields">
-        <PatientFields />
+        <PatientFields publicRegistration />
         <PatientAccountFields publicRegistration />
       </fieldset><p className="muted">Contraseña de 12 a 128 caracteres.</p>
       {error && <p role="alert" className="error">{error}</p>}<button disabled={busy}>{busy ? 'Creando cuenta…' : 'Crear cuenta'}</button></form>

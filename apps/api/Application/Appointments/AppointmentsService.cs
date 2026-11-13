@@ -118,17 +118,19 @@ public sealed partial class AppointmentsService(AppDbContext db, IdentitySupport
         await ValidateResources(doctorId, centerId, specialtyId);
         var blocks = await Schedules(doctorId, centerId, date);
         var occupied = await Occupied(doctorId, date).ToArrayAsync();
-        var slots = new List<AvailabilitySlot>();
-        var duration = TimeSpan.FromMinutes(durationMinutes).Ticks;
-        foreach (var block in blocks)
-            for (var ticks = block.StartTime.Ticks; ticks + duration <= block.EndTime.Ticks; ticks += TimeSpan.FromMinutes(30).Ticks)
+        return new(doctorId,centerId,specialtyId,date,durationMinutes,
+            CalculateSlots(blocks,occupied.Select(x=>new AvailabilitySlot(x.StartTime,x.EndTime)),durationMinutes,30));
+    }
+    private static AvailabilitySlot[] CalculateSlots(IEnumerable<DoctorSchedule> blocks,IEnumerable<AvailabilitySlot> occupied,int durationMinutes,int stepMinutes)
+    {
+        var busy=occupied.ToArray();var slots=new List<AvailabilitySlot>();var duration=TimeSpan.FromMinutes(durationMinutes).Ticks;
+        foreach(var block in blocks)
+            for(var ticks=block.StartTime.Ticks;ticks+duration<=block.EndTime.Ticks;ticks+=TimeSpan.FromMinutes(stepMinutes).Ticks)
             {
-                var start = new TimeOnly(ticks); var end = new TimeOnly(ticks + duration);
-                if (Fits(block, start, end) && !occupied.Any(x => x.StartTime < end && start < x.EndTime))
-                    slots.Add(new(start, end));
+                var start=new TimeOnly(ticks);var end=new TimeOnly(ticks+duration);
+                if(Fits(block,start,end)&&!busy.Any(x=>x.StartTime<end&&start<x.EndTime))slots.Add(new(start,end));
             }
-        return new(doctorId, centerId, specialtyId, date, durationMinutes,
-            slots.Distinct().OrderBy(x => x.StartTime).ToArray());
+        return slots.Distinct().OrderBy(x=>x.StartTime).ToArray();
     }
     private static void Apply(Appointment a, AppointmentUpdateRequest r)
     {

@@ -1,3 +1,6 @@
+import CompletePatientProfile from './modules/auth/CompletePatientProfile';
+import { patientDestination } from './modules/auth/googleIdentity';
+import PatientBooking from './modules/patient/PatientBooking';
 import InventoryPage from './modules/inventory/InventoryPage';
 import { AuthProvider, useAuth } from './modules/auth/AuthProvider';
 import { lazy, Suspense, useEffect } from 'react';
@@ -32,7 +35,11 @@ function Workspace() {
   const isCashier = session?.user.roles.includes('CASHIER') ?? false;
   useEffect(() => { if (!loading && isCashier && !isDoctor && (path === '/' || path === '/login' || path === '/cashier')) window.location.hash = '/cashier/payments'; }, [isCashier, isDoctor, loading, path]);
   useEffect(() => { if (!loading && isDoctor && (path === '/' || path === '/login' || path === '/doctor')) window.location.hash = '/doctor/appointments'; }, [isDoctor, loading, path]);
-  useEffect(() => { if (!loading && isPatient && !isDoctor && path !== '/patient' && path !== '/patient/appointments') window.location.hash = '/patient'; }, [isPatient, isDoctor, loading, path]);
+  useEffect(() => { if (!loading && isPatient && !session?.user.requiresProfileCompletion && !isDoctor && path !== '/patient' && path !== '/patient/appointments' && path !== '/patient/payments' && path !== '/patient/book' && path !== '/patient/complete-profile') { const doctor=new URLSearchParams(query).get('bookingDoctor'); window.location.hash = doctor && /^[0-9a-f-]{36}$/i.test(doctor) ? `/patient/book?doctor=${encodeURIComponent(doctor)}` : '/patient'; } }, [isPatient, isDoctor, loading, path, query]);
+  useEffect(()=>{const id=new URLSearchParams(query).get('bookingDoctor');if(!loading&&path==='/login'&&!session?.user.requiresProfileCompletion&&session?.user.roles.includes('PATIENT')&&id&&/^[0-9a-f-]{36}$/i.test(id))window.location.hash=`/patient/book?doctor=${encodeURIComponent(id)}`;},[loading,path,query,session]);
+  useEffect(() => { if (!loading && session?.user.requiresProfileCompletion && path !== '/patient/complete-profile') window.location.hash = patientDestination(true); }, [loading, session, path]);
+  if (session?.user.requiresProfileCompletion || path === '/patient/complete-profile') return <Protected><CompletePatientProfile /></Protected>;
+  if(path === '/patient/book') return <Protected>{session?.user.roles.includes('PATIENT')?<PatientBooking key={query} featuredId={new URLSearchParams(query).get('doctor')??''}/>:<section className="card"><p>Esta opción está disponible solo para pacientes.</p><a href="#/inicio">Volver al inicio</a></section>}</Protected>;
   if (path === '/cashier/payments' || path === '/cashier' || !loading && isCashier && !isDoctor && (path === '/' || path === '/login'))
     return <Protected permission="payments.view"><Suspense fallback={<p role="status">Cargando cobros…</p>}><CashierPayments /></Suspense></Protected>;
   if (path === '/doctor/inventory') return <Protected permission="inventory.view">{isDoctor ? <AdminLayout path={path} doctorPortal><InventoryPage doctor /></AdminLayout> : <p>Acceso restringido</p>}</Protected>;
@@ -42,8 +49,8 @@ function Workspace() {
     return <Protected permission="clinical_history.view">{isDoctor ? <ClinicalConsultation key={query} appointmentId={new URLSearchParams(query).get('appointment') ?? ''} /> : <section className="card"><h1>Acceso restringido</h1></section>}</Protected>;
   if (path === '/doctor' || path === '/doctor/appointments' || !loading && isDoctor && (path === '/' || path === '/login'))
     return <Protected>{isDoctor ? <DoctorDashboard /> : <section className="card"><h1>Acceso restringido</h1><p>Este portal es exclusivo para doctores.</p></section>}</Protected>;
-  if (!loading && (isPatient || session?.user.roles.includes('PATIENT') && (path === '/patient' || path === '/patient/appointments')))
-    return <Protected><PatientDashboard appointments={path === '/patient/appointments'} /></Protected>;
+  if (!loading && (isPatient || session?.user.roles.includes('PATIENT') && (path === '/patient' || path === '/patient/appointments' || path === '/patient/payments')))
+    return <Protected><PatientDashboard key={route} initialFilter={new URLSearchParams(query).get('filter') === 'upcoming' ? 'upcoming' : 'history'} view={path === '/patient/appointments' ? 'appointments' : path === '/patient/payments' ? 'payments' : 'summary'} /></Protected>;
   const pages = {
     '/admin/inventory': <Protected permission="inventory.movement.view"><InventoryPage /></Protected>,
     '/administrators': <Protected permission="users.view"><StaffPage key="administrators" kind="administrators" /></Protected>,

@@ -7,6 +7,8 @@ public sealed class PatientRegistrationService(PatientsService patients)
     {
         ct.ThrowIfCancellationRequested();
         PatientAccountService.Validate(request);
+        RegistrationPhone.Validate(request.Phone);
+        RegistrationPhone.Validate(request.EmergencyContactPhone);
         await patients.Create(new PatientCreateRequest {
             FirstName = request.FirstName, LastName = request.LastName, DocumentType = request.DocumentType, DocumentNumber = request.DocumentNumber, DocumentCountryCode = request.DocumentCountryCode,
             BirthDate = request.BirthDate, Gender = request.Gender, Phone = request.Phone,

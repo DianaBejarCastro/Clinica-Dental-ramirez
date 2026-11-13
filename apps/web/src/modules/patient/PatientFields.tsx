@@ -1,3 +1,5 @@
+import PhoneInput from '../../components/PhoneInput';
+import { phoneError } from '../../components/phoneRules';
 import IdentityDocumentFields, { documentData } from '../../components/IdentityDocumentFields';
 import PasswordField from '../../components/PasswordField';
 export function localToday() {
@@ -17,13 +19,13 @@ const fields = [
   { name: 'address', label: 'Dirección', max: 500 },
 ];
 export const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'UNKNOWN'];
-export function PatientFields({ value = {}, admin = false, disabled = false }: { value?: object; admin?: boolean; disabled?: boolean }) {
+export function PatientFields({ value = {}, admin = false, disabled = false, publicRegistration = false, missingOnly = false }: { value?: object; admin?: boolean; disabled?: boolean; publicRegistration?: boolean; missingOnly?: boolean }) {
   const data = value as Record<string, unknown>;
-  return <>{fields.map(f => f.name === 'documentNumber' ? <IdentityDocumentFields key={f.name} value={data} disabled={disabled} /> : <label key={f.name}>{f.label}<input name={f.name} type={f.type ?? 'text'} required={f.required} maxLength={f.max}
+  return <>{fields.filter(f => !publicRegistration || f.name !== 'emergencyContactName').filter(f => !missingOnly || !data[f.name]).map(f => publicRegistration && (f.name === 'phone' || f.name === 'emergencyContactPhone') ? <PhoneInput key={f.name} name={f.name} label={f.name === 'phone' ? f.label : 'Emergency Contact Phone Number'} required disabled={disabled} defaultValue={String(data[f.name] ?? '')} /> : f.name === 'documentNumber' ? <IdentityDocumentFields key={f.name} value={data} disabled={disabled} /> : <label key={f.name}>{publicRegistration && f.name === 'emergencyContactPhone' ? 'Emergency Contact Phone Number' : f.label}<input name={f.name} type={f.type ?? 'text'} required={f.required} maxLength={f.max}
     max={f.name === 'birthDate' ? localToday() : undefined} defaultValue={String(data[f.name] ?? '')} disabled={disabled} /></label>)}
-    <label>Grupo sanguíneo<select name="bloodType" required defaultValue={String(data.bloodType ?? '')} disabled={disabled}>
+    {(!missingOnly || !data.bloodType) && <label>Grupo sanguíneo<select name="bloodType" required defaultValue={String(data.bloodType ?? '')} disabled={disabled}>
       <option value="">Selecciona una opción</option>{bloodTypes.map(value => <option key={value} value={value}>{value === 'UNKNOWN' ? 'Desconocido' : value}</option>)}
-    </select></label>
+    </select></label>}
     {admin && <><label>Notas<textarea name="notes" maxLength={4000} rows={3} defaultValue={String(data.notes ?? '')} disabled={disabled} /></label></>}
   </>;
 }
@@ -31,8 +33,9 @@ export function patientData(form: FormData, admin = false) {
   const values = Object.fromEntries(fields.map(f => [f.name, String(form.get(f.name) ?? '').trim() || null]));
   return { ...values, ...documentData(form), bloodType: String(form.get('bloodType') ?? ''), ...(admin ? { notes: String(form.get('notes') ?? '').trim() || null } : {}) };
 }
-export function patientError(form: FormData) {
-  if (fields.some(f => f.required && !String(form.get(f.name) ?? '').trim())) return 'Completa los datos obligatorios del paciente.';
+export function patientError(form: FormData, publicRegistration = false) {
+  if (publicRegistration) for (const name of ['phone', 'emergencyContactPhone']) { const error = phoneError(String(form.get(`${name}Country`) ?? 'BO'), String(form.get(name) ?? '')); if (error) return error; }
+  if (fields.some(f => f.required && !(publicRegistration && f.name === 'emergencyContactName') && !String(form.get(f.name) ?? '').trim())) return 'Completa los datos obligatorios del paciente.';
   if (String(form.get('birthDate')) > localToday()) return 'La fecha de nacimiento no puede ser futura.';
   if (!bloodTypes.includes(String(form.get('bloodType')))) return 'Selecciona un grupo sanguíneo o Desconocido.';
   return '';

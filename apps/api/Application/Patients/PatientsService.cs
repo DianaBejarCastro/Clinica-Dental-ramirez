@@ -60,7 +60,7 @@ public sealed class PatientsService(AppDbContext db, IdentitySupport support, Pa
         var user = new User { CanLogin = false };
         var patient = new PatientProfile { User = user, UserId = user.Id };
         await Mutate(async () => {
-            await Apply(patient, request);
+            await Apply(patient, request, validate: !selfRegistration);
             await accounts.AssignPatientRole(user);
             if (request.Account != null) await accounts.Create(patient, request.Account);
             db.PatientProfiles.Add(patient);
@@ -93,15 +93,16 @@ public sealed class PatientsService(AppDbContext db, IdentitySupport support, Pa
         patient.IsActive = active;
         support.Audit("patient_status_changed", "PatientProfile", id, metadata: new { isActive = active });
     });
-    private async Task Apply(PatientProfile patient, PatientUpdateRequest request)
+    private async Task Apply(PatientProfile patient, PatientUpdateRequest request, bool validate = true)
     {
-        PatientAccountService.Validate(request);
+        // Public registration has already validated its own DTO before mapping to the internal create request.
+        if (validate) PatientAccountService.Validate(request);
         await IdentityDocument.Apply(db, patient.User, request.DocumentType, request.DocumentNumber, request.DocumentCountryCode);
         patient.User.FirstName = Optional(request.FirstName) ?? throw new ApiException(400, "Nombre obligatorio.");
         patient.User.LastName = Optional(request.LastName) ?? throw new ApiException(400, "Apellido obligatorio.");
          patient.User.BirthDate = request.BirthDate!.Value; patient.User.Gender = Optional(request.Gender);
         patient.User.Phone = request.Phone!.Trim();
-        patient.User.Address = Optional(request.Address); patient.EmergencyContactName = request.EmergencyContactName!.Trim();
+        patient.User.Address = Optional(request.Address); patient.EmergencyContactName = request.EmergencyContactName?.Trim() ?? "";
         patient.EmergencyContactPhone = request.EmergencyContactPhone!.Trim(); patient.BloodType = request.BloodType!;
         patient.Notes = Optional(request.Notes); patient.IsActive = request.IsActive;
     }

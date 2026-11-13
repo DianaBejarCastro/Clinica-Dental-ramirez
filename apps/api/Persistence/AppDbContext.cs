@@ -15,6 +15,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<PatientProfile> PatientProfiles => Set<PatientProfile>();
     public DbSet<ClinicaRamirez.Api.Domain.DentalAssistants.DentalAssistantProfile> DentalAssistantProfiles => Set<ClinicaRamirez.Api.Domain.DentalAssistants.DentalAssistantProfile>();
     public DbSet<UserProfilePhoto> UserProfilePhotos => Set<UserProfilePhoto>();
+    public DbSet<UserExternalLogin> UserExternalLogins => Set<UserExternalLogin>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
@@ -52,6 +53,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         b.ConfigureClinicSiteImages();
         b.ConfigureClinicSocialNetworks();
         b.ConfigurePatients();
+        b.ConfigureExternalLogins();
         b.ConfigureDentalAssistants();
         b.ConfigureAppointments();
         b.ConfigureClinicalCare();
@@ -76,8 +78,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             e.HasIndex(x => x.Email).IsUnique().HasFilter("\"Email\" IS NOT NULL");
             e.ToTable("Users", t => {
                 t.HasCheckConstraint("CK_Users_EmailNormalized", "\"Email\" = lower(btrim(\"Email\")) AND length(\"Email\") > 3");
-                t.HasCheckConstraint("CK_Users_Names", "length(btrim(\"FirstName\")) > 0 AND length(btrim(\"LastName\")) > 0");
-                t.HasCheckConstraint("CK_Users_Login", "(NOT \"CanLogin\" AND \"PasswordHash\" IS NULL) OR (\"CanLogin\" AND \"Email\" IS NOT NULL AND \"PasswordHash\" IS NOT NULL AND length(\"PasswordHash\") > 0)");
+                t.HasCheckConstraint("CK_Users_Names", "length(btrim(\"FirstName\")) > 0 AND length(\"LastName\") >= 0");
+                t.HasCheckConstraint("CK_Users_Login", "(NOT \"CanLogin\" AND \"PasswordHash\" IS NULL) OR (\"CanLogin\" AND \"Email\" IS NOT NULL AND (\"PasswordHash\" IS NULL OR length(\"PasswordHash\") > 0))");
                 t.HasCheckConstraint("CK_Users_IdentityDocument", "(\"DocumentType\" IS NULL AND \"DocumentNumber\" IS NULL AND \"DocumentCountryCode\" IS NULL) OR (\"DocumentType\" IS NOT NULL AND \"DocumentType\" IN ('CI', 'PASSPORT') AND \"DocumentNumber\" IS NOT NULL AND length(btrim(\"DocumentNumber\")) > 0 AND \"DocumentNumber\" = upper(btrim(\"DocumentNumber\")) AND \"DocumentCountryCode\" IS NOT NULL AND \"DocumentCountryCode\" ~ '^[A-Z]{2}$' AND (\"DocumentType\" <> 'CI' OR \"DocumentCountryCode\" = 'BO'))");
             });
         });
@@ -191,7 +193,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             var user = entry.Entity;
             user.Email = string.IsNullOrWhiteSpace(user.Email) ? null : user.Email.Trim().ToLowerInvariant();
             (user.DocumentType, user.DocumentNumber, user.DocumentCountryCode) = ClinicaRamirez.Api.Application.Identity.IdentityDocument.Normalize(user.DocumentType, user.DocumentNumber, user.DocumentCountryCode);
-            if (user.CanLogin ? string.IsNullOrWhiteSpace(user.Email) || string.IsNullOrWhiteSpace(user.PasswordHash) : user.PasswordHash != null)
+            if (user.CanLogin ? string.IsNullOrWhiteSpace(user.Email) || (string.IsNullOrWhiteSpace(user.PasswordHash) && !ChangeTracker.Entries<UserExternalLogin>().Any(x => x.Entity.UserId == user.Id && x.State != EntityState.Deleted) && !UserExternalLogins.Any(x => x.UserId == user.Id)) : user.PasswordHash != null)
                 throw new InvalidOperationException("Invalid access credentials invariant.");
             if (user.BirthDate > ClinicaRamirez.Api.DTOs.LocalBirthDateAttribute.Today)
                 throw new ClinicaRamirez.Api.Application.Identity.ApiException(400, "BirthDate cannot be in the future.");

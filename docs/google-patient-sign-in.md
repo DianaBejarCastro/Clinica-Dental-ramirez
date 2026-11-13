@@ -1,0 +1,17 @@
+# Google patient sign-in
+
+Create a **Web application OAuth client** in Google Cloud and configure the consent screen. Set its authorized JavaScript origins to the exact frontend origins (development: `http://localhost:5173`; production: the deployed HTTPS origin). Use the same client ID in `VITE_GOOGLE_CLIENT_ID` at frontend build time and `GoogleAuth__ClientId` in the API environment. No client secret is required for this GIS ID-token flow. No Google Maps, Places, Calendar or other API is needed.
+
+The client ID is public configuration, not a password. Never put real deployment configuration in Git. An unconfigured client displays a disabled Google option while password login remains available. A real Google account end-to-end check requires a configured OAuth client and approved origin; automated tests use mocked GIS and locally signed test tokens, never real Google requests.
+
+The official GIS script is loaded from `https://accounts.google.com/gsi/client`. If deployment adds a CSP, allow the GIS script, frame and connection origins according to [Google's setup guide](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid). Retain the API's explicit allowed frontend origins and `X-Clinic-Request` protection. Production requires HTTPS and persistent/shared ASP.NET Data Protection keys across API instances for the short-lived nonce cookie.
+
+The backend validates signature, issuer, audience, expiration, verified email, subject and a browser-bound, time-limited nonce using Microsoft IdentityModel JWT/OIDC validation and Google's cached discovery keys. ID tokens are never stored or logged. The local JWT and rotated HttpOnly refresh cookie remain the application's session mechanism.
+
+Only accounts whose sole assigned role is active PATIENT may use Google. Mixed-role accounts must use email/password because existing authorization resolves permissions from current database roles; silently selecting a frontend role would not safely restrict privileges. Google refresh sessions retain a patient-only flag, permission endpoints reject this context, and every request rechecks roles. Adding an internal role invalidates Google access and refresh.
+
+External identities use `(Provider, ProviderSubject)` and `(UserId, Provider)` unique indexes and a RESTRICT User FK. Existing verified-email patients are linked without changing their names, clinical data or password. New accounts have no password and blank/missing clinical fields, never fabricated values. Required profile completeness is inferred; completion fills missing data only. Google sessions cannot use patient endpoints until completion. Optional address and gender retain the manual registration rules. Only a validated doctor UUID is retained through completion, never an arbitrary return URL.
+
+The `AddPatientExternalLogins` migration adds this relation and the refresh context flag. It relaxes existing password/name/contact/blood-type constraints only to represent external-only accounts and missing profile data. It neither deletes nor rewrites historical data. Application validation still requires complete manual registrations. Do not downgrade while incomplete/external-only accounts exist: the older schema cannot represent them safely.
+
+References: [verify Google ID tokens](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token), [GIS JavaScript reference](https://developers.google.com/identity/gsi/web/reference/js-reference).

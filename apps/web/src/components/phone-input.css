@@ -1,0 +1,6 @@
+.phone-field { min-width: 0; display: grid; gap: .5rem; }
+.phone-control { display: flex; min-width: 0; border: 1px solid #b6d7d9; border-radius: 10px; overflow: hidden; background: #fafffe; }
+.phone-control:focus-within { outline: 2px solid #008b90; outline-offset: 2px; }
+.phone-control select, .phone-control input { border: 0 !important; border-radius: 0 !important; margin: 0; min-width: 0; width: 50%; box-shadow: none; }
+.phone-control select { border-right: 1px solid #b6d7d9 !important; }
+.phone-field small { color: #a52626; }

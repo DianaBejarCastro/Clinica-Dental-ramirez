@@ -14,6 +14,8 @@ const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit
   if (path === '/api/auth/refresh') return logged ? Response.json(session) : Response.json({}, { status: 401 });
   if (path === '/api/auth/register/patient') return errorStatus ? Response.json({ title: errorTitle }, { status: errorStatus }) : Response.json({ message: 'OK' }, { status: 201 });
   if (path === '/api/auth/login') { logged = true; return Response.json(session); }
+  if (path === '/api/patient/dashboard') return Response.json({ clinicName:'Clínica', account:{firstName:'Ana',lastName:'Paciente'},finance:{totalEstimated:0,totalPaid:0,pendingBalance:0,pendingTreatments:0},nextAppointment:null,recentPayments:[],recentAppointments:[] });
+  if (path === '/api/patient/appointments/history') return Response.json({items:[],page:1,pageSize:20,total:0});
   if (path === '/api/patient/me') return Response.json({ firstName: 'Ana', lastName: 'Paciente', email: user.email, phone: '123', documentNumber: null, birthDate: null, gender: null });
   if (path === '/api/patient/appointments') return Response.json([]);
   throw new Error(`Solicitud inesperada ${init?.method} ${path}`);
@@ -23,7 +25,7 @@ beforeEach(() => {
   window.history.replaceState(null, '', '#/register'); fetchMock.mockClear(); vi.stubGlobal('fetch', fetchMock);
 });
 async function fill(confirmation = 'SafePassword123!') {
-  for (const [name, value] of Object.entries({ documentNumber: 'CI-TEST', birthDate: '2000-01-01', phone: '70000000', emergencyContactName: 'Contacto', emergencyContactPhone: '71111111', bloodType: 'UNKNOWN' })) fireEvent.change(document.querySelector(`[name="${name}"]`)!, { target: { value } });
+  for (const [name, value] of Object.entries({ documentNumber: 'CI-TEST', birthDate: '2000-01-01', phone: '70000000', emergencyContactPhone: '71111111', bloodType: 'UNKNOWN' })) fireEvent.change(document.querySelector(`[name="${name}"]`)!, { target: { value } });
   await userEvent.type(screen.getByLabelText('Nombre'), 'Ana'); await userEvent.type(screen.getByLabelText('Apellido'), 'Paciente');
   await userEvent.type(screen.getByLabelText('Email'), user.email); await userEvent.type(screen.getByLabelText('Contraseña', { exact: true }), 'SafePassword123!');
   await userEvent.type(screen.getByLabelText('Confirmar contraseña'), confirmation);
@@ -73,23 +75,43 @@ it('login paciente dirige a Mi cuenta sin sidebar administrativo', async () => {
   window.history.replaceState(null, '', '#/login'); render(<App />);
   await userEvent.type(await screen.findByLabelText('Email'), user.email); await userEvent.type(screen.getByLabelText('Contraseña'), 'SafePassword123!');
   await userEvent.click(screen.getByRole('button', { name: 'Ingresar' }));
-  expect(await screen.findByRole('heading', { name: 'Mi cuenta' })).toBeTruthy(); expect(await screen.findByText('Ana Paciente')).toBeTruthy();
+  expect(await screen.findByRole('heading', { name: 'Mi cuenta' })).toBeTruthy(); expect(await screen.findByRole('heading', { name: 'Ana Paciente' })).toBeTruthy();
   await waitFor(() => expect(window.location.hash).toBe('#/patient')); expect(screen.queryByText('Usuarios')).toBeNull(); expect(document.querySelector('.sidebar')).toBeNull();
   expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/admin/'))).toBe(false);
 });
 it('paciente con ruta admin vuelve a portal y Mis citas usa endpoint propio', async () => {
-  logged = true; window.history.replaceState(null, '', '#/patients'); render(<App />); await screen.findByText('Ana Paciente');
-  await userEvent.click(screen.getByRole('link', { name: 'Mis citas' })); expect(await screen.findByText('No tienes citas registradas.')).toBeTruthy();
-  expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/api/patient/appointments'))).toBe(true);
+  logged = true; window.history.replaceState(null, '', '#/patients'); render(<App />); await screen.findByRole('heading', { name: 'Ana Paciente' });
+  await userEvent.click(screen.getByRole('link', { name: 'Mis citas' })); expect(await screen.findByText('No tienes próximas citas.')).toBeTruthy();
+  expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/patient/appointments/history'))).toBe(true);
   expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/admin/'))).toBe(false);
 });
 
 it('exige datos clínicos y bloquea nacimiento futuro incluso al enviar directamente', async () => {
   render(<App />); await fill();
   const birth = screen.getByLabelText('Fecha de nacimiento') as HTMLInputElement; expect(birth.max).toBe(localToday());
-  for (const label of ['Número de documento', 'Fecha de nacimiento', 'Teléfono', 'Contacto de emergencia', 'Teléfono de emergencia', 'Grupo sanguíneo', 'Email']) expect((screen.getByLabelText(label) as HTMLInputElement).required).toBe(true);
+  for (const label of ['Número de documento', 'Fecha de nacimiento', 'Teléfono', 'Emergency Contact Phone Number', 'Grupo sanguíneo', 'Email']) expect((screen.getByLabelText(label) as HTMLInputElement).required).toBe(true);
   expect((screen.getByLabelText('Género') as HTMLInputElement).required).toBe(false);
   fireEvent.change(birth, { target: { value: '2999-01-01' } }); fireEvent.submit(screen.getByRole('button', { name: 'Crear cuenta' }).closest('form')!);
   expect(screen.getByRole('alert').textContent).toContain('futura'); expect(fetchMock).not.toHaveBeenCalled();
   expect(screen.queryByLabelText('Notas')).toBeNull();
+});
+
+it('public registration has one emergency phone input and sends the existing phone property only', async () => {
+ render(<App />); await fill();
+ const field=screen.getByLabelText('Emergency Contact Phone Number') as HTMLInputElement;
+ expect(field.name).toBe('emergencyContactPhone');expect(field.type).toBe('tel');expect(field.inputMode).toBe('numeric');expect(field.required).toBe(true);
+ expect(document.querySelectorAll('input[name^="emergencyContact"]')).toHaveLength(1);
+ expect(screen.queryByLabelText('Contacto de emergencia')).toBeNull();expect(screen.queryByLabelText('Teléfono de emergencia')).toBeNull();
+ await userEvent.click(screen.getByRole('button',{name:'Crear cuenta'}));
+ await screen.findByText('Cuenta creada correctamente. Ya puedes iniciar sesión.');
+ const call=fetchMock.mock.calls.find(([url])=>String(url).includes('/register/patient'))!;
+ const body=JSON.parse(String(call[1]!.body));expect(body.emergencyContactPhone).toBe('+59171111111');expect(body.phone).toBe('+59170000000');expect(body).not.toHaveProperty('emergencyContactName');
+});
+
+it.each(['6570034', '657003444'])('blocks registration with invalid Bolivia phone %s', async number => {
+ render(<App />); await fill();
+ fireEvent.change(screen.getByLabelText('Teléfono'), { target: { value: number } });
+ fireEvent.submit(screen.getByRole('button', { name: 'Crear cuenta' }).closest('form')!);
+ expect(screen.getByRole('alert').textContent).toContain('8 dígitos');
+ expect(fetchMock).not.toHaveBeenCalled();
 });

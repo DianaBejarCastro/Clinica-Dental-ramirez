@@ -17,8 +17,8 @@ public static class PatientsConfiguration
             e.HasIndex(x => x.UserId).IsUnique();
             e.HasIndex(x => x.IsActive);
             e.ToTable("PatientProfiles", t => {
-                t.HasCheckConstraint("CK_PatientProfiles_RequiredContact", "length(btrim(\"EmergencyContactName\")) > 0 AND length(btrim(\"EmergencyContactPhone\")) > 0");
-                t.HasCheckConstraint("CK_PatientProfiles_BloodType", "\"BloodType\" IN ('A+','A-','B+','B-','AB+','AB-','O+','O-','UNKNOWN')");
+                t.HasCheckConstraint("CK_PatientProfiles_RequiredContact", "length(btrim(\"EmergencyContactPhone\")) >= 0");
+                t.HasCheckConstraint("CK_PatientProfiles_BloodType", "\"BloodType\" IN ('','A+','A-','B+','B-','AB+','AB-','O+','O-','UNKNOWN')");
             });
         });
     }

@@ -62,6 +62,7 @@ public sealed class RolePermission
 }
 public sealed class RefreshToken
 {
+    public bool PatientOnly { get; set; }
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;

@@ -24,6 +24,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_HTTP_PORTS: 8080
+      GoogleAuth__ClientId: ${GoogleAuth__ClientId:-}
       JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en .env}
       JWT_ISSUER: ${JWT_ISSUER:-clinica_ramirez}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-clinica_ramirez_web}
@@ -49,6 +50,7 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
     environment:
+      VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
       VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
       VITE_GOOGLE_MAPS_MAP_ID: ${VITE_GOOGLE_MAPS_MAP_ID:-}
       VITE_API_URL: http://localhost:${API_PORT:-5000}

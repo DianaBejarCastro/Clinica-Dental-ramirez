@@ -15,13 +15,13 @@ public abstract record PatientClinicalRequest
     [MaxLength(50)] public string? Gender { get; init; }
     [Required, MaxLength(30)] public string? Phone { get; init; }
     [MaxLength(500)] public string? Address { get; init; }
-    [Required, MaxLength(200)] public string? EmergencyContactName { get; init; }
     [Required, MaxLength(30)] public string? EmergencyContactPhone { get; init; }
     [Required, RegularExpression("^(A[+-]|B[+-]|AB[+-]|O[+-]|UNKNOWN)$")] public string? BloodType { get; init; }
 }
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public record PatientUpdateRequest : PatientClinicalRequest
 {
+    [Required, MaxLength(200)] public string? EmergencyContactName { get; init; }
     [MaxLength(4000)] public string? Notes { get; init; }
     public bool IsActive { get; init; } = true;
 }

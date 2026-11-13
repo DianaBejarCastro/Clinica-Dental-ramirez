@@ -20,16 +20,7 @@ public sealed class CashierService(AppDbContext db,FinancialPayments payments)
     private async Task PatientExists(Guid id){if(!await db.PatientProfiles.AnyAsync(x=>x.Id==id))throw new ApiException(404,"Paciente no disponible.");}
     private async Task<CashierTreatment[]> Summaries(Guid? patient=null,Guid? plan=null)
     {
-        var rows=await (from account in db.Set<TreatmentFinancialAccount>().AsNoTracking()
-            join p in db.Set<TreatmentPlan>() on account.TreatmentPlanId equals p.Id
-            join e in db.Set<TreatmentEpisode>() on p.TreatmentEpisodeId equals e.Id
-            join patientProfile in db.PatientProfiles on e.PatientProfileId equals patientProfile.Id
-            join u in db.Users on patientProfile.UserId equals u.Id
-            join d in db.DoctorProfiles on e.PrimaryDoctorProfileId equals d.Id
-            join doctor in db.Users on d.UserId equals doctor.Id
-            where (patient==null||e.PatientProfileId==patient)&&(plan==null||p.Id==plan)
-            orderby e.StartedAt descending,p.Id
-            select new{Plan=p.Id,Episode=e.Id,Patient=patientProfile.Id,Name=u.FirstName+" "+u.LastName,u.DocumentType, u.DocumentNumber, u.DocumentCountryCode,u.Phone,u.BirthDate,Title=e.Title,Doctor=doctor.FirstName+" "+doctor.LastName,e.StartedAt,account.AgreedTotal,Paid=db.Set<TreatmentPayment>().Where(x=>x.FinancialAccountId==account.Id).Sum(x=>(decimal?)x.Amount)??0m}).ToArrayAsync();
+        var rows=await FinancialAccountRead.Query(db,patient,plan).ToArrayAsync();
         var today=LocalBirthDateAttribute.Today;
         if(rows.Any(x=>x.Paid>x.AgreedTotal))throw new ApiException(409,"La cuenta requiere revisión financiera: saldo inconsistente.");
         return rows.Select(x=>new CashierTreatment(x.Plan,x.Episode,x.Patient,x.Name,x.DocumentType, x.DocumentNumber, x.DocumentCountryCode,x.Phone,x.BirthDate is DateOnly birth?today.Year-birth.Year-(birth.AddYears(today.Year-birth.Year)>today?1:0):null,x.Title,x.Doctor,x.StartedAt,x.AgreedTotal,x.Paid,x.AgreedTotal-x.Paid,x.Paid==x.AgreedTotal?"PAID":"PENDING")).ToArray();

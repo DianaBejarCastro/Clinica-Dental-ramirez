@@ -46,7 +46,7 @@ public sealed class PatientRegistrationTests(IdentityFixture f) : IClassFixture<
     }
     private async Task Login(HttpClient c, string email) { var login = await f.Login(c, email); c.DefaultRequestHeaders.Authorization = new("Bearer", login.Body.AccessToken); }
     [Theory][InlineData("firstName")][InlineData("lastName")][InlineData("documentNumber")][InlineData("birthDate")]
-    [InlineData("phone")][InlineData("emergencyContactName")][InlineData("emergencyContactPhone")][InlineData("bloodType")]
+    [InlineData("phone")][InlineData("emergencyContactPhone")][InlineData("bloodType")]
     [InlineData("email")][InlineData("password")][InlineData("confirmPassword")]
     public async Task CamposRequeridos(string field) {
         using var c = Client(); var json = JsonSerializer.SerializeToNode(Data(), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
@@ -135,5 +135,44 @@ public sealed class PatientRegistrationTests(IdentityFixture f) : IClassFixture<
         mine.IsActive = false; await db.SaveChangesAsync(); Assert.Equal(HttpStatusCode.Forbidden, (await c.GetAsync("/api/patient/me")).StatusCode);
         await Login(c, f.Email); Assert.Equal(HttpStatusCode.Forbidden, (await c.GetAsync("/api/patient/me")).StatusCode);
         c.DefaultRequestHeaders.Authorization = null; Assert.Equal(HttpStatusCode.Unauthorized, (await c.GetAsync("/api/patient/me")).StatusCode);
+    }
+
+    [Fact]
+    public async Task PublicRegistrationWithoutContactNamePersistsEmergencyPhoneAndPreservesExistingContact()
+    {
+        using var c=Client();var existing=Data();await Register(c,existing);
+        var fresh=Data() with { EmergencyContactName=null, EmergencyContactPhone="65700344" };
+        var json=JsonSerializer.SerializeToNode(fresh,new JsonSerializerOptions(JsonSerializerDefaults.Web))!.AsObject();
+        json.Remove("emergencyContactName");
+        Assert.Equal(HttpStatusCode.Created,(await c.PostAsJsonAsync(Path,json)).StatusCode);
+        using var scope=f.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var saved=await db.PatientProfiles.SingleAsync(x=>x.User.Email==fresh.Email!.ToLowerInvariant());
+        Assert.Equal("65700344",saved.EmergencyContactPhone);Assert.Equal("",saved.EmergencyContactName);
+        var original=await db.PatientProfiles.SingleAsync(x=>x.User.Email==existing.Email!.ToLowerInvariant());
+        Assert.Equal(existing.EmergencyContactName,original.EmergencyContactName);Assert.Equal(existing.EmergencyContactPhone,original.EmergencyContactPhone);
+    }
+
+    [Theory][InlineData("   ")][InlineData("1234567890123456789012345678901")]
+    public async Task SingleEmergencyPhoneRetainsValidation(string phone)
+    {
+        using var c=Client();
+        Assert.Equal(HttpStatusCode.BadRequest,(await c.PostAsJsonAsync(Path,Data() with { EmergencyContactName=null, EmergencyContactPhone=phone })).StatusCode);
+    }
+    [Theory]
+    [InlineData("+5916570034")][InlineData("+591657003444")][InlineData("+59165A00344")]
+    [InlineData("+5916570 0344")][InlineData("+99965700344")][InlineData("6570-0344")]
+    public async Task RejectsInvalidInternationalPhones(string phone)
+    {
+        using var c=Client();
+        Assert.Equal(HttpStatusCode.BadRequest,(await c.PostAsJsonAsync(Path,Data() with { Phone=phone })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest,(await c.PostAsJsonAsync(Path,Data() with { EmergencyContactPhone=phone })).StatusCode);
+    }
+    [Fact] public async Task PersistsInternationalPhonesWithoutFormatting()
+    {
+        using var c=Client();var data=Data() with { Phone="+59165700344", EmergencyContactPhone="+51987654321" };
+        await Register(c,data);
+        using var scope=f.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var patient=await db.PatientProfiles.Include(x=>x.User).SingleAsync(x=>x.User.Email==data.Email!.ToLowerInvariant());
+        Assert.Equal(data.Phone,patient.User.Phone);Assert.Equal(data.EmergencyContactPhone,patient.EmergencyContactPhone);
     }
 }

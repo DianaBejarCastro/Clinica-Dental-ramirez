@@ -40,5 +40,5 @@ public sealed class AuthController(AuthService auth, IdentitySupport support, IW
         return NoContent();
     }
     [HttpGet("me"), Authorize]
-    public async Task<ActionResult<CurrentUserResponse>> Me() => Ok(await support.Current(support.Actor!.Value));
+    public async Task<ActionResult<CurrentUserResponse>> Me() { var current = await support.Current(support.Actor!.Value); return Ok(User.FindFirst("auth_context")?.Value == "google_patient" ? current with { Permissions = [] } : current); }
 }

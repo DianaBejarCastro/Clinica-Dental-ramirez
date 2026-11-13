@@ -27,6 +27,7 @@ const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit
     return Response.json(user, { status: method === 'POST' && !role ? 201 : 200 });
   }
   if (path === '/api/admin/users/person') return Response.json(user);
+  if (path === '/api/patient/dashboard') return Response.json({clinicName:'Clínica',account:user,finance:{totalEstimated:0,totalPaid:0,pendingBalance:0,pendingTreatments:0},nextAppointment:null,recentAppointments:[],recentPayments:[]});
   if (path === '/api/patient/me') return Response.json(user);
   if (path === '/api/admin/dashboard') return Response.json({ totalUsers: 1 });
   return Response.json({ items: [user], total: 1 });

@@ -12,7 +12,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace ClinicaRamirez.Api.Application.Identity;
 
-public sealed class AuthService(AppDbContext db, IPasswordHasher<User> hasher, IdentitySupport support, JwtSettings jwt)
+public sealed partial class AuthService(AppDbContext db, IPasswordHasher<User> hasher, IdentitySupport support, JwtSettings jwt)
 {
     private static readonly User Dummy = new();
     private static readonly string DummyHash = new PasswordHasher<User>().HashPassword(Dummy, Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
@@ -26,12 +26,14 @@ public sealed class AuthService(AppDbContext db, IPasswordHasher<User> hasher, I
     private async Task<LoginResponse> Access(User user, RefreshToken session)
     {
         var current = await support.Current(user.Id);
+        if (session.PatientOnly) { await EnsureGooglePatient(user.Id); current = current with { Permissions = [] }; }
         var expires = DateTime.UtcNow.AddMinutes(jwt.AccessMinutes);
         var claims = new List<Claim> {
             new("sub", user.Id.ToString()), new("user_id", user.Id.ToString()),
             new("email", user.Email!), new("sid", session.Id.ToString()),
             new("jti", Guid.NewGuid().ToString())
         };
+        if (session.PatientOnly) claims.Add(new("auth_context", "google_patient"));
         claims.AddRange(current.Roles.Select(role => new Claim("roles", role)));
         var token = new JwtSecurityToken(jwt.Issuer, jwt.Audience, claims,
             notBefore: DateTime.UtcNow, expires: expires,
@@ -76,7 +78,7 @@ public sealed class AuthService(AppDbContext db, IPasswordHasher<User> hasher, I
         var old = rows.SingleOrDefault();
         if (old is null) throw new ApiException(401, "Sesión inválida.");
         var user = await db.Users.SingleAsync(x => x.Id == old.UserId);
-        if (old.RevokedAt != null || old.ExpiresAt <= DateTime.UtcNow || !user.IsActive || !user.CanLogin || string.IsNullOrWhiteSpace(user.Email) || string.IsNullOrWhiteSpace(user.PasswordHash))
+        if (old.RevokedAt != null || old.ExpiresAt <= DateTime.UtcNow || !user.IsActive || !user.CanLogin || string.IsNullOrWhiteSpace(user.Email) || (!old.PatientOnly && string.IsNullOrWhiteSpace(user.PasswordHash)))
         {
             if (old.RevokedAt != null)
             {
@@ -87,7 +89,9 @@ public sealed class AuthService(AppDbContext db, IPasswordHasher<User> hasher, I
             }
             throw new ApiException(401, "Sesión inválida.");
         }
+        if (old.PatientOnly) await EnsureGooglePatient(user.Id);
         var replacement = NewToken(user, out var next);
+        replacement.PatientOnly = old.PatientOnly;
         db.RefreshTokens.Add(replacement);
         await db.SaveChangesAsync();
         old.RevokedAt = DateTime.UtcNow;

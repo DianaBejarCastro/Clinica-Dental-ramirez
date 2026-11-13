@@ -53,5 +53,5 @@ public record UserListResponse(UserResponse[] Items, int Total, int Page, int Pa
 public record PermissionResponse(Guid Id, string Code, string Name, string? Description, string Module);
 public record RoleResponse(Guid Id, string Code, string Name, string? Description, bool IsSystem,
     bool IsActive, Guid[] PermissionIds);
-public record CurrentUserResponse(Guid Id, string FirstName, string LastName, string Email, string[] Roles, string[] Permissions);
+public record CurrentUserResponse(Guid Id, string FirstName, string LastName, string Email, string[] Roles, string[] Permissions, bool RequiresProfileCompletion = false);
 public record LoginResponse(string AccessToken, DateTime ExpiresAt, CurrentUserResponse User);

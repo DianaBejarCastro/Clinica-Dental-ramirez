@@ -1,4 +1,4 @@
-export interface CurrentUser { id: string; firstName: string; lastName: string; email: string; roles: string[]; permissions: string[] }
+export interface CurrentUser { id: string; firstName: string; lastName: string; email: string; roles: string[]; permissions: string[]; requiresProfileCompletion?: boolean }
 export interface Session { accessToken: string; expiresAt: string; user: CurrentUser }
 export interface Role { id: string; code: string; name: string; description: string | null; isActive: boolean; isSystem: boolean; permissionIds: string[] }
 export interface Permission { id: string; code: string; name: string; module: string }
@@ -45,3 +45,6 @@ export async function api<T>(path: string, method = 'GET', data?: unknown): Prom
     catch (retryError) { if (retryError instanceof ApiError && retryError.status === 401) setSession(null); throw retryError; }
   }
 }
+
+export const googleChallenge = () => send<{ nonce: string }>("/api/auth/google/challenge", "POST");
+export async function googleLogin(credential: string) { const value = await send<Session>("/api/auth/google", "POST", { credential }); setSession(value); return value; }

@@ -36,3 +36,5 @@
   .premium-login .login-form { width: calc(100% - 32px); margin-block: 20px 32px; padding: 24px; border-radius: 18px; }
 }
 @media (prefers-reduced-motion: reduce) { .premium-login .login-form form > button { transition: none; } }
+
+.google-sign-in{margin:24px 0;display:grid;gap:12px;justify-items:center;min-width:0}.google-sign-in>div{max-width:100%;min-width:0}.google-sign-in small{text-align:center}.google-separator{display:flex;align-items:center;gap:12px;width:100%;color:#526b79}.google-separator:before,.google-separator:after{content:"";height:1px;background:#d5e5e9;flex:1}.complete-patient-profile{max-width:800px;margin:32px auto;padding:24px}.complete-patient-profile input,.complete-patient-profile select{min-width:0;width:100%}.complete-patient-profile button{margin-top:20px}

@@ -28,7 +28,9 @@ public sealed class IdentitySupport(AppDbContext db, IHttpContextAccessor access
         var roles = await db.UserRoles.Where(x => x.UserId == id && x.Role.IsActive).Select(x => x.Role.Code).ToArrayAsync();
         var permissions = await db.UserRoles.Where(x => x.UserId == id && x.Role.IsActive)
             .SelectMany(x => x.Role.RolePermissions.Select(p => p.Permission.Code)).Distinct().ToArrayAsync();
-        return new(user.Id, user.FirstName, user.LastName, user.Email!, roles, permissions);
+        var patient = await db.PatientProfiles.AsNoTracking().SingleOrDefaultAsync(x => x.UserId == id);
+        var incomplete = patient != null && AuthService.Incomplete(user, patient) && await db.UserExternalLogins.AnyAsync(x => x.UserId == id);
+        return new(user.Id, user.FirstName, user.LastName, user.Email!, roles, permissions, incomplete);
     }
     public static UserResponse UserDto(User u) => new(u.Id, u.FirstName, u.LastName, u.Email, u.Phone,
         u.IsActive, u.EmailVerified, u.CreatedAt, u.UpdatedAt, u.LastLoginAt,

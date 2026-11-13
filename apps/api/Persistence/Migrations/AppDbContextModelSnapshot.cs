@@ -2893,6 +2893,9 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("PatientOnly")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid?>("ReplacedByTokenId")
                         .HasColumnType("uuid");
 
@@ -3086,9 +3089,52 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
 
                             t.HasCheckConstraint("CK_Users_IdentityDocument", "(\"DocumentType\" IS NULL AND \"DocumentNumber\" IS NULL AND \"DocumentCountryCode\" IS NULL) OR (\"DocumentType\" IS NOT NULL AND \"DocumentType\" IN ('CI', 'PASSPORT') AND \"DocumentNumber\" IS NOT NULL AND length(btrim(\"DocumentNumber\")) > 0 AND \"DocumentNumber\" = upper(btrim(\"DocumentNumber\")) AND \"DocumentCountryCode\" IS NOT NULL AND \"DocumentCountryCode\" ~ '^[A-Z]{2}$' AND (\"DocumentType\" <> 'CI' OR \"DocumentCountryCode\" = 'BO'))");
 
-                            t.HasCheckConstraint("CK_Users_Login", "(NOT \"CanLogin\" AND \"PasswordHash\" IS NULL) OR (\"CanLogin\" AND \"Email\" IS NOT NULL AND \"PasswordHash\" IS NOT NULL AND length(\"PasswordHash\") > 0)");
+                            t.HasCheckConstraint("CK_Users_Login", "(NOT \"CanLogin\" AND \"PasswordHash\" IS NULL) OR (\"CanLogin\" AND \"Email\" IS NOT NULL AND (\"PasswordHash\" IS NULL OR length(\"PasswordHash\") > 0))");
 
-                            t.HasCheckConstraint("CK_Users_Names", "length(btrim(\"FirstName\")) > 0 AND length(btrim(\"LastName\")) > 0");
+                            t.HasCheckConstraint("CK_Users_Names", "length(btrim(\"FirstName\")) > 0 AND length(\"LastName\") >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Identity.UserExternalLogin", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("ProviderEmail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<string>("ProviderSubject")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Provider", "ProviderSubject")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "Provider")
+                        .IsUnique();
+
+                    b.ToTable("UserExternalLogins", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_UserExternalLogins_Provider", "\"Provider\" = 'GOOGLE'");
+
+                            t.HasCheckConstraint("CK_UserExternalLogins_Subject", "length(btrim(\"ProviderSubject\")) > 0");
                         });
                 });
 
@@ -3654,9 +3700,9 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
 
                     b.ToTable("PatientProfiles", null, t =>
                         {
-                            t.HasCheckConstraint("CK_PatientProfiles_BloodType", "\"BloodType\" IN ('A+','A-','B+','B-','AB+','AB-','O+','O-','UNKNOWN')");
+                            t.HasCheckConstraint("CK_PatientProfiles_BloodType", "\"BloodType\" IN ('','A+','A-','B+','B-','AB+','AB-','O+','O-','UNKNOWN')");
 
-                            t.HasCheckConstraint("CK_PatientProfiles_RequiredContact", "length(btrim(\"EmergencyContactName\")) > 0 AND length(btrim(\"EmergencyContactPhone\")) > 0");
+                            t.HasCheckConstraint("CK_PatientProfiles_RequiredContact", "length(btrim(\"EmergencyContactPhone\")) >= 0");
                         });
                 });
 
@@ -4210,6 +4256,17 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                     b.Navigation("Permission");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.Identity.UserExternalLogin", b =>
+                {
+                    b.HasOne("ClinicaRamirez.Api.Domain.Identity.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ClinicaRamirez.Api.Domain.Identity.UserProfilePhoto", b =>

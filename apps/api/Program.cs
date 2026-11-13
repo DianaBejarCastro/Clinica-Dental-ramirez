@@ -48,6 +48,8 @@ builder.Services.AddScoped<ClinicaRamirez.Api.Application.Inventory.InventoryMov
 builder.Services.AddScoped<ClinicaRamirez.Api.Application.Inventory.InventoryItemCreation>();
 builder.Services.AddScoped<ClinicaRamirez.Api.Application.Inventory.InventoryLotService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddDataProtection();
+builder.Services.AddSingleton<IGoogleIdentityVerifier, GoogleIdentityVerifier>();
 builder.Services.AddScoped<AdminService>();
 builder.Services.AddScoped<StaffAdministrationService>();
 builder.Services.AddScoped<IdentitySeed>();
@@ -91,6 +93,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
             || !await db.RefreshTokens.AnyAsync(x => x.Id == sessionId && x.UserId == userId
                 && x.User.IsActive && x.User.CanLogin && x.RevokedAt == null && x.ExpiresAt > DateTime.UtcNow))
             context.Fail("Sesión inválida.");
+        if (context.Principal?.FindFirstValue("auth_context") == "google_patient")
+        {
+            try { await context.HttpContext.RequestServices.GetRequiredService<AuthService>().EnsureGooglePatient(userId); }
+            catch (ApiException) { context.Fail("Patient-only session is no longer valid."); }
+        }
     }};
 });
 builder.Services.AddControllers();
@@ -144,6 +151,14 @@ app.Use(async (context, next) => {
     await next();
 });
 app.UseAuthentication();
+app.Use(async (context, next) => {
+    if (context.User.FindFirstValue("auth_context") == "google_patient" && !context.Request.Path.StartsWithSegments("/api/auth"))
+    {
+        var current = await context.RequestServices.GetRequiredService<IdentitySupport>().Current(Guid.Parse(context.User.FindFirstValue("sub")!));
+        if (current.RequiresProfileCompletion) { context.Response.StatusCode = 403; await context.Response.WriteAsJsonAsync(new { title = "Completa tu perfil antes de continuar." }); return; }
+    }
+    await next();
+});
 app.UseRateLimiter();
 app.UseAuthorization();
 app.MapControllers();

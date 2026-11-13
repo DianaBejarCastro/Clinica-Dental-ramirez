@@ -20,6 +20,7 @@ public sealed class PermissionHandler(AppDbContext db) : AuthorizationHandler<Pe
 {
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
     {
+        if (context.User.FindFirstValue("auth_context") == "google_patient") return;
         if (!Guid.TryParse(context.User.FindFirstValue("sub"), out var id)) return;
         if (await db.UserRoles.AnyAsync(x => x.UserId == id && x.User.IsActive && x.Role.IsActive
             && x.Role.RolePermissions.Any(p => p.Permission.Code == requirement.Code)))
