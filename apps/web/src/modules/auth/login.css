@@ -38,3 +38,5 @@
 @media (prefers-reduced-motion: reduce) { .premium-login .login-form form > button { transition: none; } }
 
 .google-sign-in{margin:24px 0;display:grid;gap:12px;justify-items:center;min-width:0}.google-sign-in>div{max-width:100%;min-width:0}.google-sign-in small{text-align:center}.google-separator{display:flex;align-items:center;gap:12px;width:100%;color:#526b79}.google-separator:before,.google-separator:after{content:"";height:1px;background:#d5e5e9;flex:1}.complete-patient-profile{max-width:800px;margin:32px auto;padding:24px}.complete-patient-profile input,.complete-patient-profile select{min-width:0;width:100%}.complete-patient-profile button{margin-top:20px}
+
+.google-sign-in .google-coming-soon:disabled{display:flex;align-items:center;justify-content:center;gap:12px;max-width:100%;padding:12px 16px;background:#f8fafb;color:#586775;border:1px solid #d5dfe5;border-radius:8px;opacity:1;cursor:not-allowed;white-space:normal;text-align:center}.google-coming-soon svg{flex:0 0 20px}.google-coming-soon span{min-width:0;overflow-wrap:anywhere}
