@@ -2,8 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useAuth } from '../modules/auth/AuthProvider';
 import LoginPage from '../modules/auth/LoginPage';
 export function useRoute() {
-  const [path, setPath] = useState(window.location.hash.slice(1) || '/');
-  useEffect(() => { const change = () => setPath(window.location.hash.slice(1) || '/'); window.addEventListener('hashchange', change); return () => window.removeEventListener('hashchange', change); }, []);
+  const [path, setPath] = useState(window.location.hash.slice(1) || window.location.pathname + window.location.search);
+  useEffect(() => { const change = () => setPath(window.location.hash.slice(1) || window.location.pathname + window.location.search); window.addEventListener('hashchange', change); return () => window.removeEventListener('hashchange', change); }, []);
   return path;
 }
 export function Protected({ children, permission }: { children: ReactNode; permission?: string }) {

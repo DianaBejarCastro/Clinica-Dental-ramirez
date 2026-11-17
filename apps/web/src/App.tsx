@@ -67,7 +67,8 @@ function Workspace() {
 
 export default function App() {
   const route = useRoute(); const [path, query = ''] = route.split('?');
-  if (path === '/inicio') return <PublicHomePage section={new URLSearchParams(query).get('section')} />;
+  // The bare URL is public; preserve the explicit #/ workspace destination.
+  if (path === '/inicio' || path === '/' && !window.location.hash) return <PublicHomePage section={new URLSearchParams(query).get('section')} />;
   if (path === '/register') return <PatientRegisterPage />;
   return <AuthProvider><Workspace /></AuthProvider>;
 }

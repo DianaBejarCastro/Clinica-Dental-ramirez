@@ -1,3 +1,4 @@
+using ClinicaRamirez.Api.Infrastructure;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
 using System.Text.Json.Serialization;
@@ -20,11 +21,11 @@ public record CompletePatientProfileRequest : PatientClinicalRequest;
 
 [ApiController, Route("api/auth"), EnableRateLimiting("login")]
 public sealed class GooglePatientController(AuthService auth, IGoogleIdentityVerifier verifier,
-    IDataProtectionProvider protection, IWebHostEnvironment environment, AppDbContext db, IdentitySupport support) : ControllerBase
+    IDataProtectionProvider protection, IWebHostEnvironment environment, IConfiguration configuration, AppDbContext db, IdentitySupport support) : ControllerBase
 {
     const string NonceCookie = "clinic_google_nonce";
-    CookieOptions Options(DateTime expiry) => new() { HttpOnly = true, Secure = !environment.IsDevelopment(),
-        SameSite = SameSiteMode.Strict, Path = "/api/auth", Expires = expiry, IsEssential = true };
+    CookieOptions Options(DateTime expiry) => new() { HttpOnly = true, Secure = !environment.IsDevelopment() || configuration.GetValue<bool>("AuthCookies:CrossSite"),
+        SameSite = DeploymentConfiguration.CookieSameSite(configuration), Path = "/api/auth", Expires = expiry, IsEssential = true };
     [HttpPost("google/challenge"), AllowAnonymous]
     public IActionResult ChallengeGoogle()
     {

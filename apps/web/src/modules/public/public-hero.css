@@ -1,0 +1,62 @@
+.public-hero { position: relative; isolation: isolate; overflow: hidden; background: #e8f9f8; color: #173545; }
+.hero-clinic-scene { position: absolute; inset: 0; z-index: -2; pointer-events: none; background: radial-gradient(ellipse at 18% 35%, #fff 0%, #f3fcfc 28%, transparent 66%), linear-gradient(120deg, #ecfbfa, #b8eeee); }
+.hero-clinic-room { position: absolute; right: -3%; top: 0; width: 53%; height: 100%; opacity: .38; filter: blur(4px); }
+.public-hero::before { content: ''; position: absolute; z-index: -1; pointer-events: none; width: 69%; height: 96%; right: -26%; bottom: -24%; border-radius: 55% 0 0 0; background: linear-gradient(140deg, #70ded4, #0db4aa); transform: rotate(-16deg); }
+.public-hero::after { content: ''; position: absolute; z-index: -1; pointer-events: none; width: 80%; height: 28%; right: -14%; bottom: -14%; border-radius: 70% 0 0 0; background: #d6f7f3; transform: rotate(-9deg); }
+.public-hero .public-hero-grid { width: min(1180px, calc(100% - 48px)); min-height: 610px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 12px; padding-block: 64px 58px; }
+.public-hero-copy { position: relative; z-index: 1; min-width: 0; }
+.public-hero .public-eyebrow { font-size: 12px; font-weight: 500; letter-spacing: .25em; color: #36545f; margin-bottom: 22px; }
+.public-hero h1 { font-size: clamp(48px, 4.3vw, 62px); line-height: 1.03; letter-spacing: -.045em; margin-bottom: 20px; max-width: 580px; }
+.public-hero h1 span { display: block; color: #009e95; }
+.public-hero-copy > p:not(.public-eyebrow):not(.public-hero-note) { color: #36545f; font-size: 20px; line-height: 1.45; max-width: 460px; margin-bottom: 0; }
+.public-hero .public-actions { display: flex; gap: 16px; margin-top: 28px; flex-wrap: wrap; }
+.public-hero .public-button { height: 50px; padding: 12px 26px; border-radius: 999px; gap: 10px; background: linear-gradient(180deg, #19cfc4, #008278 30%, #007d73 48%, #006f66); color: #fff; box-shadow: 0 5px 12px #00797426; }
+.public-hero .public-button:hover { background: #00867e; color: #fff; }
+.public-hero .public-button-secondary { color: #006e6a; background: #ffffff70; border: 1.5px solid #009f97; box-shadow: none; }
+.public-hero .public-button-secondary:hover { background: #fff; color: #006e6a; }
+.public-hero a:focus-visible, .public-hero button:focus-visible { outline-color: #006e6a; }
+.hero-care-benefits { display: flex; gap: 18px; list-style: none; padding: 0; margin: 30px 0 0; max-width: 520px; }
+.hero-care-benefits li { display: flex; flex: 1; align-items: center; gap: 10px; font-size: 12px; font-weight: 600; line-height: 1.35; color: #274752; }
+.hero-care-benefits li > span { width: 42px; height: 42px; flex-shrink: 0; display: grid; place-items: center; color: #009d95; border: 1px solid #b9e8e5; background: #eafffcaa; border-radius: 50%; }
+.hero-care-benefits svg { width: 26px; height: 26px; }
+.public-hero-visual { position: relative; min-width: 0; }
+.public-hero .hero-tooth { height: 470px; width: 100%; max-width: none; margin: 0; }
+.public-hero .hero-tooth-stage canvas { transform: scale(1.25); }
+.public-hero .hero-tooth::before { background: #008d86; opacity: .16; bottom: 15%; }
+.public-hero .hero-tooth-controls span, .public-hero .hero-tooth-fallback { color: #36545f; }
+.public-hero .hero-tooth-controls button { background: #ffffffb3; color: #006e6a; border-color: #7ecfc8; }
+.public-hero .hero-tooth-stage:focus-visible { outline-color: #006e6a; }
+.public-hero-shield { position: absolute; width: 25%; height: auto; right: 22%; top: 37%; transform: rotate(8deg); filter: drop-shadow(0 7px 8px #007e7930); pointer-events: none; }
+.public-hero-mirror { position: absolute; width: 14%; height: 62%; right: 7%; top: 22%; transform: rotate(19deg); filter: drop-shadow(3px 5px 3px #356f6926); pointer-events: none; }
+.public-hero + #servicios { position: relative; z-index: 1; width: min(1200px, calc(100% - 48px)); margin: -24px auto 0; padding-block: 30px 48px; border-radius: 32px 32px 0 0; background: #fcfefe; }
+.public-hero + #servicios h2 { color: #173545; margin-bottom: 16px; }
+.public-hero + #servicios h2::after { content: ''; display: block; width: 42px; height: 3px; background: #009e95; margin-top: 12px; border-radius: 3px; }
+.public-hero + #servicios .public-eyebrow { display: none; }
+@media (min-width: 768px) and (max-width: 1179px) {
+  .public-hero .public-hero-grid { min-height: 570px; padding-block: 54px 48px; gap: 8px; }
+  .public-hero h1 { font-size: clamp(40px, 4.7vw, 55px); }
+  .public-hero-copy > p:not(.public-eyebrow):not(.public-hero-note) { font-size: 18px; }
+  .public-hero .hero-tooth { height: 380px; }
+  .hero-care-benefits { flex-wrap: wrap; gap: 12px; }
+  .hero-care-benefits li { flex: 0 1 44%; }
+}
+@media (max-width: 767px) {
+  .public-hero .public-hero-grid { width: calc(100% - 48px); grid-template-columns: minmax(0, 1fr); gap: 0; min-height: 0; padding-block: 42px 28px; }
+  .public-hero .public-eyebrow { font-size: 10px; letter-spacing: .22em; margin-bottom: 16px; }
+  .public-hero h1 { font-size: clamp(33px, 9.5vw, 42px); line-height: 1.03; margin-bottom: 14px; }
+  .public-hero-copy > p:not(.public-eyebrow):not(.public-hero-note) { font-size: 15px; line-height: 1.4; }
+  .public-hero .public-actions { flex-direction: column; gap: 10px; margin-top: 20px; align-items: stretch; }
+  .public-hero .public-button { height: 46px; padding: 10px 18px; }
+  .hero-care-benefits { display: none; }
+  .public-hero .hero-tooth { height: 280px; }
+  .public-hero .hero-tooth-controls { inset: auto 0 8px; }
+  .public-hero .hero-tooth-controls span { font-size: 10px; max-width: 150px; }
+  .public-hero .hero-tooth-controls button { padding: 6px 8px; font-size: 10px; }
+  .public-hero-shield { width: 25%; top: 32%; right: 24%; }
+  .public-hero-mirror { top: 15%; right: 8%; height: 65%; }
+  .hero-clinic-room { top: 40%; right: -15%; width: 100%; height: 60%; opacity: .25; }
+  .public-hero::before { width: 115%; height: 43%; bottom: -7%; right: -40%; }
+  .public-hero::after { width: 120%; height: 12%; right: -15%; bottom: -4%; }
+  .public-hero + #servicios { width: 100%; margin-top: -12px; padding-block: 26px 32px; border-radius: 26px 26px 0 0; }
+  .public-hero + #servicios h2 { font-size: 26px; }
+}

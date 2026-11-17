@@ -13,7 +13,7 @@ beforeEach(() => {
 });
 it('muestra la landing pública y sus secciones sin consultar APIs privadas', async () => {
   render(<App />);
-  expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Cuidamos tu sonrisa');
+  expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Tu salud bucal,');
   await screen.findByRole('heading', { name: 'Nuestros servicios' });
   for (const name of ['Nuestros servicios', 'Nuestro equipo', 'Contacto', 'Agenda tu próxima consulta']) expect(screen.getByRole('heading', { name })).toBeTruthy();
   expect(fetchMock.mock.calls.every(call => ['/api/clinic/branches', '/api/clinic/team', '/api/clinic/services', '/api/clinic/site-images/care/meta', '/api/clinic/site-images/hero/meta', '/api/clinic/social-networks'].some(path => String(call[0]).endsWith(path)))).toBe(true);
@@ -46,6 +46,7 @@ it('navegar a una sección cierra el menú y enfoca el destino', async () => {
   render(<App />); const u = userEvent.setup(); await u.click(screen.getByLabelText('Abrir menú'));
   await u.click(within(screen.getByRole('navigation', { name: 'Navegación pública' })).getByRole('link', { name: 'Servicios' }));
   await waitFor(() => expect(document.activeElement?.id).toBe('servicios'));
+  expect(within(screen.getByRole('navigation', { name: 'Navegación pública' })).getByRole('link', { name: 'Servicios' }).getAttribute('aria-current')).toBe('location');
   expect(screen.getByLabelText('Abrir menú').getAttribute('aria-expanded')).toBe('false');
 });
 it('reservar dirige a contacto sin abrir agenda interna', () => {
@@ -62,15 +63,72 @@ it('Acceso al sistema abre el login funcional', async () => {
 it('login permite volver al inicio público', async () => {
   window.history.replaceState(null, '', '#/login'); render(<App />); const u = userEvent.setup();
   await u.click(await screen.findByRole('link', { name: 'Volver al inicio' }));
-  await waitFor(() => expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Cuidamos tu sonrisa'));
+  await waitFor(() => expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Tu salud bucal,'));
 });
 
-it('conserva el diente interactivo y añade beneficios sin enlaces ajenos', () => {
+it('conserva el diente interactivo y añade beneficios sin enlaces ajenos', async () => {
   const { container } = render(<App />);
   expect(container.querySelector('.hero-tooth-stage')).toBeTruthy();
-  expect(container.querySelector('.hero-family-badge')?.textContent).toContain('Odontología para toda la familia');
+  expect(screen.getByRole('link', { name: 'Agendar mi cita' }).getAttribute('href')).toBe('#/inicio?section=contacto');
+  expect(container.querySelector('.public-hero-shield')).toBeTruthy();
+  await screen.findByRole('heading', { name: 'Nuestros servicios' });
+  expect(container.querySelector('#inicio')?.nextElementSibling?.id).toBe('servicios');
   expect(container.querySelectorAll('.hero-care-benefits li')).toHaveLength(3);
   expect(container.querySelector('.hero-clinic-scene')?.getAttribute('aria-hidden')).toBe('true');
   expect(screen.queryByRole('link', { name: 'Galería' })).toBeNull();
   expect(screen.queryByRole('link', { name: 'Blog' })).toBeNull();
+});
+
+
+it('la navegación móvil conserva cinco destinos y la acción pública de reserva', () => {
+  render(<App />);
+  const nav = within(screen.getByRole('navigation', { name: 'Navegación móvil principal' }));
+  expect(nav.getAllByRole('link')).toHaveLength(5);
+  for (const [label, href] of [['Inicio', '#/inicio?section=inicio'], ['Servicios', '#/inicio?section=servicios'], ['Agendar cita', '#/inicio?section=contacto'], ['Contacto', '#/inicio?section=contacto'], ['Mi perfil', '#/login']]) {
+    expect(nav.getByRole('link', { name: label }).getAttribute('href')).toBe(href);
+  }
+  expect(nav.getByRole('link', { name: 'Inicio' }).getAttribute('aria-current')).toBe('page');
+});
+
+it('Mi perfil sin sesión reutiliza el acceso existente', async () => {
+  render(<App />);
+  await userEvent.setup().click(within(screen.getByRole('navigation', { name: 'Navegación móvil principal' })).getByRole('link', { name: 'Mi perfil' }));
+  expect(await screen.findByRole('button', { name: 'Ingresar' })).toBeTruthy();
+});
+
+it.each([['DOCTOR', '/doctor/appointments'], ['PATIENT', '/patient'], ['CASHIER', '/cashier/payments']])('Mi perfil reutiliza el panel de %s', async (role, destination) => {
+  const session = { accessToken: 'test', expiresAt: '2099-01-01', user: { id: 'test', firstName: 'Test', lastName: 'User', email: 'test@example.test', roles: [role], permissions: [] } };
+  vi.stubGlobal('fetch', vi.fn(async (input: unknown) => String(input).endsWith('/refresh')
+    ? new Response(JSON.stringify(session), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    : new Response('{}', { status: 404, headers: { 'Content-Type': 'application/json' } })));
+  render(<App />);
+  await userEvent.setup().click(within(screen.getByRole('navigation', { name: 'Navegación móvil principal' })).getByRole('link', { name: 'Mi perfil' }));
+  await waitFor(() => expect(window.location.hash).toBe('#' + destination));
+});
+
+
+it.each(['/', '/inicio'])('renders the public home for anonymous visitors at %s', async (url) => {
+  window.history.replaceState(null, '', url);
+  render(<App />);
+  expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Tu salud bucal,');
+  await screen.findByRole('heading', { name: 'Nuestros servicios' });
+  expect(screen.queryByRole('button', { name: 'Ingresar' })).toBeNull();
+  expect(window.location.pathname + window.location.hash).toBe(url);
+  expect(fetchMock.mock.calls.some(call => String(call[0]).includes('/auth/'))).toBe(false);
+});
+
+it.each(['/login', '/users', '/doctor/appointments', '/cashier/payments', '/patient', '/unknown-route'])('preserves login and protected fallback at %s', async (url) => {
+  window.history.replaceState(null, '', url);
+  render(<App />);
+  expect(await screen.findByRole('button', { name: 'Ingresar' })).toBeTruthy();
+  expect(screen.queryByRole('heading', { name: /Tu salud bucal/ })).toBeNull();
+});
+
+it.each(['ADMINISTRATOR', 'DOCTOR', 'PATIENT', 'CASHIER'])('keeps the public root accessible with a %s session', async (role) => {
+  setSession({ accessToken: 'test', expiresAt: '2099-01-01', user: { id: 'test', firstName: 'Test', lastName: 'User', email: 'test@example.test', roles: [role], permissions: [] } });
+  window.history.replaceState(null, '', '/');
+  render(<App />);
+  await screen.findByRole('heading', { name: 'Nuestros servicios' });
+  expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Tu salud bucal,');
+  expect(window.location.hash).toBe('');
 });

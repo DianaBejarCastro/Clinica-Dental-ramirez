@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import MobileBottomNav from './MobileBottomNav';
 import PublicSocialLinks from './PublicSocialLinks';
 import ClinicLogo from '../admin/clinic/ClinicLogo';
 
 export const publicLinks = [['inicio', 'Inicio'], ['nosotros', 'Nosotros'], ['servicios', 'Servicios'], ['equipo', 'Equipo'], ['contacto', 'Contacto']] as const;
 export const sectionHref = (section: string) => `#/inicio?section=${section}`;
-export function PublicHeader() {
+export function PublicHeader({ section }: { section?: string | null }) {
   const [open, setOpen] = useState(false); const toggle = useRef<HTMLButtonElement>(null);
-  return <header className="public-header"><div className="public-container public-header-inner">
+  return <header className="public-header"><div className="public-header-surface"><div className="public-header-inner">
     <a className="public-brand" href="#/inicio" aria-label="Clínica Dental RAMÍREZ, inicio"><ClinicLogo /></a>
     <button ref={toggle} className="public-menu-toggle" type="button" aria-controls="public-menu" aria-expanded={open}
       aria-label={open ? 'Cerrar menú' : 'Abrir menú'} onClick={() => setOpen(value => !value)}>
@@ -14,11 +15,11 @@ export function PublicHeader() {
     </button>
     <nav id="public-menu" className={`public-menu${open ? ' is-open' : ''}`} aria-label="Navegación pública"
       onKeyDown={event => { if (event.key === 'Escape') { setOpen(false); toggle.current?.focus(); } }}>
-      {publicLinks.map(([id, label]) => <a key={id} href={sectionHref(id)} onClick={() => setOpen(false)}>{label}</a>)}
+      {publicLinks.map(([id, label]) => <a key={id} href={sectionHref(id)} aria-current={(section || 'inicio') === id ? 'location' : undefined} onClick={() => setOpen(false)}>{label}</a>)}
       <a className="public-access" href="#/login" onClick={() => setOpen(false)}>Acceso al sistema</a>
-      <a className="public-button" href={sectionHref('contacto')} onClick={() => setOpen(false)}>Reservar cita</a>
+      <a className="public-button" href={sectionHref('contacto')} onClick={() => setOpen(false)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 3v4m8-4v4M4 10h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /><path d="M8 14h2m4 0h2m-8 3h2" stroke="currentColor" strokeWidth="1.7" /></svg>Reservar cita</a>
     </nav>
-  </div></header>;
+  </div></div></header>;
 }
 export function PublicFooter() {
   return <footer className="public-footer"><div className="public-container public-footer-inner">
@@ -34,5 +35,5 @@ export default function PublicLayout({ children, section }: { children: ReactNod
     const target = document.getElementById(section);
     target?.scrollIntoView?.({ behavior: 'auto', block: 'start' }); target?.focus({ preventScroll: true });
   }, [section]);
-  return <div className="public-site"><a className="public-skip" href={sectionHref('inicio')}>Ir al contenido</a><PublicHeader /><main>{children}</main><PublicFooter /></div>;
+  return <div className="public-site"><a className="public-skip" href={sectionHref('inicio')}>Ir al contenido</a><PublicHeader section={section} /><main>{children}</main><PublicFooter /><MobileBottomNav section={section} /></div>;
 }

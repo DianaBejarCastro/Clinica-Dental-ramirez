@@ -24,6 +24,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_HTTP_PORTS: 8080
+      ConnectionStrings__DefaultConnection: ${ConnectionStrings__DefaultConnection:-}
       GoogleAuth__ClientId: ${GoogleAuth__ClientId:-}
       JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en .env}
       JWT_ISSUER: ${JWT_ISSUER:-clinica_ramirez}

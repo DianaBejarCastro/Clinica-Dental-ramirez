@@ -1,3 +1,4 @@
+using ClinicaRamirez.Api.Infrastructure;
 using ClinicaRamirez.Api.Application.Identity;
 using ClinicaRamirez.Api.DTOs.Identity;
 using Microsoft.AspNetCore.Authorization;
@@ -6,11 +7,11 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace ClinicaRamirez.Api.Controllers;
 
 [ApiController, Route("api/auth"), Tags("Auth")]
-public sealed class AuthController(AuthService auth, IdentitySupport support, IWebHostEnvironment environment) : ControllerBase
+public sealed class AuthController(AuthService auth, IdentitySupport support, IWebHostEnvironment environment, IConfiguration configuration) : ControllerBase
 {
     private const string CookieName = "clinic_refresh";
     private CookieOptions Options(DateTime? expiry = null) => new() {
-        HttpOnly = true, Secure = !environment.IsDevelopment(), SameSite = SameSiteMode.Strict,
+        HttpOnly = true, Secure = !environment.IsDevelopment() || configuration.GetValue<bool>("AuthCookies:CrossSite"), SameSite = DeploymentConfiguration.CookieSameSite(configuration),
         Path = "/api/auth", Expires = expiry, IsEssential = true
     };
     [HttpPost("login"), AllowAnonymous, EnableRateLimiting("login")]

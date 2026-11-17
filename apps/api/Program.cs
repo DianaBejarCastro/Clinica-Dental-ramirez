@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using ClinicaRamirez.Api.Application.DentalCharting;
 using System.Security.Claims;
 using System.Text;
@@ -19,6 +20,12 @@ using Microsoft.OpenApi;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
+var port = builder.Configuration["PORT"];
+if (!string.IsNullOrWhiteSpace(port))
+{
+    if (!int.TryParse(port, out var number) || number is < 1 or > 65535) throw new InvalidOperationException("Invalid PORT.");
+    builder.WebHost.UseUrls($"http://0.0.0.0:{number}");
+}
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrWhiteSpace(connectionString))
 {
@@ -48,7 +55,9 @@ builder.Services.AddScoped<ClinicaRamirez.Api.Application.Inventory.InventoryMov
 builder.Services.AddScoped<ClinicaRamirez.Api.Application.Inventory.InventoryItemCreation>();
 builder.Services.AddScoped<ClinicaRamirez.Api.Application.Inventory.InventoryLotService>();
 builder.Services.AddScoped<AuthService>();
-builder.Services.AddDataProtection();
+var dataProtection = builder.Services.AddDataProtection().SetApplicationName("ClinicaRamirez");
+var keyPath = builder.Configuration["DataProtection:KeysPath"];
+if (!string.IsNullOrWhiteSpace(keyPath)) dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keyPath));
 builder.Services.AddSingleton<IGoogleIdentityVerifier, GoogleIdentityVerifier>();
 builder.Services.AddScoped<AdminService>();
 builder.Services.AddScoped<StaffAdministrationService>();
@@ -115,7 +124,7 @@ builder.Services.AddSwaggerGen(options => {
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("postgresql", tags: ["ready"]);
-var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? ["http://localhost:5173"];
+var origins = DeploymentConfiguration.Origins(builder.Configuration, builder.Environment.IsDevelopment());
 builder.Services.AddCors(options => options.AddPolicy("Web",
     policy => policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 builder.Services.AddRateLimiter(options => {
