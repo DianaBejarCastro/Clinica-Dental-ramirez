@@ -7,15 +7,15 @@
 .public-header .clinic-brand-logo { background: transparent; border: 0; border-radius: 0; padding: 0; box-shadow: none; }
 .public-header .clinic-brand-logo img { width: 230px; max-width: 230px; height: 72px; max-height: 72px; object-fit: contain; object-position: left center; }
 .public-header .public-menu { display: flex; width: max-content; flex: 0 0 auto; align-items: center; gap: var(--header-gap); flex-wrap: nowrap; }
-.public-header .public-menu a { position: relative; color: #243b4b; font-family: "Plus Jakarta Sans", sans-serif; font-size: 14px; font-weight: 500; line-height: 1.2; letter-spacing: 0; white-space: nowrap; padding: 10px 2px 12px; transition: color .18s; }
+.public-header .public-menu a, .public-site .public-hero .public-button { position: relative; color: #243b4b; font-family: "Plus Jakarta Sans", sans-serif; font-size: 14px; font-weight: 500; line-height: 1.2; letter-spacing: 0; white-space: nowrap; padding: 10px 2px 12px; transition: color .18s; }
 .public-header .public-menu a:hover { color: var(--header-teal); }
 .public-header .public-menu a[aria-current] { color: var(--header-accent); }
 .public-header .public-menu a[aria-current]::after { content: ''; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); width: 32px; height: 3px; border-radius: 3px; background: var(--header-accent); }
-.public-header .public-menu .public-access { display: inline-flex; align-items: center; justify-content: center; height: 42px; min-height: 42px; padding: 0 20px; border: 1px solid #0CBEB3; border-radius: 999px; background: transparent; color: #006e6a; }
-.public-header .public-menu .public-access:hover { background: rgba(12, 190, 179, .08); color: #006e6a; }
-.public-header .public-menu .public-button { flex-shrink: 0; width: 160px; height: 50px; margin-left: 4px; padding: 12px 24px; gap: 10px; border: none; border-radius: 999px; color: #FFFFFF; background: linear-gradient(180deg, #19CFC4 0%, #008278 30%, #007D73 48%, #006F66 100%); box-shadow: 0 6px 14px #00797438, 0 2px 4px #00000014, inset 0 1px 0 #ffffff47; transition: background .18s, transform .18s, box-shadow .18s; }
-.public-header .public-menu .public-button:hover { background: linear-gradient(180deg, #20D6CC 0%, #00847A 30%, #007F75 48%, #007168 100%); color: #FFFFFF; transform: translateY(-1px); box-shadow: 0 7px 16px #00797440, 0 2px 4px #00000014, inset 0 1px 0 #ffffff47; }
-.public-header .public-button svg { width: 18px; height: 18px; flex-shrink: 0; }
+.public-header .public-menu .public-access, .public-site .public-hero .public-button-secondary { display: inline-flex; align-items: center; justify-content: center; height: 42px; min-height: 42px; padding: 0 20px; border: 1px solid #0CBEB3; border-radius: 999px; background: transparent; color: #006e6a; }
+.public-header .public-menu .public-access:hover, .public-site .public-hero .public-button-secondary:hover { background: rgba(12, 190, 179, .08); color: #006e6a; }
+.public-header .public-menu .public-button, .public-site .public-hero .public-button:not(.public-button-secondary) { flex-shrink: 0; width: 160px; height: 50px; margin-left: 4px; padding: 12px 24px; gap: 10px; border: none; border-radius: 999px; color: #FFFFFF; background: linear-gradient(180deg, #19CFC4 0%, #008278 30%, #007D73 48%, #006F66 100%); box-shadow: 0 6px 14px #00797438, 0 2px 4px #00000014, inset 0 1px 0 #ffffff47; transition: background .18s, transform .18s, box-shadow .18s; }
+.public-header .public-menu .public-button:hover, .public-site .public-hero .public-button:not(.public-button-secondary):hover { background: linear-gradient(180deg, #20D6CC 0%, #00847A 30%, #007F75 48%, #007168 100%); color: #FFFFFF; transform: translateY(-1px); box-shadow: 0 7px 16px #00797440, 0 2px 4px #00000014, inset 0 1px 0 #ffffff47; }
+.public-header .public-button svg, .public-site .public-hero .public-button svg { width: 18px; height: 18px; flex-shrink: 0; }
 .public-header a:focus-visible, .public-header button:focus-visible { outline: 3px solid #007c80; outline-offset: 4px; }
 .public-header .public-menu-toggle { display: none; }
 @media (min-width: 1180px) and (max-width: 1279px) {

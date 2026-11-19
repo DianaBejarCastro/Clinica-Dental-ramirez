@@ -10,10 +10,10 @@
 .public-hero h1 span { display: block; color: #009e95; }
 .public-hero-copy > p:not(.public-eyebrow):not(.public-hero-note) { color: #36545f; font-size: 20px; line-height: 1.45; max-width: 460px; margin-bottom: 0; }
 .public-hero .public-actions { display: flex; gap: 16px; margin-top: 28px; flex-wrap: wrap; }
-.public-hero .public-button { height: 50px; padding: 12px 26px; border-radius: 999px; gap: 10px; background: linear-gradient(180deg, #19cfc4, #008278 30%, #007d73 48%, #006f66); color: #fff; box-shadow: 0 5px 12px #00797426; }
-.public-hero .public-button:hover { background: #00867e; color: #fff; }
-.public-hero .public-button-secondary { color: #006e6a; background: #ffffff70; border: 1.5px solid #009f97; box-shadow: none; }
-.public-hero .public-button-secondary:hover { background: #fff; color: #006e6a; }
+/* Header CTA rules supply the shared appearance; only hero geometry differs. */
+.public-site .public-hero .public-actions a.public-button { width: auto; height: 50px; min-height: 50px; margin-left: 0; padding: 0 26px; gap: 10px; }
+.public-site .public-hero .public-actions a.public-button-secondary { height: 48px; min-height: 48px; padding-inline: 24px; box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { .public-site .public-hero .public-actions a.public-button { transition: none; } }
 .public-hero a:focus-visible, .public-hero button:focus-visible { outline-color: #006e6a; }
 .hero-care-benefits { display: flex; gap: 18px; list-style: none; padding: 0; margin: 30px 0 0; max-width: 520px; }
 .hero-care-benefits li { display: flex; flex: 1; align-items: center; gap: 10px; font-size: 12px; font-weight: 600; line-height: 1.35; color: #274752; }
@@ -46,7 +46,6 @@
   .public-hero h1 { font-size: clamp(33px, 9.5vw, 42px); line-height: 1.03; margin-bottom: 14px; }
   .public-hero-copy > p:not(.public-eyebrow):not(.public-hero-note) { font-size: 15px; line-height: 1.4; }
   .public-hero .public-actions { flex-direction: column; gap: 10px; margin-top: 20px; align-items: stretch; }
-  .public-hero .public-button { height: 46px; padding: 10px 18px; }
   .hero-care-benefits { display: none; }
   .public-hero .hero-tooth { height: 280px; }
   .public-hero .hero-tooth-controls { inset: auto 0 8px; }

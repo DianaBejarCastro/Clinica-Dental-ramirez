@@ -23,7 +23,6 @@ export default function LoginPage() {
         <BackLink href="#/inicio">Volver al inicio</BackLink>
         <ClinicLogo />
         <h1 id="login-title">Iniciar <span>sesión</span></h1>
-        <p>Accede al sistema de la<br />Clínica Dental Ramírez</p>
       </header>
       <div className="login-illustration"><LoginDentalVisual /></div>
       <section className="login-form" aria-label="Acceso al sistema">
@@ -40,7 +39,7 @@ export default function LoginPage() {
           {error && <p role="alert" className="error">{error}</p>}
           <button className="login-submit" disabled={busy}>{busy ? 'Ingresando…' : 'Iniciar sesión'}<span aria-hidden="true">→</span></button>
         </form>
-        <GoogleSignIn separator="o" />
+        <GoogleSignIn separator="o" showPatientHint={false} />
         <p className="login-registration">¿No tienes una cuenta? <a href="#/register">Regístrate</a></p>
       </section>
     </section>

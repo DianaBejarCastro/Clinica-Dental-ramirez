@@ -9,6 +9,8 @@ it('preserves login inputs, transparent logo source, links, password control and
   const { container } = render(<LoginPage />);
   expect(container.querySelector('.premium-login')).toBeTruthy();
   expect(screen.getByRole('heading', { name: 'Iniciar sesión' })).toBeTruthy();
+  expect(screen.queryByText(/Accede al sistema de la/)).toBeNull();
+  expect(screen.queryByText('Disponible exclusivamente para pacientes.')).toBeNull();
   expect(container.querySelector('.hero-tooth-stage')).toBeTruthy();
   expect(container.querySelector('.public-hero-shield')).toBeTruthy();
   expect(container.querySelector('.public-hero-mirror')).toBeTruthy();

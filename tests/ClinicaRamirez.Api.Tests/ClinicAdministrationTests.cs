@@ -13,7 +13,7 @@ public sealed class ClinicAdministrationTests(IdentityFixture f) : IClassFixture
 {
 
     [Fact]
-    public async Task PublicBrandExposesOnlyCurrentNameWithoutAdministrativeAccess()
+    public async Task PublicBrandExposesOnlyNameAndPublicWhatsappWithoutAdministrativeAccess()
     {
         using var scope = f.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -21,7 +21,8 @@ public sealed class ClinicAdministrationTests(IdentityFixture f) : IClassFixture
         var client = f.Client();
         var result = await Json(await client.GetAsync("/api/clinic/brand"));
         Assert.Equal(expected, result.GetProperty("name").GetString());
-        Assert.Single(result.EnumerateObject());
+        Assert.Equal(2, result.EnumerateObject().Count());
+        Assert.Equal(await db.Clinics.Select(x => x.IsActive ? x.Whatsapp : null).SingleAsync(), result.GetProperty("whatsapp").GetString());
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/admin/clinic")).StatusCode);
     }
 

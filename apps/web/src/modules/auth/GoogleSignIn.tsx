@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { googleChallenge, googleLogin } from '../../services/api';
 import { loadGoogleIdentity, bookingDoctorFromHash, patientDestination } from './googleIdentity';
 
-export default function GoogleSignIn({ separator = 'o continúa con' }: { separator?: string } = {}) {
+export default function GoogleSignIn({ separator = 'o continúa con', showPatientHint = true }: { separator?: string; showPatientHint?: boolean } = {}) {
   const root = useRef<HTMLDivElement>(null);
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -35,7 +35,7 @@ export default function GoogleSignIn({ separator = 'o continúa con' }: { separa
         <path fill="#EA4335" d="M12 5.96c1.47 0 2.79.51 3.83 1.51l2.87-2.87A9.6 9.6 0 0 0 12 2a10 10 0 0 0-8.94 5.49l3.34 2.59C7.19 7.72 9.4 5.96 12 5.96Z" />
       </svg><span>Continuar con Google (próximamente)</span>
     </button>}
-    <small>Disponible exclusivamente para pacientes.</small>
+    {showPatientHint && <small>Disponible exclusivamente para pacientes.</small>}
     {busy && <p role="status">Verificando tu cuenta…</p>}
     {error && <p role="alert">{error}</p>}
   </section>;

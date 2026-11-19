@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ClinicaRamirez.Api.Controllers;
 
-public sealed record ClinicBrandResponse(string Name);
+public sealed record ClinicBrandResponse(string Name, string? Whatsapp);
 
 [ApiController, Route("api/clinic/brand"), AllowAnonymous]
 public sealed class ClinicBrandController(AppDbContext db) : ControllerBase
@@ -14,7 +14,7 @@ public sealed class ClinicBrandController(AppDbContext db) : ControllerBase
     public async Task<ActionResult<ClinicBrandResponse>> Get(CancellationToken ct)
     {
         Response.Headers.CacheControl = "no-cache";
-        var brand = await db.Clinics.AsNoTracking().Select(x => new ClinicBrandResponse(x.Name)).SingleOrDefaultAsync(ct);
+        var brand = await db.Clinics.AsNoTracking().Select(x => new ClinicBrandResponse(x.Name, x.IsActive ? x.Whatsapp : null)).SingleOrDefaultAsync(ct);
         return brand is null ? NotFound() : Ok(brand);
     }
 }

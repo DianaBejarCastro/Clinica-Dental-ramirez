@@ -1,0 +1,7 @@
+.public-site .public-whatsapp { position: fixed; right: 24px; bottom: 24px; z-index: 40; width: 58px; height: 58px; display: grid; place-items: center; border-radius: 50%; border: 1px solid #0CBEB3; background: #fcfefe; color: #25D366; box-shadow: 0 8px 22px #00787329; transition: background .18s, transform .18s, box-shadow .18s; }
+.public-site .public-whatsapp svg { width: 28px; height: 28px; }
+.public-site .public-whatsapp:hover { background: #edfbfa; transform: translateY(-1px); box-shadow: 0 9px 24px #00787333; }
+.public-site .public-whatsapp:active { transform: scale(.97); }
+.public-site .public-whatsapp:focus-visible { outline: 3px solid #007c80; outline-offset: 4px; }
+@media (max-width: 767px) { .public-site .public-whatsapp { width: 54px; height: 54px; right: 16px; bottom: calc(var(--mobile-bottom-nav-height) + 20px + env(safe-area-inset-bottom, 0px)); } }
+@media (prefers-reduced-motion: reduce) { .public-site .public-whatsapp { transition: none; } }
