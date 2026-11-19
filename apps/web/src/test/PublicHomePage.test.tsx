@@ -57,7 +57,7 @@ it('reservar dirige a contacto sin abrir agenda interna', () => {
 it('Acceso al sistema abre el login funcional', async () => {
   render(<App />); const u = userEvent.setup();
   await u.click(within(screen.getByRole('navigation', { name: 'Navegación pública' })).getByRole('link', { name: 'Acceso al sistema' }));
-  expect(await screen.findByRole('button', { name: 'Ingresar' })).toBeTruthy();
+  expect(await screen.findByRole('button', { name: 'Iniciar sesión' })).toBeTruthy();
   expect(screen.getByLabelText('Email')).toBeTruthy(); expect(screen.getByLabelText('Contraseña')).toBeTruthy();
 });
 it('login permite volver al inicio público', async () => {
@@ -93,7 +93,7 @@ it('la navegación móvil conserva cinco destinos y la acción pública de reser
 it('Mi perfil sin sesión reutiliza el acceso existente', async () => {
   render(<App />);
   await userEvent.setup().click(within(screen.getByRole('navigation', { name: 'Navegación móvil principal' })).getByRole('link', { name: 'Mi perfil' }));
-  expect(await screen.findByRole('button', { name: 'Ingresar' })).toBeTruthy();
+  expect(await screen.findByRole('button', { name: 'Iniciar sesión' })).toBeTruthy();
 });
 
 it.each([['DOCTOR', '/doctor/appointments'], ['PATIENT', '/patient'], ['CASHIER', '/cashier/payments']])('Mi perfil reutiliza el panel de %s', async (role, destination) => {
@@ -112,7 +112,7 @@ it.each(['/', '/inicio'])('renders the public home for anonymous visitors at %s'
   render(<App />);
   expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Tu salud bucal,');
   await screen.findByRole('heading', { name: 'Nuestros servicios' });
-  expect(screen.queryByRole('button', { name: 'Ingresar' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Iniciar sesión' })).toBeNull();
   expect(window.location.pathname + window.location.hash).toBe(url);
   expect(fetchMock.mock.calls.some(call => String(call[0]).includes('/auth/'))).toBe(false);
 });
@@ -120,7 +120,7 @@ it.each(['/', '/inicio'])('renders the public home for anonymous visitors at %s'
 it.each(['/login', '/users', '/doctor/appointments', '/cashier/payments', '/patient', '/unknown-route'])('preserves login and protected fallback at %s', async (url) => {
   window.history.replaceState(null, '', url);
   render(<App />);
-  expect(await screen.findByRole('button', { name: 'Ingresar' })).toBeTruthy();
+  expect(await screen.findByRole('button', { name: 'Iniciar sesión' })).toBeTruthy();
   expect(screen.queryByRole('heading', { name: /Tu salud bucal/ })).toBeNull();
 });
 

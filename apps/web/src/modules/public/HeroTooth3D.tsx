@@ -16,6 +16,6 @@ export default function HeroTooth3D(){
       onPointerMove={e=>{const previous=drag.current;if(!previous||previous.id!==e.pointerId)return;scene.current?.rotate((e.clientY-previous.y)*.006,(e.clientX-previous.x)*.008);drag.current={id:e.pointerId,x:e.clientX,y:e.clientY};}}
       onPointerUp={()=>{drag.current=null;}} onPointerCancel={()=>{drag.current=null;}} onLostPointerCapture={()=>{drag.current=null;}} />
     {state!=='ready'&&<div className="hero-tooth-fallback" role="status"><span className="hero-tooth-monogram" aria-hidden="true">R</span><strong>Odontología con precisión</strong><p>{state==='loading'?'Preparando experiencia 3D…':'Cuidado profesional, en cada detalle.'}</p></div>}
-    <div className="hero-tooth-controls"><span id={help}>{state==='ready'?'Arrastra para explorar · Usa las flechas del teclado':'Clínica Dental RAMÍREZ'}</span>{state==='ready'&&<button type="button" className="secondary" aria-pressed={paused} onClick={()=>{scene.current?.setPaused(!paused);setPaused(!paused);}}>{paused?'Reanudar giro':'Pausar giro'}</button>}</div>
+    <div className="hero-tooth-controls"><span id={help} hidden={state==='ready'}>{state==='ready'?'Arrastra para explorar · Usa las flechas del teclado':'Clínica Dental RAMÍREZ'}</span>{state==='ready'&&<button type="button" className="secondary" aria-pressed={paused} onClick={()=>{scene.current?.setPaused(!paused);setPaused(!paused);}}>{paused?'Reanudar giro':'Pausar giro'}</button>}</div>
   </div>;
 }

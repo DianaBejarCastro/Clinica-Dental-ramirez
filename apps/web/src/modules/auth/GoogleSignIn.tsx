@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { googleChallenge, googleLogin } from '../../services/api';
 import { loadGoogleIdentity, bookingDoctorFromHash, patientDestination } from './googleIdentity';
 
-export default function GoogleSignIn() {
+export default function GoogleSignIn({ separator = 'o continúa con' }: { separator?: string } = {}) {
   const root = useRef<HTMLDivElement>(null);
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -26,7 +26,7 @@ export default function GoogleSignIn() {
     return () => { active = false; };
   }, [clientId, attempt]);
   return <section className="google-sign-in" aria-label="Acceso de pacientes con Google">
-    <p className="google-separator">o continúa con</p>
+    <p className="google-separator">{separator}</p>
     {clientId ? <div ref={root} aria-busy={busy} /> : <button type="button" className="google-coming-soon" disabled>
       <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.38a4.6 4.6 0 0 1-2 3.02v2.51h3.24c1.89-1.74 2.98-4.31 2.98-7.36Z" />

@@ -6,7 +6,7 @@
 .hero-tooth-stage canvas { display: block; width: 100%; height: 100%; }
 .hero-tooth-controls { position: absolute; inset: auto 18px 14px; display: flex; gap: 10px; align-items: center; justify-content: space-between; }
 .hero-tooth-controls span { font-size: 11px; color: var(--color-primary-text); max-width: 200px; }
-.hero-tooth-controls button { font-size: 11px; padding: 8px 10px; flex-shrink: 0; }
+.hero-tooth-controls button { font-size: 11px; padding: 8px 10px; flex-shrink: 0; margin-left: auto; }
 .hero-tooth-fallback { position: absolute; inset: 0 20px 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--color-primary-text); pointer-events: none; }
 .hero-tooth-fallback p { font-size: 13px; }
 .hero-tooth-monogram { font: 80px Georgia, serif; color: var(--color-primary); margin-bottom: 12px; }

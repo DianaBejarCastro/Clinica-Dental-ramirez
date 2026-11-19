@@ -9,6 +9,9 @@ it('loads without blocking and exposes accessible controls',async()=>{
  render(<HeroTooth3D/>);expect(screen.getByRole('status').textContent).toContain('Preparando');
  expect(await screen.findByRole('button',{name:'Pausar giro'})).toBeTruthy();
  expect(screen.getByRole('group').tabIndex).toBe(0);
+ const help=screen.getByText('Arrastra para explorar · Usa las flechas del teclado');
+ expect(help.hidden).toBe(true);
+ expect(screen.getByRole('group').getAttribute('aria-describedby')).toBe(help.id);
 });
 it('supports keyboard rotation and pause/resume',async()=>{
  render(<HeroTooth3D/>);await screen.findByRole('button',{name:'Pausar giro'});

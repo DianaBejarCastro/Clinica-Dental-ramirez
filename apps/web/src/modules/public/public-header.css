@@ -1,23 +1,25 @@
-.public-header { --header-teal: #008d88; --header-accent: #0CBEB3; --header-gap: 28px; position: relative; z-index: 2; padding: 10px 16px; margin-bottom: -28px; background: transparent; }
+@font-face { font-family: 'Plus Jakarta Sans'; font-style: normal; font-weight: 500; font-display: swap; src: url('../../assets/fonts/plus-jakarta-sans-500.ttf') format('truetype'); }
+.public-header { --header-teal: #008d88; --header-accent: #0CBEB3; --header-gap: 24px; position: relative; z-index: 2; padding: 10px 16px; margin-bottom: -28px; background: transparent; }
 .public-header-surface { position: relative; isolation: isolate; max-width: 1500px; margin-inline: auto; background: linear-gradient(#fcfefe calc(100% - 22px), transparent 0); border: none; border-radius: 32px 32px 0 0; box-shadow: none; }
 .public-header-surface::after { content: ''; position: absolute; z-index: -1; pointer-events: none; left: 0; right: 0; bottom: -18px; height: 40px; border-radius: 0 0 50% 50% / 0 0 100% 100%; background: #fcfefe; }
-.public-header-inner { width: 100%; max-width: 1480px; min-height: 100px; margin-inline: auto; padding: 10px 24px; display: flex; align-items: center; justify-content: center; gap: 140px; }
+.public-header-inner { width: 100%; max-width: 1480px; min-height: 100px; margin-inline: auto; padding: 10px 24px; display: flex; align-items: center; justify-content: center; gap: 124px; }
 .public-header .public-brand { min-width: 0; flex: 0 0 230px; color: var(--header-teal); }
 .public-header .clinic-brand-logo { background: transparent; border: 0; border-radius: 0; padding: 0; box-shadow: none; }
 .public-header .clinic-brand-logo img { width: 230px; max-width: 230px; height: 72px; max-height: 72px; object-fit: contain; object-position: left center; }
 .public-header .public-menu { display: flex; width: max-content; flex: 0 0 auto; align-items: center; gap: var(--header-gap); flex-wrap: nowrap; }
-.public-header .public-menu a { position: relative; color: #243b4b; font-size: 14px; font-weight: 600; line-height: 1.3; white-space: nowrap; padding: 10px 2px 12px; transition: color .18s; }
+.public-header .public-menu a { position: relative; color: #243b4b; font-family: "Plus Jakarta Sans", sans-serif; font-size: 14px; font-weight: 500; line-height: 1.2; letter-spacing: 0; white-space: nowrap; padding: 10px 2px 12px; transition: color .18s; }
 .public-header .public-menu a:hover { color: var(--header-teal); }
 .public-header .public-menu a[aria-current] { color: var(--header-accent); }
 .public-header .public-menu a[aria-current]::after { content: ''; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); width: 32px; height: 3px; border-radius: 3px; background: var(--header-accent); }
-.public-header .public-menu .public-access { font-size: 12px; color: #4b6570; }
+.public-header .public-menu .public-access { display: inline-flex; align-items: center; justify-content: center; height: 42px; min-height: 42px; padding: 0 20px; border: 1px solid #0CBEB3; border-radius: 999px; background: transparent; color: #006e6a; }
+.public-header .public-menu .public-access:hover { background: rgba(12, 190, 179, .08); color: #006e6a; }
 .public-header .public-menu .public-button { flex-shrink: 0; width: 160px; height: 50px; margin-left: 4px; padding: 12px 24px; gap: 10px; border: none; border-radius: 999px; color: #FFFFFF; background: linear-gradient(180deg, #19CFC4 0%, #008278 30%, #007D73 48%, #006F66 100%); box-shadow: 0 6px 14px #00797438, 0 2px 4px #00000014, inset 0 1px 0 #ffffff47; transition: background .18s, transform .18s, box-shadow .18s; }
 .public-header .public-menu .public-button:hover { background: linear-gradient(180deg, #20D6CC 0%, #00847A 30%, #007F75 48%, #007168 100%); color: #FFFFFF; transform: translateY(-1px); box-shadow: 0 7px 16px #00797440, 0 2px 4px #00000014, inset 0 1px 0 #ffffff47; }
 .public-header .public-button svg { width: 18px; height: 18px; flex-shrink: 0; }
 .public-header a:focus-visible, .public-header button:focus-visible { outline: 3px solid #007c80; outline-offset: 4px; }
 .public-header .public-menu-toggle { display: none; }
 @media (min-width: 1180px) and (max-width: 1279px) {
-  .public-header-inner { gap: 104px; padding-inline: 24px; }
+  .public-header-inner { gap: 88px; padding-inline: 24px; }
 }
 @media (max-width: 1179px) {
   .public-header { padding: 6px 10px 10px; margin-bottom: -18px; }
@@ -32,7 +34,7 @@
   .public-header .public-menu { display: none; position: absolute; top: calc(100% + 12px); left: 0; right: 0; width: auto; padding: 12px; border: 1px solid #d5eaea; border-radius: 20px; background: #fff; box-shadow: 0 10px 24px #06474c1a; align-items: stretch; flex-direction: column; gap: 2px; }
   .public-header .public-menu.is-open { display: flex; animation: public-menu-enter .18s ease-out; }
   .public-header .public-menu a { min-height: 44px; padding: 12px 16px; border-radius: 8px; }
-  .public-header .public-menu a[aria-current] { background: #eaf7f6; }
+  .public-header .public-menu a[aria-current] { background: transparent; }
   .public-header .public-menu a[aria-current]::after { content: none; }
   .public-header .public-menu .public-button { margin: 8px 0 0; width: 100%; height: 48px; }
 }
@@ -56,7 +58,7 @@
 
 @media (min-width: 1180px) {
   .public-header .public-brand { margin-left: -30px; margin-right: 30px; }
-  .public-header .public-menu .public-button { margin-left: 34px; margin-right: -30px; }
+  .public-header .public-menu .public-button { margin-left: -8px; margin-right: -30px; }
 }
 
 .public-header .public-menu .public-button:active { transform: translateY(0); }

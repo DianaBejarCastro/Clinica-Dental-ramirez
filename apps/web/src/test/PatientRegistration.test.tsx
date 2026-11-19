@@ -58,7 +58,7 @@ it.each(['Ya existe una cuenta registrada con este correo electrónico.', 'CI ya
 it('registro exitoso dirige a login con mensaje y sin auto-login', async () => {
   render(<App />); await fill(); await userEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }));
   expect(await screen.findByText('Cuenta creada correctamente. Ya puedes iniciar sesión.')).toBeTruthy();
-  expect(window.location.hash).toBe('#/login'); expect(screen.getByRole('button', { name: 'Ingresar' })).toBeTruthy();
+  expect(window.location.hash).toBe('#/login'); expect(screen.getByRole('button', { name: 'Iniciar sesión' })).toBeTruthy();
   const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/register/patient'))!;
   const body = JSON.parse(String(call[1]!.body)); expect(body.email).toBe(user.email); expect(body).not.toHaveProperty('roles'); expect(body).not.toHaveProperty('userId');
   expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/login'))).toBe(false);
@@ -74,7 +74,7 @@ it('error general no expone detalles técnicos', async () => {
 it('login paciente dirige a Mi cuenta sin sidebar administrativo', async () => {
   window.history.replaceState(null, '', '#/login'); render(<App />);
   await userEvent.type(await screen.findByLabelText('Email'), user.email); await userEvent.type(screen.getByLabelText('Contraseña'), 'SafePassword123!');
-  await userEvent.click(screen.getByRole('button', { name: 'Ingresar' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
   expect(await screen.findByRole('heading', { name: 'Mi cuenta' })).toBeTruthy(); expect(await screen.findByRole('heading', { name: 'Ana Paciente' })).toBeTruthy();
   await waitFor(() => expect(window.location.hash).toBe('#/patient')); expect(screen.queryByText('Usuarios')).toBeNull(); expect(document.querySelector('.sidebar')).toBeNull();
   expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/admin/'))).toBe(false);

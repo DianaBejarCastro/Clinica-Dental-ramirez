@@ -1,12 +1,18 @@
 import { expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { login } from '../services/api';
 import LoginPage from '../modules/auth/LoginPage';
 vi.mock('../services/api', () => ({ apiUrl: (path: string) => path, login: vi.fn().mockRejectedValue(new Error('Credenciales incorrectas.')), getSession: () => null }));
 it('preserves login inputs, transparent logo source, links, password control and errors', async () => {
   const user = userEvent.setup();
   const { container } = render(<LoginPage />);
   expect(container.querySelector('.premium-login')).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Iniciar sesión' })).toBeTruthy();
+  expect(container.querySelector('.hero-tooth-stage')).toBeTruthy();
+  expect(container.querySelector('.public-hero-shield')).toBeTruthy();
+  expect(container.querySelector('.public-hero-mirror')).toBeTruthy();
+  expect(container.querySelector('.hero-clinic-scene')).toBeTruthy();
   expect(screen.getByAltText('Logo de la clínica').getAttribute('src')).toContain('/api/clinic/logo');
   expect(screen.getByRole('link', { name: 'Volver al inicio' }).getAttribute('href')).toBe('#/inicio');
   expect(screen.getByRole('link', { name: 'Regístrate' }).getAttribute('href')).toBe('#/register');
@@ -16,6 +22,7 @@ it('preserves login inputs, transparent logo source, links, password control and
   expect(screen.getByLabelText('Contraseña').getAttribute('type')).toBe('text');
   await user.click(screen.getByRole('button', { name: /Ocultar contraseña/i }));
   expect(screen.getByLabelText('Contraseña').getAttribute('type')).toBe('password');
-  await user.click(screen.getByRole('button', { name: 'Ingresar' }));
+  await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
   expect((await screen.findByRole('alert')).textContent).toBe('Credenciales incorrectas.');
+  expect(login).toHaveBeenCalledWith('user@example.com', 'test-password');
 });
