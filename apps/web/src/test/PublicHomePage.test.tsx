@@ -28,7 +28,7 @@ it('muestra la landing pública y sus secciones sin consultar APIs privadas', as
   await screen.findByRole('heading', { name: 'Nuestros servicios' });
   const main = within(screen.getByRole('main'));
   for (const name of ['Nuestros servicios', 'Nuestro equipo', 'Contacto', 'Agenda tu próxima consulta']) expect(main.getByRole('heading', { name })).toBeTruthy();
-  expect(fetchMock.mock.calls.every(call => ['/api/clinic/brand', '/api/clinic/branches', '/api/clinic/team', '/api/clinic/services', '/api/clinic/site-images/care/meta', '/api/clinic/site-images/hero/meta', '/api/clinic/social-networks'].some(path => String(call[0]).endsWith(path)))).toBe(true);
+  expect(fetchMock.mock.calls.every(call => ['/api/clinic/media', '/api/clinic/brand', '/api/clinic/branches', '/api/clinic/team', '/api/clinic/services', '/api/clinic/site-images/care/meta', '/api/clinic/site-images/hero/meta', '/api/clinic/social-networks'].some(path => String(call[0]).split('?')[0].endsWith(path)))).toBe(true);
 });
 it('simplifica el footer y conserva los datos de sucursales solo en su sección pública', async () => {
   render(<App />);
@@ -101,7 +101,7 @@ it('navegar a una sección cierra el menú y enfoca el destino', async () => {
 it('reservar dirige a contacto sin abrir agenda interna', () => {
   render(<App />);
   screen.getAllByRole('link', { name: 'Reservar cita' }).forEach(link => expect(link.getAttribute('href')).toBe('#/inicio?section=contacto'));
-  expect(fetchMock.mock.calls.every(call => ['/api/clinic/brand', '/api/clinic/branches', '/api/clinic/team', '/api/clinic/services', '/api/clinic/site-images/care/meta', '/api/clinic/site-images/hero/meta', '/api/clinic/social-networks'].some(path => String(call[0]).endsWith(path)))).toBe(true);
+  expect(fetchMock.mock.calls.every(call => ['/api/clinic/media', '/api/clinic/brand', '/api/clinic/branches', '/api/clinic/team', '/api/clinic/services', '/api/clinic/site-images/care/meta', '/api/clinic/site-images/hero/meta', '/api/clinic/social-networks'].some(path => String(call[0]).split('?')[0].endsWith(path)))).toBe(true);
 });
 it('Acceso al sistema abre el login funcional', async () => {
   render(<App />); const u = userEvent.setup();

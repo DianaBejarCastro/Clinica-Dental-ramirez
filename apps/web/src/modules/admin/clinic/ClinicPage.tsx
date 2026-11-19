@@ -1,3 +1,4 @@
+import ClinicGallery from './ClinicGallery';
 import ClinicWhatsapp from './ClinicWhatsapp';
 import ClinicTeam from './ClinicTeam';
 import ClinicServices from './ClinicServices';
@@ -27,5 +28,5 @@ export default function ClinicPage() {
   }
   return <><PageTitle title="Clínica" description="Información institucional y canales de contacto." /><Feedback {...action} />
     {clinic ? <><ClinicLogoUploader logo={clinic.logo ?? null} onChanged={logo => setClinic(value => value ? { ...value, logo } : value)} />
-      <section className="card"><form onSubmit={save} className="editor"><Fields fields={fields} value={clinic} disabled={!can('clinic.update') || action.busy} />{can('clinic.update') && <FormActions busy={action.busy} label="Guardar clínica" />}</form><p className="muted">Estos datos corresponden a toda la clínica.</p></section><ClinicWhatsapp clinic={clinic} onSaved={setClinic} disabled={!can('clinic.update')} /><ClinicCoverUploader /><ClinicCoverUploader purpose="care" /><ClinicSocialNetworks /><ClinicServices /><ClinicTeam /></> : !action.error && <p role="status">Cargando clínica…</p>}</>;
+      <section className="card"><form onSubmit={save} className="editor"><Fields fields={fields} value={clinic} disabled={!can('clinic.update') || action.busy} />{can('clinic.update') && <FormActions busy={action.busy} label="Guardar clínica" />}</form><p className="muted">Estos datos corresponden a toda la clínica.</p></section><ClinicWhatsapp clinic={clinic} onSaved={setClinic} disabled={!can('clinic.update')} /><ClinicGallery /><ClinicCoverUploader purpose="care" /><ClinicSocialNetworks /><ClinicServices /><ClinicTeam /></> : !action.error && <p role="status">Cargando clínica…</p>}</>;
 }

@@ -13,6 +13,7 @@ let exists = false, fail = false, permission = true;
 const drawImage = vi.fn(), encode = vi.fn();
 const fetchMock = vi.fn(async (input: unknown, init?: RequestInit): Promise<Response> => {
   const path = new URL(String(input)).pathname;
+  if (path === '/api/clinic/media') return Response.json({items:exists?[{id:'legacy',mediaType:'IMAGE',altText:'Instalaciones',width:1916,height:821}]:[],total:exists?1:0});
   if (path === '/api/auth/refresh') return Response.json({ accessToken: 'test', expiresAt: '', user: { id: 'u', firstName: 'Admin', lastName: '', email: '', roles: [], permissions: permission ? ['clinic.view', 'clinic.update'] : ['clinic.view'] } });
   if (path === '/api/clinic/site-images/hero/meta') return exists ? Response.json(metadata) : new Response(null, { status: 404 });
   if (['/api/admin/clinic/site-images/hero', '/api/admin/clinic/site-images/care'].includes(path)) {
@@ -125,24 +126,19 @@ it('Canvas usa recorte y resolución exacta', async () => {
   await renderCover(image, 2, .4, .3, 'image/webp'); expect(encode).toHaveBeenCalledWith(1916, 821);
   expect(drawImage.mock.calls[0].slice(-4)).toEqual([0, 0, 1916, 821]);
 });
-it('portada configurable después del equipo y antes de la llamada a reservar', async () => {
+it('galería conserva la portada referenciada después del equipo', async () => {
   exists = true; const { container } = render(<PublicHomePage section={null} />);
-  const image = await screen.findByAltText('Instalaciones'); fireEvent.load(image);
-  const banner = container.querySelector('.clinic-hero-banner')!;
-  expect(banner.hasAttribute('hidden')).toBe(false); expect(image.style.objectPosition).toBe('30% 60%');
-  expect(container.querySelector('main')!.firstElementChild).not.toBe(banner);
-  expect(banner.previousElementSibling).toBe(container.querySelector('#equipo'));
-  expect(banner.nextElementSibling).toBe(container.querySelector('.public-cta'));
-  expect(image.getAttribute('src')).toContain('/api/clinic/site-images/hero?v=');
-  expect(container.querySelectorAll('.clinic-hero-banner')).toHaveLength(1);
-  expect(container.querySelector('header')!.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Cuidamos tu sonrisa');
+  const image = await screen.findByAltText('Instalaciones');
+  const gallery = container.querySelector('.public-gallery')!;
+  expect(gallery.previousElementSibling).toBe(container.querySelector('#equipo'));
+  expect(gallery.nextElementSibling).toBe(container.querySelector('.public-cta'));
+  expect(image.getAttribute('src')).toContain('/api/clinic/media/legacy/content');
   expect(container.querySelector('.hero-tooth')).toBeTruthy();
 });
 it('sin portada no hay wrapper, placeholder ni hueco y conserva hero', async () => {
   const { container } = render(<PublicHomePage section={null} />); await act(async () => {});
   expect(container.querySelector('.clinic-hero-banner')).toBeNull(); expect(container.querySelector('.hero-tooth')).toBeTruthy();
-  expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Cuidamos tu sonrisa');
+  expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Tu salud bucal');
 });
 it('fallo de imagen no deja hueco y cambio de versión invalida caché', async () => {
   exists = true; const { container } = render(<ClinicHeroBanner />); const image = await screen.findByAltText('Instalaciones'); fireEvent.error(image);

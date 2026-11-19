@@ -24,6 +24,7 @@ const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit
   const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {};
   if (path === '/api/auth/refresh') return response(session);
   if (['/api/admin/clinic/site-images/hero', '/api/admin/clinic/site-images/care'].includes(path)) return Response.json({ title: 'No hay portada.' }, { status: 404 });
+  if (path === '/api/admin/clinic/media') return response({items:[],total:0,page:1,pageSize:8,videoUploadAvailable:false});
   if (path.startsWith('/api/admin/clinic/team')) return response([]);
   if (path.startsWith('/api/admin/clinic/services')) return response([]);
   if (path === '/api/admin/clinic/social-networks') return response([]);

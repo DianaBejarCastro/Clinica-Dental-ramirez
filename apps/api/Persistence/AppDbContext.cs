@@ -7,6 +7,7 @@ namespace ClinicaRamirez.Api.Persistence;
 
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    public DbSet<ClinicMediaItem> ClinicMediaItems => Set<ClinicMediaItem>();
     public DbSet<ClinicFeaturedDoctor> ClinicFeaturedDoctors => Set<ClinicFeaturedDoctor>();
     public DbSet<ClinicService> ClinicServices => Set<ClinicService>();
     public DbSet<ClinicSiteImage> ClinicSiteImages => Set<ClinicSiteImage>();
@@ -47,6 +48,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.ConfigureClinicAdministration();
+        b.ConfigureClinicMedia();
         b.ConfigureClinicServices();
         b.ConfigureClinicFeaturedDoctors();
         b.ConfigureUserProfilePhotos();

@@ -302,6 +302,124 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicMediaAsset", b =>
+                {
+                    b.Property<Guid>("MediaItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("Height")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("ImageData")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("MimeType")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("StorageKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<byte[]>("ThumbnailData")
+                        .HasColumnType("bytea");
+
+                    b.Property<int?>("Width")
+                        .HasColumnType("integer");
+
+                    b.HasKey("MediaItemId");
+
+                    b.ToTable("ClinicMediaAssets", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_MediaAsset_Storage", "(\"ImageData\" IS NOT NULL AND \"StorageKey\" IS NULL AND \"FileSizeBytes\" BETWEEN 1 AND 10485760) OR (\"ImageData\" IS NULL AND \"StorageKey\" IS NOT NULL AND \"FileSizeBytes\" BETWEEN 1 AND 52428800)");
+                        });
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicMediaExternalSource", b =>
+                {
+                    b.Property<Guid>("MediaItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("ExternalUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("MediaItemId");
+
+                    b.ToTable("ClinicMediaExternalSources", (string)null);
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicMediaItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AltText")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Caption")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("ClinicId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("LegacyImageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MediaType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LegacyImageId")
+                        .IsUnique();
+
+                    b.HasIndex("ClinicId", "IsActive", "SortOrder");
+
+                    b.ToTable("ClinicMediaItems", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ClinicMedia_Order", "\"SortOrder\" >= 0");
+
+                            t.HasCheckConstraint("CK_ClinicMedia_Type", "\"MediaType\" IN ('IMAGE','VIDEO_UPLOAD','TIKTOK')");
+                        });
+                });
+
             modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicService", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3766,6 +3884,44 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                     b.Navigation("Doctor");
                 });
 
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicMediaAsset", b =>
+                {
+                    b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicMediaItem", "Item")
+                        .WithOne("Asset")
+                        .HasForeignKey("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicMediaAsset", "MediaItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Item");
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicMediaExternalSource", b =>
+                {
+                    b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicMediaItem", "Item")
+                        .WithOne("External")
+                        .HasForeignKey("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicMediaExternalSource", "MediaItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Item");
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicMediaItem", b =>
+                {
+                    b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.Clinic", null)
+                        .WithMany()
+                        .HasForeignKey("ClinicId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicSiteImage", "LegacyImage")
+                        .WithMany()
+                        .HasForeignKey("LegacyImageId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("LegacyImage");
+                });
+
             modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicService", b =>
                 {
                     b.HasOne("ClinicaRamirez.Api.Domain.ClinicAdministration.Clinic", null)
@@ -4399,6 +4555,13 @@ namespace ClinicaRamirez.Api.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.ClinicMediaItem", b =>
+                {
+                    b.Navigation("Asset");
+
+                    b.Navigation("External");
                 });
 
             modelBuilder.Entity("ClinicaRamirez.Api.Domain.ClinicAdministration.DoctorProfile", b =>
