@@ -43,7 +43,7 @@ small { display: block; margin-top: var(--space-1); }
 .brand { display: flex; gap: var(--space-3); align-items: center; font-size: 9px; letter-spacing: .07em; }
 .brand strong { display: block; font-size: 17px; letter-spacing: .04em; }
 .shell { display: flex; min-height: 100vh; }
-.shell aside { width: 236px; flex-shrink: 0; height: 100vh; height: 100dvh; position: sticky; top: 0; align-self: flex-start; overflow: hidden; background: linear-gradient(180deg, rgb(255 255 255 / 6%), rgb(255 255 255 / 0%) 20%), linear-gradient(180deg, var(--color-brand), var(--color-sidebar-top) 55%, var(--color-sidebar-bottom)); color: var(--color-sidebar-text); padding: var(--space-6) var(--space-4); display: flex; flex-direction: column; gap: var(--space-6); }
+.shell aside { --color-sidebar-text: #24384B; --color-sidebar-muted: #607489; --color-sidebar-hover: #D3F3F5; --color-sidebar-active: #169597; --color-sidebar-border: #D3F3F5; isolation: isolate; width: 236px; flex-shrink: 0; height: 100vh; height: 100dvh; position: sticky; top: 0; align-self: flex-start; overflow: hidden; background: linear-gradient(180deg, #FFFFFF 0%, #F4FAFD 78%, #D3F3F5 100%); color: var(--color-sidebar-text); padding: var(--space-6) var(--space-4); display: flex; flex-direction: column; gap: var(--space-6); }
 .shell aside > .eyebrow { flex-shrink: 0; color: var(--color-sidebar-muted); margin: 0; padding: 0 var(--space-2); }
 .account { flex-shrink: 0; margin-top: 0; display: grid; gap: var(--space-2); overflow-wrap: anywhere; border-top: 1px solid var(--color-sidebar-border); padding-top: var(--space-5); }
 .account small { color: var(--color-sidebar-muted); }
@@ -117,7 +117,7 @@ button.secondary:not(:disabled):active { background: var(--color-primary-soft); 
 input:is([type=checkbox], [type=radio]) { accent-color: var(--color-primary); }
 .shell aside > .brand { flex-shrink: 0; min-height: 160px; align-content: center; background: transparent; color: var(--color-sidebar-text); padding: var(--space-3); border: 0; border-radius: 0; box-shadow: none; }
 .shell .account a { color: var(--color-sidebar-text); text-decoration: underline; }
-.shell .account a:hover { color: var(--color-surface); }
+.shell .account a:hover { color: #002124; }
 .shell .account button.secondary:active { background: var(--color-sidebar-active); color: var(--color-sidebar-text); border-color: var(--color-sidebar-border); }
 .login-brand .brand { background: var(--color-logo-surface); color: var(--color-primary-text); padding: var(--space-4); border-radius: var(--radius-md); }
 button:is(.danger, .protected-delete-confirm):not(:disabled) { background: var(--color-danger); border-color: var(--color-danger); color: var(--color-surface); }
@@ -128,4 +128,3 @@ button.protected-delete-trigger:not(:disabled):is(:hover, :active) { background:
 .shell aside > .brand { flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--space-3); }
 .shell .brand .sidebar-clinic-name { font-family: inherit; font-size: 15px; line-height: 1.4; font-weight: 600; letter-spacing: normal; color: var(--color-sidebar-text); overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; min-height: 2.8em; }
 .shell .brand .clinic-brand-logo:has(img:not([hidden])) { flex-basis: auto; }
-.shell .brand .clinic-brand-logo img { filter: drop-shadow(0 0 1px rgb(255 255 255 / 55%)); }

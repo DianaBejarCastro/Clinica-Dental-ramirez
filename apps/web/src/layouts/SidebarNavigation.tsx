@@ -14,8 +14,46 @@ function GroupIcon({ label }: { label: string }) {
   </svg>;
 }
 
+const peopleIcon = 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75';
+const inventoryIcon = 'M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.3 7l8.7 5 8.7-5M12 22V12';
+const calendarIcon = 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 14h.01M12 14h.01M16 14h.01M8 18h.01';
+const paymentIcon = 'M3 5h18v14H3zM3 10h18M7 15h3';
+
+const itemIconPaths: Record<string, string> = {
+  '/': 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
+  '/administrators': peopleIcon,
+  '/cashiers': 'M3 7h18v13H3zM3 7l2-4h14l2 4M7 12h4',
+  '/secretaries': peopleIcon,
+  '/users': peopleIcon,
+  '/roles': 'M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11zM9 12l2 2 4-4',
+  '/permissions': 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',
+  '/admin/inventory': inventoryIcon,
+  '/doctor/inventory': inventoryIcon,
+  '/clinic': 'M3 21h18M5 21V5h14v16M9 9h2M13 9h2M9 13h2M13 13h2M10 21v-4h4v4',
+  '/centers': 'M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0zM12 10a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+  '/specialties': 'M12 3c-4 0-7 3-7 7 0 5 3 11 7 11s7-6 7-11c0-4-3-7-7-7zM8 11c0 2 1 4 2 5M16 11c0 2-1 4-2 5M10 8c0 1 1 2 2 2s2-1 2-2',
+  '/doctors': 'M20 21a8 8 0 0 0-16 0M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM19 8v6M16 11h6',
+  '/schedules': 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 14h3M8 18h3',
+  '/patients': peopleIcon,
+  '/doctor/patients': peopleIcon,
+  '/appointments': calendarIcon,
+  '/doctor/appointments': calendarIcon,
+  '/patient/appointments': calendarIcon,
+  '/cashier/payments': paymentIcon,
+  '/patient/payments': paymentIcon,
+  '/patient': 'M3 10.5 12 3l9 7.5M5 9v12h14V9M9 21v-7h6v7',
+};
+
+export function SidebarItemIcon({ route }: { route: string }) {
+  return <svg className="sidebar-item-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+    <path d={itemIconPaths[route] ?? 'M4 5h16M4 12h16M4 19h16'} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>;
+}
+
 export function SidebarItem({ item, path }: { item: NavigationItem; path: string }) {
-  return <a href={`#${item.route}`} aria-current={path === item.route ? 'page' : undefined}>{item.label}</a>;
+  return <a href={`#${item.route}`} aria-current={path === item.route ? 'page' : undefined}>
+    <SidebarItemIcon route={item.route} /><span>{item.label}</span>
+  </a>;
 }
 export function SidebarGroup({ group, path, open, onToggle }: { group: NavigationGroup; path: string; open: boolean; onToggle: () => void }) {
   const id = useId();

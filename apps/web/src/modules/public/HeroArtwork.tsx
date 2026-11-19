@@ -1,4 +1,5 @@
 import HeroTooth3D from './HeroTooth3D';
+import DecorativeAquaWaves from '../../components/DecorativeAquaWaves';
 
 export function HeroBackground() {
   return <div className="hero-clinic-scene" aria-hidden="true">
@@ -16,6 +17,7 @@ export function HeroBackground() {
 
 export default function HeroArtwork() {
   return <div className="public-hero-visual">
+        <DecorativeAquaWaves className="public-footer-wave public-hero-waves" />
         <HeroTooth3D />
         <svg className="public-hero-shield" viewBox="0 0 140 165" aria-hidden="true">
           <defs><linearGradient id="hero-shield-fill" x2="1" y2="1"><stop stopColor="#53e9de"/><stop offset="1" stopColor="#008c86"/></linearGradient></defs>

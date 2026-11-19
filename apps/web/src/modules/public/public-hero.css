@@ -1,8 +1,6 @@
 .public-hero { position: relative; isolation: isolate; overflow: hidden; background: #e8f9f8; color: #173545; }
 .hero-clinic-scene { position: absolute; inset: 0; z-index: -2; pointer-events: none; background: radial-gradient(ellipse at 18% 35%, #fff 0%, #f3fcfc 28%, transparent 66%), linear-gradient(120deg, #ecfbfa, #b8eeee); }
 .hero-clinic-room { position: absolute; right: -3%; top: 0; width: 53%; height: 100%; opacity: .38; filter: blur(4px); }
-.public-hero::before { content: ''; position: absolute; z-index: -1; pointer-events: none; width: 69%; height: 96%; right: -26%; bottom: -24%; border-radius: 55% 0 0 0; background: radial-gradient(ellipse at 24% 26%, #57fff166, transparent 58%), radial-gradient(ellipse at 78% 80%, #168e9633, transparent 65%), linear-gradient(145deg, #d9f5f3 0%, #a0e8e1 28%, #52d6cc 58%, #28b8b2 100%); transform: rotate(-16deg); }
-.public-hero::after { content: ''; position: absolute; z-index: -1; pointer-events: none; width: 80%; height: 28%; right: -14%; bottom: -14%; border-radius: 70% 0 0 0; background: radial-gradient(ellipse at 25% 15%, #ffffffb3, transparent 62%), radial-gradient(ellipse at 85% 90%, #57fff133, transparent 70%), linear-gradient(115deg, #eaf8f7 0%, #d9f5f3 40%, #aee7e4 75%, #80d9d5 100%); box-shadow: 0 -2px 0 0 #d8b85aa6, 0 -6px 16px #eaf8f733; transform: rotate(-9deg); }
 .public-hero .public-hero-grid { width: min(1180px, calc(100% - 48px)); min-height: 610px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 12px; padding-block: 64px 58px; }
 .public-hero-copy { position: relative; z-index: 1; min-width: 0; }
 .public-hero .public-eyebrow { font-size: 12px; font-weight: 500; letter-spacing: .25em; color: #36545f; margin-bottom: 22px; }
@@ -19,7 +17,8 @@
 .hero-care-benefits li { display: flex; flex: 1; align-items: center; gap: 10px; font-size: 12px; font-weight: 600; line-height: 1.35; color: #274752; }
 .hero-care-benefits li > span { width: 42px; height: 42px; flex-shrink: 0; display: grid; place-items: center; color: #009d95; border: 1px solid #b9e8e5; background: #eafffcaa; border-radius: 50%; }
 .hero-care-benefits svg { width: 26px; height: 26px; }
-.public-hero-visual { position: relative; min-width: 0; }
+.public-hero-visual { position: relative; min-width: 0; isolation: isolate; }
+.public-hero .public-hero-waves { left: 0; bottom: 0; width: 100%; height: 88%; z-index: -1; }
 .public-hero .hero-tooth { height: 470px; width: 100%; max-width: none; margin: 0; }
 .public-hero .hero-tooth-stage canvas { transform: scale(1.25); }
 .public-hero .hero-tooth::before { background: #008d86; opacity: .16; bottom: 15%; }
@@ -54,8 +53,7 @@
   .public-hero-shield { width: 25%; top: 32%; right: 24%; }
   .public-hero-mirror { top: 15%; right: 8%; height: 65%; }
   .hero-clinic-room { top: 40%; right: -15%; width: 100%; height: 60%; opacity: .25; }
-  .public-hero::before { width: 115%; height: 43%; bottom: -7%; right: -40%; }
-  .public-hero::after { width: 120%; height: 12%; right: -15%; bottom: -4%; }
+  .public-hero .public-hero-waves { height: 84%; }
   .public-hero + #servicios { width: 100%; margin-top: -12px; padding-block: 26px 32px; border-radius: 26px 26px 0 0; }
   .public-hero + #servicios h2 { font-size: 26px; }
 }

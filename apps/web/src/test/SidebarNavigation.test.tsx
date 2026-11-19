@@ -35,6 +35,7 @@ it('muestra Resumen y los cuatro grupos en el orden solicitado', () => {
   expect(screen.getAllByRole('button').map(button => button.textContent)).toEqual(['Administración', 'Clínica', 'Equipo médico', 'Atención']);
   expect(screen.getAllByRole('link').map(link => link.textContent)).toEqual(['Resumen']);
   expect(screen.getByRole('navigation').getAttribute('aria-label')).toBe('Navegación principal');
+  expect(screen.getByRole('link', { name: 'Resumen' }).querySelector('.sidebar-item-icon')?.getAttribute('aria-hidden')).toBe('true');
 });
 it('expande y contrae cada grupo con controles accesibles', async () => {
   render(<SidebarNavigation path="/" permissions={permissions} />); const user = userEvent.setup();

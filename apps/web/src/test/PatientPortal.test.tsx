@@ -17,8 +17,12 @@ const fetchMock=vi.fn(async(input:RequestInfo|URL)=>{
 });
 beforeEach(()=>{empty=false;fail=false;pending=false;requests.length=0;vi.stubGlobal('fetch',fetchMock);setSession({accessToken:'token',expiresAt:'2099-01-01',user:{id:'patient',firstName:'Diana',lastName:'Bejar',email:'p@test.example',roles:['PATIENT'],permissions:[]}});});
 it('summary exposes only patient navigation and real financial totals',async()=>{
- render(<PatientDashboard/>);await screen.findByRole('heading',{name:'Diana Bejar'});
+ const {container}=render(<PatientDashboard/>);await screen.findByRole('heading',{name:'Diana Bejar'});
  expect(within(screen.getByRole('navigation',{name:'Portal del paciente'})).getAllByRole('link').map(x=>x.textContent)).toEqual(['Resumen','Mis citas','Mis pagos']);
+ const navigation=screen.getByRole('navigation',{name:'Portal del paciente'});
+ expect(within(navigation).getAllByRole('link').every(link=>Boolean(link.querySelector('.sidebar-item-icon')))).toBe(true);
+ expect(container.querySelector('.patient-sidebar-waves')?.getAttribute('aria-hidden')).toBe('true');
+ expect(within(navigation).getByRole('link',{name:'Resumen'}).getAttribute('aria-current')).toBe('page');
  expect(screen.getByText('Clínica de prueba')).toBeTruthy();expect(screen.getByText('Total pagado')).toBeTruthy();expect(screen.getByText('Tratamientos con saldo pendiente')).toBeTruthy();expect(screen.getAllByText('Doctor Uno')).toHaveLength(2);expect(screen.getByText('REC-1',{exact:false})).toBeTruthy();
  expect(document.body.textContent).not.toContain('internal-');expect(screen.queryByText('Administración')).toBeNull();expect(requests).toEqual(['/api/patient/dashboard']);
 });

@@ -5,6 +5,7 @@ import { cashierNavigation, doctorNavigation, navigationGroups, overview } from 
 import { useState, type ReactNode } from 'react';
 import { useAuth } from '../modules/auth/AuthProvider';
 import { logout } from '../services/api';
+import DecorativeAquaWaves from '../components/DecorativeAquaWaves';
 export default function AdminLayout({ children, path, doctorPortal = false, cashierPortal = false }: { children: ReactNode; path: string; doctorPortal?: boolean; cashierPortal?: boolean }) {
   const { session } = useAuth(); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
   const navigation = cashierPortal ? cashierNavigation : doctorPortal ? doctorNavigation : { items: [overview], groups: navigationGroups };
@@ -14,6 +15,7 @@ export default function AdminLayout({ children, path, doctorPortal = false, cash
     ? item.label : path === '/' ? overview.label : 'Gestión de la clínica';
   return <div className="shell">
     <aside>
+      <DecorativeAquaWaves className="dashboard-sidebar-waves" />
       <div className="brand"><ClinicLogo /><SidebarClinicName /></div>
       <p className="eyebrow">ESPACIO DE TRABAJO</p>
       <SidebarNavigation path={path} permissions={session?.user.permissions ?? []} navigation={navigation} />
