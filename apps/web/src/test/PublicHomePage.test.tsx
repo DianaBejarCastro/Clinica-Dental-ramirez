@@ -27,13 +27,21 @@ it('muestra la landing pública y sus secciones sin consultar APIs privadas', as
   expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Tu salud bucal,');
   await screen.findByRole('heading', { name: 'Nuestros servicios' });
   const main = within(screen.getByRole('main'));
-  for (const name of ['Nuestros servicios', 'Agenda tu cita con nuestros especialistas', 'Contacto', 'Agenda tu próxima consulta']) expect(main.getByRole('heading', { name })).toBeTruthy();
+  for (const name of ['Nuestros servicios', 'Agenda tu cita con nuestros especialistas']) expect(main.getByRole('heading', { name })).toBeTruthy();
+  expect(main.queryByRole('heading', { name: 'Contacto' })).toBeNull();
+  expect(main.queryByText('ESTAMOS PARA ORIENTARTE')).toBeNull();
+  expect(main.queryByText('Los canales de contacto se publicarán aquí próximamente.')).toBeNull();
+  expect(screen.getByRole('main').querySelector('#contacto')).toBeNull();
+  expect(main.queryByRole('heading', { name: 'Agenda tu próxima consulta' })).toBeNull();
+  expect(main.queryByText('EL SIGUIENTE PASO')).toBeNull();
+  expect(main.queryByText('Conversemos sobre el cuidado de tu sonrisa.')).toBeNull();
+  expect(screen.getByRole('main').querySelector('.public-cta')).toBeNull();
   expect(fetchMock.mock.calls.every(call => ['/api/clinic/media', '/api/clinic/brand', '/api/clinic/branches', '/api/clinic/team', '/api/clinic/services', '/api/clinic/site-images/care/meta', '/api/clinic/site-images/hero/meta', '/api/clinic/social-networks'].some(path => String(call[0]).split('?')[0].endsWith(path)))).toBe(true);
 });
 it('simplifica el footer y conserva los datos de sucursales solo en su sección pública', async () => {
   render(<App />);
   const main = within(screen.getByRole('main'));
-  expect((await main.findAllByText('Sucursal Centro')).length).toBe(3);
+  expect((await main.findAllByText('Sucursal Centro')).length).toBe(1);
   expect(main.getByText(/Av. Principal 123/)).toBeTruthy();
   expect(main.getByRole('link', { name: '+591 4 1234567' }).getAttribute('href')).toBe('tel:+59141234567');
 
@@ -45,7 +53,7 @@ it('simplifica el footer y conserva los datos de sucursales solo en su sección 
   for (const value of ['Sucursal Centro', 'Av. Principal 123', '+591 4 1234567']) expect(footer.queryByText(value)).toBeNull();
   expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/api/clinic/branches'))).toHaveLength(1);
   expect(footer.getByRole('link', { name: 'Inicio' }).getAttribute('href')).toBe('#/inicio?section=inicio');
-  expect(footer.getByRole('link', { name: 'Reservar cita' }).getAttribute('href')).toBe('#/inicio?section=contacto');
+  expect(footer.getByRole('link', { name: 'Reservar cita' }).getAttribute('href')).toBe('#/inicio?section=equipo');
   expect(footer.getByRole('link', { name: 'Acceso al sistema' }).getAttribute('href')).toBe('#/login');
   const year = String(new Date().getFullYear());
   expect(footer.getByText(year, { selector: 'time' }).getAttribute('dateTime')).toBe(year);
@@ -81,7 +89,7 @@ it('el menú público contiene enlaces a las cinco secciones', () => {
     expect(footerLink.getAttribute('aria-current')).toBe(headerLink.getAttribute('aria-current'));
   }
   expect(footerNav.getByRole('link', { name: 'Acceso al sistema' }).getAttribute('href')).toBe('#/login');
-  expect(footerNav.getByRole('link', { name: 'Reservar cita' }).getAttribute('href')).toBe('#/inicio?section=contacto');
+  expect(footerNav.getByRole('link', { name: 'Reservar cita' }).getAttribute('href')).toBe('#/inicio?section=equipo');
 });
 it('abre y cierra el menú y Escape devuelve foco al botón', async () => {
   render(<App />); const u = userEvent.setup(); const toggle = screen.getByLabelText('Abrir menú');
@@ -97,10 +105,22 @@ it('navegar a una sección cierra el menú y enfoca el destino', async () => {
   expect(within(screen.getByRole('navigation', { name: 'Navegación pública' })).getByRole('link', { name: 'Servicios' }).getAttribute('aria-current')).toBe('location');
   expect(within(screen.getByRole('navigation', { name: 'Navegación del pie' })).getByRole('link', { name: 'Servicios' }).getAttribute('aria-current')).toBe('location');
   expect(screen.getByLabelText('Abrir menú').getAttribute('aria-expanded')).toBe('false');
+  await screen.findByText('Sucursal Centro');
+  await u.click(within(screen.getByRole('navigation', { name: 'Navegación pública' })).getByRole('link', { name: 'Contacto' }));
+  await waitFor(() => expect(document.activeElement?.id).toBe('sucursales'));
+  expect(within(screen.getByRole('navigation', { name: 'Navegación pública' })).getByRole('link', { name: 'Contacto' }).getAttribute('aria-current')).toBe('location');
 });
-it('reservar dirige a contacto sin abrir agenda interna', () => {
+it('Contacto conserva un destino navegable cuando no hay sucursales', async () => {
+  vi.stubGlobal('fetch', vi.fn(async input => String(input).endsWith('/api/clinic/branches')
+    ? { ok: true, json: async () => [] } as Response
+    : { ok: false, status: 404, json: async () => ({}) } as Response));
   render(<App />);
-  screen.getAllByRole('link', { name: 'Reservar cita' }).forEach(link => expect(link.getAttribute('href')).toBe('#/inicio?section=contacto'));
+  await userEvent.setup().click(within(screen.getByRole('navigation', { name: 'Navegación pública' })).getByRole('link', { name: 'Contacto' }));
+  await waitFor(() => expect(document.activeElement?.id).toBe('equipo'));
+});
+it('reservar dirige al equipo sin abrir agenda interna', () => {
+  render(<App />);
+  screen.getAllByRole('link', { name: 'Reservar cita' }).forEach(link => expect(link.getAttribute('href')).toBe('#/inicio?section=equipo'));
   expect(fetchMock.mock.calls.every(call => ['/api/clinic/media', '/api/clinic/brand', '/api/clinic/branches', '/api/clinic/team', '/api/clinic/services', '/api/clinic/site-images/care/meta', '/api/clinic/site-images/hero/meta', '/api/clinic/social-networks'].some(path => String(call[0]).split('?')[0].endsWith(path)))).toBe(true);
 });
 it('Acceso al sistema abre el login funcional', async () => {
@@ -120,7 +140,7 @@ it('login permite volver al inicio público', async () => {
 it('conserva el diente interactivo y añade beneficios sin enlaces ajenos', async () => {
   const { container } = render(<App />);
   expect(container.querySelector('.hero-tooth-stage')).toBeTruthy();
-  expect(screen.getByRole('link', { name: 'Agendar mi cita' }).getAttribute('href')).toBe('#/inicio?section=contacto');
+  expect(screen.getByRole('link', { name: 'Agendar mi cita' }).getAttribute('href')).toBe('#/inicio?section=equipo');
   expect(container.querySelector('.public-hero-shield')).toBeTruthy();
   await screen.findByRole('heading', { name: 'Nuestros servicios' });
   expect(container.querySelector('#inicio')?.nextElementSibling?.id).toBe('servicios');
@@ -156,7 +176,7 @@ it('la navegación móvil conserva cinco destinos y la acción pública de reser
   render(<App />);
   const nav = within(screen.getByRole('navigation', { name: 'Navegación móvil principal' }));
   expect(nav.getAllByRole('link')).toHaveLength(5);
-  for (const [label, href] of [['Inicio', '#/inicio?section=inicio'], ['Servicios', '#/inicio?section=servicios'], ['Agendar cita', '#/inicio?section=contacto'], ['Contacto', '#/inicio?section=contacto'], ['Mi perfil', '#/login']]) {
+  for (const [label, href] of [['Inicio', '#/inicio?section=inicio'], ['Servicios', '#/inicio?section=servicios'], ['Agendar cita', '#/inicio?section=equipo'], ['Contacto', '#/inicio?section=contacto'], ['Mi perfil', '#/login']]) {
     expect(nav.getByRole('link', { name: label }).getAttribute('href')).toBe(href);
   }
   expect(nav.getByRole('link', { name: 'Inicio' }).getAttribute('aria-current')).toBe('page');

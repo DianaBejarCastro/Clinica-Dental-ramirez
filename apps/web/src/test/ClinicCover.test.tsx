@@ -131,7 +131,8 @@ it('galería conserva la portada referenciada después del equipo', async () => 
   const image = await screen.findByAltText('Instalaciones');
   const gallery = container.querySelector('.public-gallery')!;
   expect(gallery.previousElementSibling).toBe(container.querySelector('#equipo'));
-  expect(gallery.nextElementSibling).toBe(container.querySelector('.public-cta'));
+  expect(gallery.nextElementSibling).toBe(container.querySelector('#sucursales'));
+  expect(container.querySelector('#contacto')).toBeNull();
   expect(image.getAttribute('src')).toContain('/api/clinic/media/legacy/content');
   expect(container.querySelector('.hero-tooth')).toBeTruthy();
 });

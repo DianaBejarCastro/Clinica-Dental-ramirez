@@ -12,7 +12,7 @@ function PublicNavigationItems({ section, onNavigate }: { section?: string | nul
     {publicLinks.map(([id, label]) => <a key={id} href={sectionHref(id)}
       aria-current={(section || 'inicio') === id ? 'location' : undefined} onClick={onNavigate}>{label}</a>)}
     <a className="public-access" href="#/login" onClick={onNavigate}>Acceso al sistema <span aria-hidden="true">→</span></a>
-    <a className="public-button" href={sectionHref('contacto')} onClick={onNavigate}>
+    <a className="public-button public-button-primary" href={sectionHref('equipo')} onClick={onNavigate}>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M8 3v4m8-4v4M4 10h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
         <path d="M8 14h2m4 0h2m-8 3h2" stroke="currentColor" strokeWidth="1.7" />
@@ -86,7 +86,8 @@ export default function PublicLayout({ children, section }: { children: ReactNod
   useEffect(() => {
     if (!section) return;
     if (!publicLinks.some(([id]) => id === section)) return;
-    const target = document.getElementById(section);
+    const target = document.getElementById(section === 'contacto' ? 'sucursales' : section)
+      ?? (section === 'contacto' ? document.getElementById('equipo') : null);
     target?.scrollIntoView?.({ behavior: 'auto', block: 'start' }); target?.focus({ preventScroll: true });
   }, [section]);
   return <div className="public-site"><a className="public-skip" href={sectionHref('inicio')}>Ir al contenido</a><PublicHeader section={section} /><main>{children}</main><PublicFooter section={section} /><MobileBottomNav section={section} /><PublicWhatsAppButton /></div>;

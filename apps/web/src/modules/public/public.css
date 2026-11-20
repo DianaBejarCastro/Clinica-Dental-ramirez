@@ -1,4 +1,7 @@
 .public-site { --public-accent: var(--color-primary); --public-soft: var(--color-primary-soft); color: var(--color-text); background: var(--color-surface); }
+.public-site main { --public-body-font-family: "Plus Jakarta Sans", sans-serif; --public-body-text-color: #173545; }
+.public-site main p:not(.public-eyebrow):not(.team-directory-eyebrow):not(.public-hero-note):not(.team-filter-message):not(.team-results-status):not(.team-booking-message):not(.service-tile *):not(.care-placeholder *):not(.hero-tooth-fallback *), .public-site main address, .public-site main .hero-care-benefits li, .public-site main .services-controls > span { font-family: var(--public-body-font-family); color: var(--public-body-text-color); }
+.public-site main .team-results-count strong { color: var(--public-body-text-color); }
 .public-site * { box-sizing: border-box; }
 .public-container { width: min(1160px, calc(100% - 48px)); margin-inline: auto; }
 .public-site a { text-decoration: none; }
@@ -32,13 +35,6 @@
 .public-team-empty > span { font-size: 38px; color: var(--public-accent); }
 .public-team-empty h3 { font-size: 18px; margin-bottom: 8px; }
 .public-team-empty p { color: var(--color-muted); }
-.public-cta { background: var(--color-sidebar); color: var(--color-surface); padding-block: 48px; }
-.public-cta > div { display: flex; align-items: center; justify-content: space-between; gap: 28px; }
-.public-cta .public-eyebrow { color: var(--color-sidebar-text); }
-.public-cta p { margin-bottom: 0; }
-.public-cta .public-button { flex-shrink: 0; }
-.public-contact-note { padding: 24px; border-left: 3px solid var(--public-accent); background: var(--public-soft); max-width: 720px; line-height: 1.7; }
-.public-contact-list { display: grid; gap: 12px; font-style: normal; overflow-wrap: anywhere; }
 .public-footer { position: relative; isolation: isolate; overflow: hidden; background: transparent; color: var(--color-text); border-top: 0; padding-top: 190px; }
 .public-footer::before { content: ''; position: absolute; z-index: -1; inset: 0; pointer-events: none; background: linear-gradient(to bottom, rgba(243, 252, 252, 0) 0, #f3fcfc 220px); }
 .public-footer-wave { position: absolute; display: block; width: 100%; pointer-events: none; }
@@ -71,7 +67,6 @@
   .public-container { width: calc(100% - 36px); }
   .public-hero-grid { grid-template-columns: 1fr; gap: 32px; min-height: auto; padding-block: 48px; }
   .public-section { padding-block: 48px; }
-  .public-cta > div { align-items: flex-start; flex-direction: column; }
   .public-card { padding: 20px; }
 }
 @media (max-width: 400px) { .public-benefits, .public-services { grid-template-columns: 1fr; } .public-site .clinic-brand-logo img { max-width: 110px; } .public-brand strong { font-size: 16px; } }

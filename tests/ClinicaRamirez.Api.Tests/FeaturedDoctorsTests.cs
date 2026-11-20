@@ -11,6 +11,20 @@ namespace ClinicaRamirez.Api.Tests;
 public sealed class FeaturedDoctorsTests(IdentityFixture f) : IClassFixture<IdentityFixture>
 {
     private const string Root = "/api/admin/clinic/team";
+    [Fact] public async Task PublicFacetsContainOnlyActiveAssignedReferencesAndNoPrivateFields() {
+        var d=await Doctor();using var c=await Admin();var id=await Add(c,d);
+        using var scope=f.Services.CreateScope();var db=scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var active=new Specialty{Code="S"+Guid.NewGuid().ToString("N").ToUpperInvariant(),Name="Public specialty"};
+        var inactive=new Specialty{Code="S"+Guid.NewGuid().ToString("N").ToUpperInvariant(),Name="Inactive specialty",IsActive=false};
+        db.DoctorSpecialties.AddRange(new DoctorSpecialty{DoctorId=d.Id,Specialty=active},new DoctorSpecialty{DoctorId=d.Id,Specialty=inactive});
+        var center=new Center{ClinicId=Clinic.SingletonId,Name="Inactive branch",Code="C"+Guid.NewGuid().ToString("N").ToUpperInvariant(),Address="Test",IsActive=false};
+        db.DoctorCenters.Add(new DoctorCenter{DoctorId=d.Id,Center=center});await db.SaveChangesAsync();
+        var result=(await c.GetFromJsonAsync<PublicTeamResponse[]>("/api/clinic/team"))!.Single(x=>x.Id==id);
+        Assert.Single(result.SpecialtyOptions);Assert.Equal(active.Id,result.SpecialtyOptions[0].Id);
+        Assert.Single(result.Branches);Assert.DoesNotContain(result.Branches,x=>x.Id==center.Id);
+        var raw=await c.GetStringAsync("/api/clinic/team");Assert.DoesNotContain("userId",raw);Assert.DoesNotContain("email",raw);Assert.DoesNotContain("professionalLicense",raw);
+        await c.DeleteAsync($"{Root}/{id}");Assert.DoesNotContain((await c.GetFromJsonAsync<PublicTeamResponse[]>("/api/clinic/team"))!,x=>x.Id==id);
+    }
     private async Task<HttpClient> Admin() { var c = f.Client(); var login = await f.Login(c); c.DefaultRequestHeaders.Authorization = new("Bearer", login.Body.AccessToken); return c; }
     private async Task<DoctorProfile> Doctor(bool activeUser = true, bool activeDoctor = true, bool assigned = true) {
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

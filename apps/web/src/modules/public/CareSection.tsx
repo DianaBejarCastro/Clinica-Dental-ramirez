@@ -46,7 +46,7 @@ export default function CareSection() {
         <h2 id="nosotros-title"><span>Una atención pensada</span>{' '}<strong>en las personas</strong></h2>
         <p className="care-intro">En Clínica Dental RAMÍREZ, el cuidado de tu sonrisa empieza por escucharte y organizar cada paso de tu atención.</p>
         <ul className="care-benefits">{benefits.map(benefit => <li key={benefit.icon}><span className="care-icon"><CareIcon kind={benefit.icon} /></span><div><h3>{benefit.title}</h3><p>{benefit.description}</p></div></li>)}</ul>
-        <a className="public-button care-cta" href={sectionHref('contacto')}>
+        <a className="public-button public-button-primary care-cta" href={sectionHref('equipo')}>
           <span className="care-cta-icon"><CareIcon kind="calendar" /></span>
           <span>Agendar consulta</span>
           <span className="care-cta-arrow" aria-hidden="true">→</span>

@@ -13,7 +13,7 @@ export default function MobileBottomNav({ section }: { section: string | null })
   const items = [
     { label: 'Inicio', icon: 'home', href: sectionHref('inicio'), active: !section || section === 'inicio' },
     { label: 'Servicios', icon: 'services', href: sectionHref('servicios'), active: section === 'servicios' },
-    { label: 'Agendar', icon: 'calendar', href: sectionHref('contacto'), active: false },
+    { label: 'Agendar', icon: 'calendar', href: sectionHref('equipo'), active: false },
     { label: 'Contacto', icon: 'phone', href: sectionHref('contacto'), active: section === 'contacto' },
     // Workspace already restores the session and resolves the appropriate role dashboard.
     { label: 'Mi perfil', icon: 'user', href: '#/login', active: false },

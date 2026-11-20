@@ -25,7 +25,9 @@ public sealed class FeaturedDoctorsService(AppDbContext db, IdentitySupport supp
         .OrderBy(x => x.DisplayOrder).ThenBy(x => x.Id)
         .Select(x => new PublicTeamResponse(x.Id, x.Doctor.User.FirstName, x.Doctor.User.LastName,
             x.Doctor.DoctorSpecialties.Where(s => s.Specialty.IsActive).OrderBy(s => s.Specialty.Name).Select(s => s.Specialty.Name).ToArray(),
-            db.UserProfilePhotos.Where(p => p.UserId == x.Doctor.UserId).Select(p => (DateTime?)p.UpdatedAt).FirstOrDefault())).ToArrayAsync(ct);
+            db.UserProfilePhotos.Where(p => p.UserId == x.Doctor.UserId).Select(p => (DateTime?)p.UpdatedAt).FirstOrDefault(),
+            x.Doctor.DoctorSpecialties.Where(s => s.Specialty.IsActive).OrderBy(s => s.Specialty.Name).Select(s => new PublicTeamReference(s.SpecialtyId, s.Specialty.Name)).ToArray(),
+            x.Doctor.DoctorCenters.Where(c => c.IsActive && c.Center.IsActive && c.Center.ClinicId == Clinic.SingletonId).OrderBy(c => c.Center.Name).Select(c => new PublicTeamReference(c.CenterId, c.Center.Name)).ToArray())).ToArrayAsync(ct);
     public async Task<Guid> Add(FeaturedDoctorRequest request, CancellationToken ct)
     {
         if (request.DisplayOrder < 0) throw new ApiException(400, "El orden debe ser mayor o igual a cero.");

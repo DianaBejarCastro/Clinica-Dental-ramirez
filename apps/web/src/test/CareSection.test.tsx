@@ -6,7 +6,7 @@ it('conserva los cuatro beneficios con descripción, CTA y fallback sin foto', a
   render(<CareSection />);
   expect(screen.getByRole('heading', { name: 'Una atención pensada en las personas' })).toBeTruthy();
   expect(screen.getAllByRole('listitem')).toHaveLength(4);
-  expect(screen.getByRole('link', { name: 'Agendar consulta' }).getAttribute('href')).toContain('contacto');
+  expect(screen.getByRole('link', { name: 'Agendar consulta' }).getAttribute('href')).toContain('equipo');
   expect(screen.getByText('nuestro compromiso.')).toBeTruthy();
   await waitFor(() => expect(fetch).toHaveBeenCalled());
   expect(screen.queryByRole('img')).toBeNull();

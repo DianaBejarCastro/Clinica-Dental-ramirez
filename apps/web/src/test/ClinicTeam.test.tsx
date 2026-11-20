@@ -82,18 +82,10 @@ it('keeps a single API professional in one compact card',async()=>{
  expect(document.querySelectorAll('.public-team-grid .public-team-card')).toHaveLength(1);
  expect(screen.getByRole('button',{name:'Reservar cita con Maria Perez'})).toBeTruthy();
 });
-it('shows real specialty and branch preview labels while keeping controls disabled',async()=>{
- const branches=[{id:'branch-1',name:'Sucursal Centro',address:'Calle Uno',city:'Llallagua',department:'Potosí',phone:null,latitude:null,longitude:null}];
- vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>[{id:'featured-1',firstName:'Maria',lastName:'Perez',specialties:['Ortodoncia'],photoVersion:null}]})));
- render(<TeamSection branches={branches}/>);await screen.findByText('Maria Perez');
- expect(screen.getByText('Sucursal Centro',{selector:'.team-filter-option span'})).toBeTruthy();
- expect(screen.getByRole('note').textContent).toContain('todavía no están activos');
- expect(screen.getByRole('searchbox',{name:'Buscar profesionales (vista previa)'}).hasAttribute('disabled')).toBe(true);
- expect(screen.getByLabelText('Especialidades (vista previa)').hasAttribute('disabled')).toBe(true);
- expect(screen.getByLabelText('Sucursales (vista previa)').hasAttribute('disabled')).toBe(true);
- expect([...screen.getAllByRole('checkbox')].every(control=>control.hasAttribute('disabled'))).toBe(true);
- expect(screen.getByRole('button',{name:'Ordenar profesionales'}).hasAttribute('disabled')).toBe(true);
- expect(screen.getByText('Paginación no activa')).toBeTruthy();
- expect(screen.queryByText(/reseñas|disponible hoy|Ver perfil/i)).toBeNull();
+it('enables directory controls and excludes unrelated clinic branches',async()=>{
+ vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>[{id:'f1',firstName:'Maria',lastName:'Perez',specialties:['Ortodoncia'],specialtyOptions:[{id:'s1',name:'Ortodoncia'}],branches:[{id:'b1',name:'Centro'}],photoVersion:null}]})));
+ render(<TeamSection/>);await screen.findByText('Maria Perez');
+ expect(screen.queryByRole('note')).toBeNull();expect(screen.getByRole('searchbox').hasAttribute('disabled')).toBe(false);
+ expect(screen.getByLabelText('Especialidades').hasAttribute('disabled')).toBe(false);expect(screen.getByLabelText('Sucursales').hasAttribute('disabled')).toBe(false);
+ expect(screen.getByText('Página 1 de 1')).toBeTruthy();
 });
-

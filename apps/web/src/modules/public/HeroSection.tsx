@@ -17,7 +17,7 @@ export default function HeroSection() {
         <h1 id="hero-title">Tu salud bucal,<span>en buenas manos</span></h1>
         <p>Atención dental integral, moderna y personalizada para toda la familia.</p>
         <div className="public-actions">
-          <a className="public-button" href={sectionHref('contacto')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 3v4m8-4v4M4 10h16M4 5h16v15H4ZM8 14h2m4 0h2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>Agendar mi cita</a>
+          <a className="public-button" href={sectionHref('equipo')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 3v4m8-4v4M4 10h16M4 5h16v15H4ZM8 14h2m4 0h2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>Agendar mi cita</a>
           <a className="public-button public-button-secondary" href={sectionHref('servicios')}>Conocer servicios <span aria-hidden="true">→</span></a>
         </div>
         <ul className="hero-care-benefits">{benefits.map(([label, path]) => <li key={label}><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d={path} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span><div>{label}</div></li>)}</ul>

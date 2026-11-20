@@ -25,7 +25,7 @@ export default function BranchesSection({ branches: suppliedBranches }: { branch
         return <article className="public-branch-card" key={branch.id}><h3>{branch.name}</h3>
           <address>{branch.address}<br />{[branch.city, branch.department].filter(Boolean).join(', ')}</address>
           {branch.phone && <p><a href={`tel:${branch.phone.replace(/[^+\d]/g, '')}`}>{branch.phone}</a></p>}
-          {directions && <a className="public-button" href={directions} target="_blank" rel="noopener noreferrer">Cómo llegar<span className="sr-only"> a {branch.name}</span></a>}
+          {directions && <a className="public-button public-button-primary" href={directions} target="_blank" rel="noopener noreferrer">Cómo llegar<span className="sr-only"> a {branch.name}</span></a>}
         </article>;
       })}</div>
     </div>

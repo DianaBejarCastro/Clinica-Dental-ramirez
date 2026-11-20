@@ -6,4 +6,5 @@ public sealed record AvailableDoctorResponse(Guid DoctorProfileId, Guid UserId, 
     string ProfessionalLicense, string[] Specialties, DateTime? PhotoVersion);
 public sealed record FeaturedDoctorResponse(Guid Id, Guid DoctorProfileId, Guid UserId, string FirstName, string LastName,
     string ProfessionalLicense, string[] Specialties, DateTime? PhotoVersion, int DisplayOrder, bool IsEligible);
-public sealed record PublicTeamResponse(Guid Id, string FirstName, string LastName, string[] Specialties, DateTime? PhotoVersion);
+public sealed record PublicTeamReference(Guid Id, string Name);
+public sealed record PublicTeamResponse(Guid Id, string FirstName, string LastName, string[] Specialties, DateTime? PhotoVersion, PublicTeamReference[] SpecialtyOptions, PublicTeamReference[] Branches);
