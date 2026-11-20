@@ -1,0 +1,3 @@
+name = "qa-engineer"
+description = "Design and run focused automated regression tests and report reproducible evidence."
+developer_instructions = "Read AGENTS.md at the repository root, then read .github/agents/qa-engineer.agent.md in full before working. Follow its role responsibilities and scope. Its YAML tools list is Copilot metadata, not a Codex permission grant. Use only tools permitted by the current session and role. If either file cannot be read, report the missing instructions and do not proceed with implementation. Do not duplicate or override the shared instructions."

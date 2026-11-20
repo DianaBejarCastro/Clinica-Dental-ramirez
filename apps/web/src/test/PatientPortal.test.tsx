@@ -40,3 +40,15 @@ it('payments show treatment balances and history without write controls',async()
 it('empty payments preserve zero-balance feedback',async()=>{empty=true;render(<PatientDashboard view="payments"/>);expect(await screen.findByText('No tienes saldos pendientes.')).toBeTruthy();expect(screen.getByText('Todavía no tienes pagos registrados.')).toBeTruthy();});
 it('loading and denied access do not show stale financial data',async()=>{fail=true;render(<PatientDashboard/>);expect(await screen.findByRole('alert')).toBeTruthy();expect(screen.queryByText('Total pagado')).toBeNull();});
 it('loading is accessible',()=>{pending=true;render(<PatientDashboard/>);expect(screen.getByRole('status').textContent).toContain('Cargando');});
+
+it('keeps optional workspace navigation inside the menu and logout outside it',async()=>{
+ const session=getSession()!;setSession({...session,user:{...session.user,permissions:['patients.view']}});
+ const {container}=render(<PatientDashboard/>);
+ await screen.findByRole('heading',{name:'Diana Bejar'});
+ const nav=screen.getByRole('navigation',{name:'Portal del paciente'});
+ expect(within(nav).getByRole('link',{name:'Espacio de trabajo'}).getAttribute('href')).toBe('#/');
+ const footer=container.querySelector('.patient-sidebar-user')!;
+ expect(footer.parentElement).toBe(container.querySelector('aside'));
+ expect(nav.contains(footer)).toBe(false);
+ expect(within(footer).getByRole('button',{name:'Cerrar sesi\u00f3n'})).toBeTruthy();
+});

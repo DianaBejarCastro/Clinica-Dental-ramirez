@@ -43,7 +43,7 @@ small { display: block; margin-top: var(--space-1); }
 .brand { display: flex; gap: var(--space-3); align-items: center; font-size: 9px; letter-spacing: .07em; }
 .brand strong { display: block; font-size: 17px; letter-spacing: .04em; }
 .shell { display: flex; min-height: 100vh; }
-.shell aside { --color-sidebar-text: #24384B; --color-sidebar-muted: #607489; --color-sidebar-hover: #D3F3F5; --color-sidebar-active: #169597; --color-sidebar-border: #D3F3F5; isolation: isolate; width: 236px; flex-shrink: 0; height: 100vh; height: 100dvh; position: sticky; top: 0; align-self: flex-start; overflow: hidden; background: linear-gradient(180deg, #FFFFFF 0%, #F4FAFD 78%, #D3F3F5 100%); color: var(--color-sidebar-text); padding: var(--space-6) var(--space-4); display: flex; flex-direction: column; gap: var(--space-6); }
+.shell aside { --color-sidebar-text: #24384B; --color-sidebar-muted: #607489; --color-sidebar-hover: #D3F3F5; --color-sidebar-active: #169597; --color-sidebar-border: #D3F3F5; isolation: isolate; width: 236px; flex-shrink: 0; background: linear-gradient(180deg, #FFFFFF 0%, #F4FAFD 78%, #D3F3F5 100%); color: var(--color-sidebar-text); padding: var(--space-6) var(--space-4); display: flex; flex-direction: column; gap: var(--space-6); }
 .shell aside > .eyebrow { flex-shrink: 0; color: var(--color-sidebar-muted); margin: 0; padding: 0 var(--space-2); }
 .account { flex-shrink: 0; margin-top: 0; display: grid; gap: var(--space-2); overflow-wrap: anywhere; border-top: 1px solid var(--color-sidebar-border); padding-top: var(--space-5); }
 .account small { color: var(--color-sidebar-muted); }

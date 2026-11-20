@@ -1,12 +1,32 @@
-.shell nav.sidebar-navigation {
-  display: grid;
-  gap: 8px;
-  flex: 1;
+/* Shared viewport contract for staff and patient sidebars. */
+.shell aside,
+.patient-workspace > .patient-sidebar {
+  box-sizing: border-box;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  position: sticky;
+  top: 0;
+  align-self: start;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.shell aside > :not(nav),
+.patient-sidebar > :not(nav) { flex-shrink: 0; }
+.shell nav.sidebar-navigation,
+.patient-sidebar > nav {
+  flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   align-content: start;
   overscroll-behavior: contain;
+}
+
+.shell nav.sidebar-navigation {
+  display: grid;
+  gap: 8px;
   position: relative;
   z-index: 1;
 }
@@ -105,4 +125,17 @@
   .sidebar-navigation .sidebar-chevron,
   .sidebar-navigation .sidebar-group-toggle,
   .shell .sidebar-navigation a { transition: none; }
+}
+
+/* Preserve the existing stacked mobile layouts. */
+@media (max-width: 850px) {
+  .shell aside { position: relative; height: min(36rem, 100vh); height: min(36rem, 100dvh); }
+}
+@media (max-width: 650px) {
+  .patient-workspace > .patient-sidebar { position: relative; height: auto; max-height: 100vh; max-height: 100dvh; }
+}
+/* Leave usable navigation space on short/landscape screens. */
+@media (max-height: 600px) {
+  .shell > aside:not([hidden]) { gap: var(--space-3); padding-block: var(--space-3); }
+  .shell aside > div.brand { min-height: 0; padding-block: 0; gap: var(--space-2); }
 }
