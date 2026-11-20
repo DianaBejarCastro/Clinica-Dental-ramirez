@@ -37,3 +37,10 @@ it('preserves cards and directions when Google cannot load', async () => {
   expect(screen.getByText('Central')).toBeTruthy();
   expect(screen.getByRole('link', { name: /Cómo llegar/ })).toBeTruthy();
 });
+it('uses homepage-provided branches without fetching them again', () => {
+  const fetch = vi.fn();
+  vi.stubGlobal('fetch', fetch);
+  render(<BranchesSection branches={[{ ...branch, latitude: null, longitude: null }]} />);
+  expect(screen.getByText('Central')).toBeTruthy();
+  expect(fetch).not.toHaveBeenCalled();
+});

@@ -27,13 +27,13 @@ it('muestra la landing pública y sus secciones sin consultar APIs privadas', as
   expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Tu salud bucal,');
   await screen.findByRole('heading', { name: 'Nuestros servicios' });
   const main = within(screen.getByRole('main'));
-  for (const name of ['Nuestros servicios', 'Nuestro equipo', 'Contacto', 'Agenda tu próxima consulta']) expect(main.getByRole('heading', { name })).toBeTruthy();
+  for (const name of ['Nuestros servicios', 'Agenda tu cita con nuestros especialistas', 'Contacto', 'Agenda tu próxima consulta']) expect(main.getByRole('heading', { name })).toBeTruthy();
   expect(fetchMock.mock.calls.every(call => ['/api/clinic/media', '/api/clinic/brand', '/api/clinic/branches', '/api/clinic/team', '/api/clinic/services', '/api/clinic/site-images/care/meta', '/api/clinic/site-images/hero/meta', '/api/clinic/social-networks'].some(path => String(call[0]).split('?')[0].endsWith(path)))).toBe(true);
 });
 it('simplifica el footer y conserva los datos de sucursales solo en su sección pública', async () => {
   render(<App />);
   const main = within(screen.getByRole('main'));
-  expect(await main.findByText('Sucursal Centro')).toBeTruthy();
+  expect((await main.findAllByText('Sucursal Centro')).length).toBe(3);
   expect(main.getByText(/Av. Principal 123/)).toBeTruthy();
   expect(main.getByRole('link', { name: '+591 4 1234567' }).getAttribute('href')).toBe('tel:+59141234567');
 

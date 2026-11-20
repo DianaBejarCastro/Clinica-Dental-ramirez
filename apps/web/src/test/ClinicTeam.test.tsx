@@ -68,11 +68,32 @@ it('read-only permissions hide mutation controls',async()=>{
 it('reports loading errors without pretending list is empty',async()=>{
  api.mockRejectedValue(new Error('Error de carga'));render(<ClinicTeam/>);expect(screen.getByRole('status')).toBeTruthy();await screen.findByText('Error de carga');expect(screen.queryByText('No hay profesionales seleccionados para el inicio.')).toBeNull();
 });
-it('public empty state is preserved',()=>{render(<TeamSection/>);expect(screen.getByText('Conoce a quienes te acompañan')).toBeTruthy();});
+it('public empty state is preserved',async()=>{vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>[]})));render(<TeamSection/>);expect(await screen.findByText('Conoce a quienes te acompañan')).toBeTruthy();});
 it('public cards use real names, ordered response, photos and fallback',async()=>{
  vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>[{id:'b',firstName:'Maria',lastName:'Perez',specialties:['Ortodoncia'],photoVersion:'v1'},{id:'a',firstName:'Juan',lastName:'Ramirez',specialties:[],photoVersion:null}]})));
  render(<TeamSection/>);await screen.findByText('Maria Perez');expect(screen.getByAltText('Maria Perez').getAttribute('src')).toContain('/api/clinic/team/b/photo');expect(screen.getByLabelText('Sin foto de Juan Ramirez').textContent).toBe('JR');
- expect([...document.querySelectorAll('.public-team-caption h3')].map(x=>x.textContent)).toEqual(['Maria Perez','Juan Ramirez']);expect(fetch).toHaveBeenCalledTimes(1);
+ expect([...document.querySelectorAll('.public-team-card h3')].map(x=>x.textContent)).toEqual(['Maria Perez','Juan Ramirez']);expect(document.querySelectorAll('.public-team-grid .public-team-card')).toHaveLength(2);
+ expect(document.querySelector('.public-team-caption p span')?.textContent).toContain('Ortodoncia');expect(screen.getByRole('button',{name:'Reservar cita con Maria Perez'})).toBeTruthy();expect(fetch).toHaveBeenCalledTimes(1);
  fireEvent.error(screen.getByAltText('Maria Perez'));expect(screen.getByLabelText('Sin foto de Maria Perez')).toBeTruthy();
+});
+it('keeps a single API professional in one compact card',async()=>{
+ vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>[{id:'featured-1',firstName:'Maria',lastName:'Perez',specialties:['Ortodoncia'],photoVersion:null}]})));
+ render(<TeamSection/>);await screen.findByText('Maria Perez');
+ expect(document.querySelectorAll('.public-team-grid .public-team-card')).toHaveLength(1);
+ expect(screen.getByRole('button',{name:'Reservar cita con Maria Perez'})).toBeTruthy();
+});
+it('shows real specialty and branch preview labels while keeping controls disabled',async()=>{
+ const branches=[{id:'branch-1',name:'Sucursal Centro',address:'Calle Uno',city:'Llallagua',department:'Potosí',phone:null,latitude:null,longitude:null}];
+ vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>[{id:'featured-1',firstName:'Maria',lastName:'Perez',specialties:['Ortodoncia'],photoVersion:null}]})));
+ render(<TeamSection branches={branches}/>);await screen.findByText('Maria Perez');
+ expect(screen.getByText('Sucursal Centro',{selector:'.team-filter-option span'})).toBeTruthy();
+ expect(screen.getByRole('note').textContent).toContain('todavía no están activos');
+ expect(screen.getByRole('searchbox',{name:'Buscar profesionales (vista previa)'}).hasAttribute('disabled')).toBe(true);
+ expect(screen.getByLabelText('Especialidades (vista previa)').hasAttribute('disabled')).toBe(true);
+ expect(screen.getByLabelText('Sucursales (vista previa)').hasAttribute('disabled')).toBe(true);
+ expect([...screen.getAllByRole('checkbox')].every(control=>control.hasAttribute('disabled'))).toBe(true);
+ expect(screen.getByRole('button',{name:'Ordenar profesionales'}).hasAttribute('disabled')).toBe(true);
+ expect(screen.getByText('Paginación no activa')).toBeTruthy();
+ expect(screen.queryByText(/reseñas|disponible hoy|Ver perfil/i)).toBeNull();
 });
 

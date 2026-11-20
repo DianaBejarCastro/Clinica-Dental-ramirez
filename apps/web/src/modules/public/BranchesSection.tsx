@@ -6,14 +6,16 @@ import { googleMapsLink, validCoordinates } from '../../components/maps/coordina
 import './branches-section.css';
 
 export interface PublicBranch { id: string; name: string; address: string; city: string | null; department: string | null; phone: string | null; latitude: number | null; longitude: number | null }
-export default function BranchesSection() {
-  const [branches, setBranches] = useState<PublicBranch[]>([]);
+export default function BranchesSection({ branches: suppliedBranches }: { branches?: PublicBranch[] | null } = {}) {
+  const [loadedBranches, setLoadedBranches] = useState<PublicBranch[]>([]);
   useEffect(() => {
+    if (suppliedBranches !== undefined) return;
     const controller = new AbortController();
     fetch(apiUrl('/api/clinic/branches'), { signal: controller.signal }).then(r => r.ok ? r.json() : [])
-      .then(data => { if (!controller.signal.aborted && Array.isArray(data)) setBranches(data); }).catch(() => undefined);
+      .then(data => { if (!controller.signal.aborted && Array.isArray(data)) setLoadedBranches(data); }).catch(() => undefined);
     return () => controller.abort();
-  }, []);
+  }, [suppliedBranches]);
+  const branches = suppliedBranches ?? loadedBranches;
   if (!branches.length) return null;
   return <PublicSection id="sucursales" eyebrow="CERCA DE TI" title="Nuestras sucursales">
     <div className="public-branches-layout">
